@@ -23,7 +23,7 @@ If the script is interrupted and leaves `.install-lock`, verify no installer is 
 
 ## Owner login and remembered browser sessions
 
-Version 0.8.0 is built and deployed (2026-10-15). Keep existing `.env`, workspace volume and worker volume unchanged when upgrading. Server login is separate from the ChatGPT account used for generation.
+Version 0.8.1 is deployed (2026-10-15), preserving the original configuration, workspace, access key and ChatGPT worker sign-in after stopped-volume backups. Owner login was introduced in 0.8.0. Keep existing `.env`, workspace volume and worker volume unchanged when upgrading. Server login is separate from the ChatGPT account used for generation.
 
 1. A new server with no configured `IMAGEGEN_SERVER_TOKEN` generates its key once in `/data/server-access-key`. Retrieve it privately with `docker compose --env-file server/.env -f server/compose.yaml exec imagegen cat /data/server-access-key`. A configured access key takes precedence and is never changed by account setup. Existing deployments must retain their current environment key.
 2. Open the server in a browser and choose **Server access key** to prove ownership. First login offers a personal username/password account or **Use access key only**. There is no unauthenticated account registration.

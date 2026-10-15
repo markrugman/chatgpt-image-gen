@@ -212,3 +212,9 @@ Qualification: no installer is executed over the running user installation. Wind
 - [Release 0.8.1](https://github.com/markrugman/chatgpt-image-gen/releases/tag/v0.8.1) is published with Windows installer/portable/companion, install.sh, compose.release.yaml, immutable server-image.txt and SHA256SUMS. The existing private production server remains on 0.8.0.
 
 Qualification limits: Windows x64 desktop and Linux amd64 server are the release targets. Physical phone/Safari, other desktop architectures and fresh Windows machine installation are not qualified.
+
+### Existing server upgrade to 0.8.1 (2026-10-15)
+
+After explicit authorization, the existing manual deployment was upgraded to the published immutable 0.8.1 image using its original project, environment and persistent workspace/private-worker volumes. Complete stopped-volume backups and configuration were verified before replacement; an off-server copy also matches all backup checksums. The new release becomes current only after runtime checks pass.
+
+Exact pre-upgrade workspace metadata, server identity, all 18 original image hashes, four documents, four assets and job history are unchanged. Environment/access key and worker auth.json are byte-identical. The existing browser session remains valid, owner/setup state is unchanged, and the same ChatGPT worker account reports image-generation capability without a new sign-in. Health reports 0.8.1. The other two services retain their original container IDs/images/start times and pass health checks. No fresh image generation was requested against the production workspace during this upgrade.
