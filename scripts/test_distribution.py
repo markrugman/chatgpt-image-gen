@@ -240,7 +240,7 @@ class CompanionInstallerTests(unittest.TestCase):
         end = lines.index('set "IMAGEGEN_RESULT=%ERRORLEVEL%"')
         self.script = " ".join(line.strip().removesuffix(" ^")[1:-1] for line in lines[start:end])
         self.mocks = r'''
-function Get-Command { if ($env:TEST_CLI_MISSING -ne '1') { [pscustomobject]@{Source='Invoke-TestCodex'} } }
+function Get-Command { if ($env:TEST_CLI_MISSING -ne '1') { [pscustomobject]@{Source='Invoke-TestCodex'}; if ($env:TEST_CLI_DUPLICATE -eq '1') { [pscustomobject]@{Source='Unwanted-SecondCodex'} } } }
 function Get-ItemProperty { if ($env:TEST_APP_MISSING -ne '1') { [pscustomobject]@{InstallLocation=(Split-Path $env:TEST_APP)} } }
 function Invoke-TestCodex {
     $args | ConvertTo-Json | Set-Content -LiteralPath (Join-Path $env:TEST_ROOT 'registration.json')
@@ -278,6 +278,12 @@ function Invoke-TestCodex {
         self.assertNotEqual(result.returncode, 0)
         self.assertIn("Codex CLI was not found", result.stdout)
         self.assertFalse(self.target.exists())
+
+    def test_multiple_codex_executables_use_first_path_match(self):
+        self.env["TEST_CLI_DUPLICATE"] = "1"
+        result = self.invoke()
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertEqual(self.target.read_text(), "test skill")
 
     def test_missing_native_app_explains_next_step(self):
         self.env["TEST_APP_MISSING"] = "1"

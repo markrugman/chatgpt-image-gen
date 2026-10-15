@@ -8,7 +8,7 @@ powershell.exe -NoProfile -Command ^
  "$root=$env:IMAGEGEN_INSTALLER_ROOT;" ^
  "$skill=Join-Path $root 'companion\skills\imagegenapp\SKILL.md';" ^
  "if (!(Test-Path -LiteralPath $skill)) { throw 'Extract the entire companion ZIP before running this installer.' };" ^
- "$codex=Get-Command codex.exe -CommandType Application -ErrorAction SilentlyContinue;" ^
+ "$codex=Get-Command codex.exe -CommandType Application -ErrorAction SilentlyContinue | Select-Object -First 1;" ^
  "if (!$codex) { throw 'Codex CLI was not found on PATH. Install the Codex CLI, open a new terminal, then run this installer again. See https://developers.openai.com/codex/cli/' };" ^
  "$candidates=@();" ^
  "if ($env:IMAGEGEN_COMPANION_APP) { $candidates=@($env:IMAGEGEN_COMPANION_APP) } else {" ^
