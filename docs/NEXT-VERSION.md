@@ -1,5 +1,30 @@
 # Next version design interview
 
+## Consolidated 0.8.4 release (2026-10-15)
+
+Mark authorised GitHub publication and upgrading the existing server, superseding the local-only holds below. Release 0.8.4 combines organisation sidebar controls, avatar appearance settings and two-column phone grids from the separate chats, plus MIT licensing in packaged distributions. The browser warning investigation required no product changes: disabling the injecting extension removed the warnings. User-facing changes are consolidated in CHANGELOG.md; release and preservation evidence is recorded in VALIDATION.md.
+
+## Two-column phone grids - local build (2026-10-15)
+
+Projects, designs and asset/upload cards use two equal columns in browser viewports up to 600px. Compact spacing, wrapping titles and smaller preview padding preserve readable cards and existing touch targets. Wider layouts retain their automatic column counts.
+
+Verification: `npm run build` passes. Isolated Edge checks against the built frontend with in-memory workspace fixtures confirm two columns without horizontal overflow at 320, 393 and 600px, and projects/designs still fit at 601, 768 and 1440px. The 393px screenshots were inspected. No publication or deployment; real workspace data was not modified. Physical phone/Safari checks remain outstanding.
+
+## Avatar menu and dark mode - local build (2026-10-15)
+
+The user avatar opens an appearance menu with a Dark mode toggle in the workspace, desktop editor and compact browser header. Light remains the default; the explicit choice is saved in device-local storage and restored before React renders, including the browser login screen. Keyboard focus, Escape, outside click and Tab dismissal are supported. Shared interface colours adapt across cards, navigation, editor, chat and dialogs. Artwork, paper backgrounds and explicit contrast previews retain their original colours. No workspace schema or server changes are required.
+
+Verification: local frontend build, 28 frontend tests, isolated Playwright theme checks (toggle, reload persistence, keyboard/focus dismissal, desktop/editor/mobile/settings colours, unchanged paper and blocked storage), plus the browser-history regression. The optimized Windows executable also builds locally; a separate preview with checksum-verified executable/runtime copies is in outputs/local-dark-mode-preview/. The user explicitly authorised local builds for this update and kept deployment on hold. No publication or deployment.
+
+## Organisation sidebar controls — local test builds (2026-10-15)
+
+Requested: reordering, a hover ellipsis menu, inline Rename, and Trash for an organisation and all its contents. Implemented drag-and-drop ordering and Alt+Up/Down on focused organisation buttons; ordering is saved per organisation and used in destination selectors. The menu also appears on keyboard focus and touch devices. Rename uses an inline textbox with Save/Enter and Cancel/Escape, rejects blank names, and preserves the draft when saving fails.
+
+Organisation Trash atomically marks its projects, designs, assets and uploads deleted, retaining media, conversations, revisions and references. Shared libraries and other organisations stay unchanged. The organisation appears in Trash and can be restored with exactly the items deleted by that operation; previously trashed items remain deleted. Children cannot be individually restored until their organisation is restored. Active generation in any descendant blocks the operation. Local and server validation reject concurrent additions or restores into a trashed organisation. Optional metadata defaults preserve old workspaces and omit unset fields during serialization. Windows HTML5 dragging requires disabling Tauri's native file-drop handler; the window config now does so (uploads continue through the file picker).
+
+Verification: 28 frontend tests, non-emitting TypeScript diagnostics, isolated development-browser checks for hover/menu, drag/keyboard order, reload, inline blank/cancel/save/error recovery, Trash/Restore, selection fallback and compact navigation, plus the existing browser-history regression. Rust source parses with rustfmt; backend regression tests cover cascade/restore, pre-existing trash, shared/other libraries, saved membership and invalid ordering. The initial no-build request was subsequently lifted for local testing only. All 26 native tests and 30 server tests pass (one separate network-login native test remains ignored). Local Windows portable, NSIS installer and Windows server packages are in `outputs/Local Test 2026-10-15-2234/`. Native MCP loader and bundled-runtime startup, ZIP integrity and checksums pass. The actual packaged server passes disposable-data tests for cascade, restart, exact restore, old trash, shared/other libraries and persisted order/rename. The installer was not executed. Test launchers use separate empty workspaces. No publication, deployment or real-user workspace changes occurred. See VALIDATION.md.
+
+
 ## Organisation libraries — 0.8.2 (2026-10-15)
 
 Mark approved implementation and local/private-server testing of organisation switching/counts, separate Uploads and Assets, popup Reference/Place actions in a wider editor panel, and cross-organisation Copy/Move with preserved design history. Switching organisations retains the current section. After preview checks passed, Mark explicitly authorised GitHub publication and live-server deployment as 0.8.2. Implementation and preview verification are recorded in [ORGANISATION-LIBRARIES.md](ORGANISATION-LIBRARIES.md); release/deployment verification is recorded in VALIDATION.md.

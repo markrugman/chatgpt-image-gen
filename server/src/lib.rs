@@ -89,6 +89,7 @@ pub fn valid_file(file: &str) -> bool {
 pub fn validate(workspace: &Value) -> Result<(), String> {
     let w: model::Workspace =
         serde_json::from_value(workspace.clone()).map_err(|_| "Workspace data is invalid")?;
+    organisations::validate(&w)?;
     if w.format_version > 3 {
         return Err("This workspace needs a newer server".into());
     }
@@ -505,6 +506,8 @@ pub mod codex;
 pub mod commands;
 #[path = "../../src-tauri/src/libraries.rs"]
 pub mod libraries;
+#[path = "../../src-tauri/src/organisations.rs"]
+pub mod organisations;
 #[path = "../../src-tauri/src/jobs.rs"]
 pub mod jobs;
 #[path = "../../src-tauri/src/original.rs"]

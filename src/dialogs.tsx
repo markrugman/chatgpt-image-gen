@@ -1,3 +1,4 @@
+import { activeOrganisations } from "./types";
 import { TransferDialog } from "./TransferDialog";
 import { libraryKind } from "./types";
 import { ServerSettings, type ServerStatus } from "./ServerSettings";
@@ -41,7 +42,7 @@ export function CreateDialog({
   const initialProject = w.projects.find((p) => p.id === options.projectId);
   const [org, setOrg] = useState(
     initialProject?.organisationId ||
-      (orgId === "all" ? w.organisations[0]?.id || "" : orgId),
+      (orgId === "all" ? activeOrganisations(w)[0]?.id || "" : orgId),
   );
   const [project, setProject] = useState(initialProject?.id || ""),
     [newProject, setNewProject] = useState("");
@@ -170,7 +171,7 @@ export function CreateDialog({
       <form onSubmit={submit}>
         <div className="form-body">
           {kind !== "organisation" &&
-            (kind !== "asset" || w.organisations.length > 0) && (
+            (kind !== "asset" || activeOrganisations(w).length > 0) && (
               <div className="form-grid">
                 <label>
                   Organisation
@@ -182,7 +183,7 @@ export function CreateDialog({
                     }}
                     required
                   >
-                    {w.organisations.map((o) => (
+                    {activeOrganisations(w).map((o) => (
                       <option key={o.id} value={o.id}>
                         {o.name}
                       </option>
@@ -251,7 +252,7 @@ export function CreateDialog({
                 <option value="shared">
                   Shared library · use across organisations
                 </option>
-                <option value="organisation" disabled={!w.organisations.length}>
+                <option value="organisation" disabled={!activeOrganisations(w).length}>
                   This organisation only
                 </option>
               </select>

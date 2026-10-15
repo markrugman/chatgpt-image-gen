@@ -128,9 +128,11 @@ pub async fn mutate(
 ) -> Result<Value, String> {
     let operation = text(&action, "op")?;
     if ["history", "revision", "delete", "restore", "transfer", "classify", "save_as_asset"].contains(&operation.as_str()) {
+        let workspace = state.store.read()?;
         let busy = state.jobs.lock().await.values().any(|j| {
             ["starting", "running", "cancelling"].contains(&j.status.as_str())
-                && (action["id"] == j.target.id || action["target"]["id"] == j.target.id)
+                && (action["id"] == j.target.id || action["target"]["id"] == j.target.id
+                    || (action["kind"] == "organisation" && crate::organisations::owns(&workspace, action["id"].as_str().unwrap_or(""), &j.target.id)))
         });
         if busy {
             return Err("Stop this item's active request before changing its history, library, or organisation".into());
@@ -144,9 +146,13 @@ pub async fn mutate(
     let result = state
         .store
         .change_from(base.as_ref(), |w| match operation.as_str() {
+            "reorder_organisations" => crate::organisations::reorder(w, &action),
             "transfer" | "classify" | "save_as_asset" => crate::libraries::change(w, &action),
             "organisation" => {
                 let o = Organisation {
+                    position: Some(w.organisations.iter().enumerate().map(|(i, o)| o.position.unwrap_or(i as u64)).max().map_or(0, |p| p + 1)),
+                    deleted_at: None,
+                    trashed_items: vec![],
                     id: id(),
                     name: text(&action, "name")?,
                     color: optional(&action, "color").unwrap_or("#7654cf".into()),
@@ -157,7 +163,7 @@ pub async fn mutate(
             }
             "project" => {
                 let org = text(&action, "organisationId")?;
-                if !w.organisations.iter().any(|o| o.id == org) {
+                if !w.organisations.iter().any(|o| o.id == org && o.deleted_at.is_none()) {
                     return Err("Organisation not found".into());
                 }
                 let p = Project {
@@ -210,6 +216,7 @@ pub async fn mutate(
                 Ok(Value::Null)
             }
             "asset" => {
+                crate::organisations::require_active(w, optional(&action, "organisationId").as_deref())?;
                 let a = Asset {
                     library_kind: "asset".into(),
                     description_json: optional(&action, "descriptionJson")
@@ -314,7 +321,7 @@ pub async fn mutate(
                             .iter_mut()
                             .find(|o| o.id == id)
                             .ok_or("Organisation not found")?
-                            .name = name.ok_or("Enter a name")?;
+                            .name = text(&action, "name")?;
                     }
                     _ => return Err("Unsupported item".into()),
                 }
@@ -387,6 +394,12 @@ pub async fn mutate(
             }
             "delete" | "restore" => {
                 let id = text(&action, "id")?;
+                if action["kind"] == "organisation" {
+                    return crate::organisations::trash(w, &id, operation == "delete");
+                }
+                if operation == "restore" {
+                    crate::organisations::can_restore(w, &id)?;
+                }
                 let deleted = if operation == "delete" {
                     Some(now())
                 } else {
@@ -496,6 +509,7 @@ pub(crate) fn save_imported_asset(
         source_references.insert(0, format!("image:{}", image.id));
     }
     let asset_id = state.store.change(|w| {
+        crate::organisations::require_active(w, organisation_id.as_deref())?;
         let version = AssetVersion {
             id: id(),
             image_id: image.id.clone(),

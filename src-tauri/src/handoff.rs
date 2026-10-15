@@ -74,7 +74,7 @@ async fn handle(
     if tool == "list_workspace" {
         let w = state.store.read()?;
         return Ok(
-            json!({"organisations":w.organisations,"projects":w.projects.iter().filter(|p|p.deleted_at.is_none()).collect::<Vec<_>>()}),
+            json!({"organisations":w.organisations.iter().filter(|o|o.deleted_at.is_none()).collect::<Vec<_>>(),"projects":w.projects.iter().filter(|p|p.deleted_at.is_none()).collect::<Vec<_>>()}),
         );
     }
     if tool != "start_design" {
@@ -99,7 +99,7 @@ async fn handle(
     }
     let (doc_id,fresh)=state.store.change(|w|{
         if let Some(id)=w.handoffs.get(&request_id){return Ok((id.clone(),false));}
-        let matches:Vec<_>=w.organisations.iter().filter(|o|o.name.eq_ignore_ascii_case(&org_name)).collect();if matches.len()!=1{return Err("Choose exactly one existing organisation using list_workspace; ambiguous or missing organisation".into());}let org_id=matches[0].id.clone();
+        let matches:Vec<_>=w.organisations.iter().filter(|o|o.deleted_at.is_none() && o.name.eq_ignore_ascii_case(&org_name)).collect();if matches.len()!=1{return Err("Choose exactly one existing organisation using list_workspace; ambiguous or missing organisation".into());}let org_id=matches[0].id.clone();
         let projects:Vec<_>=w.projects.iter().filter(|p|p.organisation_id==org_id && p.name.eq_ignore_ascii_case(&project_name) && p.deleted_at.is_none()).collect();
         if projects.len()>1{return Err("Multiple matching projects. Rename or select the intended project in Image Gen first.".into());}
         let project_id=if let Some(p)=projects.first(){p.id.clone()}else{let p=Project{id:id(),organisation_id:org_id,name:project_name,tags:vec![],deleted_at:None};let id=p.id.clone();w.projects.push(p);id};

@@ -213,6 +213,9 @@ mod tests {
         store
             .change(|w| {
                 w.organisations.push(Organisation {
+                    position: None,
+                    deleted_at: None,
+                    trashed_items: vec![],
                     id: "o".into(),
                     name: "Original".into(),
                     color: "purple".into(),

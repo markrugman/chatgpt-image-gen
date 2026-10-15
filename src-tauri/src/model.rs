@@ -37,6 +37,12 @@ pub struct CustomSize {
 #[derive(Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Organisation {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub position: Option<u64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub deleted_at: Option<u64>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub trashed_items: Vec<String>,
     pub id: String,
     pub name: String,
     pub color: String,

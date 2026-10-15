@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { UserMenu } from "./UserMenu";
 import {
   ArrowDownToLine,
   ArrowLeft,
@@ -391,6 +392,7 @@ export function Editor({
             <ArrowDownToLine size={16} />
             Export
           </button>
+          {!compact && <UserMenu />}
         </div>
       </header>
       {compact && <div className="mobile-editor-views" role="group" aria-label="Editor view">

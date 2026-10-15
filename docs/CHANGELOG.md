@@ -1,5 +1,13 @@
 # Release history
 
+## New in 0.8.4
+
+- Reorder organisations by dragging, or focus one and use Alt+Up/Down. The saved order also appears in organisation selectors.
+- Hover an organisation to open its **...** menu. **Rename** edits its name inline; **Trash** moves the organisation and its projects, designs, assets and uploads to Trash. Restoring the organisation restores those contents while leaving previously trashed items in Trash. Shared libraries and other organisations remain available.
+- Open the avatar menu to switch between light and dark mode. The choice is remembered on that device across the workspace, editor, dialogs and browser login screen. Artwork, paper and explicit contrast previews retain their original colours.
+- Phone screens keep two columns for projects, designs, assets and uploads, with tighter spacing and wrapping titles.
+- Distribution packages now include the project's MIT licence and third-party notices. Existing creations, media, sign-in and workspace identity are preserved.
+
 ## New in 0.8.3
 
 Desktop generation now has its own ChatGPT OAuth sign-in and private runtime history. Image Gen uses only its bundled generation runtime, ignores inherited Codex credentials and history settings, and no longer falls back to a separately installed Codex. Sign in once inside Image Gen after upgrading. Existing designs, images and saved page conversations remain available; previous entries in Codex recent chats are not automatically removed. The browser worker retains its existing isolated server sign-in and history.

@@ -8,6 +8,7 @@ mod libraries;
 mod local_store;
 mod model;
 mod original;
+mod organisations;
 mod print;
 mod remote;
 mod runtime;

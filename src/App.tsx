@@ -28,6 +28,8 @@ import {
 import { api, clearImageCache, importImageFile } from "./api";
 import {
   emptyWorkspace,
+  activeOrganisations,
+  trashedOrganisationForItem,
   libraryKind,
   type Connection,
   type Job,
@@ -46,6 +48,8 @@ import { AssetCard, DocumentCard, ProjectCard, SearchResults } from "./cards";
 import { CreateDialog, EditDialog, SettingsDialog } from "./dialogs";
 import { Editor } from "./Editor";
 import "./App.css";
+import { OrganisationList } from "./OrganisationList";
+import { UserMenu } from "./UserMenu";
 
 function readNavigation() {
   const params = new URLSearchParams(isBrowser ? window.location.hash.slice(1) : "");
@@ -128,6 +132,11 @@ export default function App() {
     setStorage(await api<ServerStatus>("server_status"));
     setLoaded(true);
   }, []);
+  useEffect(() => {
+    if (loaded && orgId !== "all" && !w.organisations.some(o => o.id === orgId && !o.deletedAt)) {
+      setOrgId("all"); setProjectId(null); setDocId(null); setAssetId(null); setPageId(null);
+    }
+  }, [loaded, w.organisations, orgId]);
   const completedJobs = useRef(new Set<string>());
   const refreshJobs = useCallback(async () => {
     const next = await api<Job[]>("get_jobs");setJobs(next);
@@ -225,7 +234,8 @@ export default function App() {
   const document = w.documents.find((d) => d.id === docId && !d.deletedAt),
     asset = w.assets.find((a) => a.id === assetId && !a.deletedAt),
     editor = !!document || !!asset;
-  const organisation = w.organisations.find((o) => o.id === orgId);
+  const organisations = activeOrganisations(w);
+  const organisation = organisations.find((o) => o.id === orgId);
   const visibleProjects = w.projects.filter(
     (p) => !p.deletedAt && (orgId === "all" || p.organisationId === orgId),
   );
@@ -260,7 +270,7 @@ export default function App() {
   };
   const create = (options: CreateOptions) => {
     if (
-      !w.organisations.length &&
+      !organisations.length &&
       ["document", "project"].includes(options.kind)
     )
       setCreating({ kind: "organisation" });
@@ -341,24 +351,12 @@ export default function App() {
           </span>
           <span>All organisations</span>
         </button>
-        {w.organisations.map((org) => (
-          <button
-            key={org.id}
-            className={`org-item ${orgId === org.id ? "selected" : ""}`}
-            onClick={() => {
-              switchOrganisation(org.id);
-            }}
-            title={org.name}
-          >
-            <span
-              className="org-avatar"
-              style={{ color: org.color, background: `${org.color}16` }}
-            >
-              {org.name.slice(0, 2).toUpperCase()}
-            </span>
-            <span>{org.name}</span>
-          </button>
-        ))}
+        <OrganisationList organisations={organisations} selected={orgId} act={act} notify={notify}
+          onSelect={id => { switchOrganisation(id); if (compact) setNavigationOpen(false); }}
+          onTrash={id => {
+            if (orgId === id || (document && w.projects.some(p => p.id === document.projectId && p.organisationId === id)) || asset?.organisationId === id) switchOrganisation("all");
+            notify("Organisation and its contents moved to Trash");
+          }} />
         <div className="sidebar-bottom">
           <button
             className="nav-item"
@@ -439,6 +437,7 @@ export default function App() {
           <header className="mobile-appbar">
             <button className="icon-button" aria-label="Open navigation" aria-expanded={navigationOpen} onClick={() => setNavigationOpen(true)}><Menu size={22} /></button>
             <span className="mobile-brand"><Sparkles size={19} /> imagegen</span>
+            <UserMenu />
             <button className="icon-button" aria-label="Create a design" onClick={() => create({ kind: "document", projectId: projectId || undefined })}><Plus size={22} /></button>
           </header>
           {navigationOpen && <div className="mobile-navigation"><Modal title="Workspace navigation" onClose={() => setNavigationOpen(false)}><div className="form-body">{sidebar}</div></Modal></div>}
@@ -494,7 +493,7 @@ export default function App() {
                 />
                 <select aria-label="Current organisation" value={orgId} onChange={e => switchOrganisation(e.target.value)}>
                   <option value="all">All organisations</option>
-                  {w.organisations.map(o => <option key={o.id} value={o.id}>{o.name}</option>)}
+                  {organisations.map(o => <option key={o.id} value={o.id}>{o.name}</option>)}
                 </select>
               </div>
               <div className="topbar-right">
@@ -516,7 +515,7 @@ export default function App() {
                 >
                   <CircleHelp size={19} />
                 </button>
-                <div className="user-avatar">M</div>
+                {!compact && <UserMenu />}
               </div>
             </header>
             <div className="workspace-content">
@@ -547,6 +546,9 @@ export default function App() {
                   />
                   <div className="list-card">
                     {[
+                      ...w.organisations
+                        .filter((o) => o.deletedAt)
+                        .map((o) => ({ ...o, kind: "organisation" })),
                       ...w.projects
                         .filter((p) => p.deletedAt)
                         .map((p) => ({ ...p, kind: "project" })),
@@ -565,6 +567,8 @@ export default function App() {
                         </div>
                         <button
                           className="button secondary small"
+                          disabled={!!trashedOrganisationForItem(w, item.id)}
+                          title={trashedOrganisationForItem(w, item.id) ? "Restore this item's organisation first" : undefined}
                           onClick={() =>
                             run(() =>
                               act({
@@ -580,13 +584,13 @@ export default function App() {
                         </button>
                       </div>
                     ))}
-                    {![...w.projects, ...w.documents, ...w.assets].some(
+                    {![...w.organisations, ...w.projects, ...w.documents, ...w.assets].some(
                       (i) => i.deletedAt,
                     ) && (
                       <Empty
                         icon={<Trash2 />}
                         title="Nothing in Trash"
-                        text="Your deleted projects, designs, and assets will appear here."
+                        text="Your deleted organisations, projects, designs, assets, and uploads will appear here."
                       />
                     )}
                   </div>

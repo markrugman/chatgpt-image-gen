@@ -105,7 +105,7 @@ pub fn change(w: &mut Workspace, action: &Value) -> Result<Value, String> {
     let org = action["organisationId"]
         .as_str()
         .ok_or("Choose a destination organisation")?;
-    if !w.organisations.iter().any(|o| o.id == org) {
+    if !w.organisations.iter().any(|o| o.id == org && o.deleted_at.is_none()) {
         return Err("Organisation not found".into());
     }
     let moving = action["mode"] == "move";
@@ -254,6 +254,9 @@ mod tests {
         let mut w = Workspace::default();
         for org in ["source", "destination"] {
             w.organisations.push(Organisation {
+                position: None,
+                deleted_at: None,
+                trashed_items: vec![],
                 id: org.into(),
                 name: org.into(),
                 color: "#7654cf".into(),

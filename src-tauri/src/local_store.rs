@@ -91,6 +91,7 @@ impl Store {
             .map_err(|e| e.to_string())?;
         let mut workspace: Workspace = serde_json::from_str(&data).map_err(|e| e.to_string())?;
         let result = edit(&mut workspace)?;
+        crate::organisations::validate(&workspace)?;
         tx.execute(
             "UPDATE workspace SET data=?1 WHERE id=1",
             params![serde_json::to_string(&workspace).map_err(|e| e.to_string())?],
@@ -202,6 +203,9 @@ mod tests {
             let s = Store::open(root.clone()).unwrap();
             s.change(|w| {
                 w.organisations.push(Organisation {
+                    position: None,
+                    deleted_at: None,
+                    trashed_items: vec![],
                     id: "o".into(),
                     name: "Courtyard".into(),
                     color: "amber".into(),

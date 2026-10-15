@@ -3,6 +3,9 @@ import ReactDOM from "react-dom/client";
 import App from "./App";
 import { BrowserGate } from "./BrowserGate";
 import { isDesktop } from "./api";
+import { initializeTheme } from "./UserMenu";
+
+initializeTheme();
 
 ReactDOM.createRoot(document.getElementById("root") as HTMLElement).render(
   <React.StrictMode>

@@ -276,6 +276,9 @@ mod tests {
         let doc = first
             .change(|w| {
                 w.organisations.push(Organisation {
+                    position: None,
+                    deleted_at: None,
+                    trashed_items: vec![],
                     id: "org".into(),
                     name: "Courtyard".into(),
                     color: "purple".into(),

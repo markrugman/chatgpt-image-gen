@@ -1,3 +1,4 @@
+import { activeOrganisations } from "./types";
 import { useState } from "react";
 import { Modal, type Act } from "./ui";
 import { type Workspace } from "./types";
@@ -22,7 +23,7 @@ export function TransferDialog({
   const sourceOrg =
     asset?.organisationId ||
     w.projects.find((p) => p.id === doc?.projectId)?.organisationId;
-  const organisations = w.organisations.filter((o) => o.id !== sourceOrg);
+  const organisations = activeOrganisations(w).filter((o) => o.id !== sourceOrg);
   const [org, setOrg] = useState(organisations[0]?.id || "");
   const [project, setProject] = useState(""),
     [projectName, setProjectName] = useState("");

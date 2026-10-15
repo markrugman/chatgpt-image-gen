@@ -1,4 +1,7 @@
 export interface Organisation {
+  position?: number | null;
+  deletedAt?: number | null;
+  trashedItems?: string[];
   id: string;
   name: string;
   color: string;
@@ -240,3 +243,16 @@ export const presets = [
     unit: "px",
   },
 ];
+
+export function activeOrganisations(w: Workspace): Organisation[] {
+  return w.organisations.map((org, index) => ({ org, index }))
+    .filter(({ org }) => !org.deletedAt)
+    .sort((a, b) => (a.org.position ?? a.index) - (b.org.position ?? b.index))
+    .map(({ org }) => org);
+}
+
+export function trashedOrganisationForItem(w: Workspace, id: string): Organisation | undefined {
+  const project = w.projects.find(p => p.id === id) || w.projects.find(p => p.id === w.documents.find(d => d.id === id)?.projectId);
+  const owner = project?.organisationId || w.assets.find(a => a.id === id)?.organisationId;
+  return w.organisations.find(o => o.id === owner && !!o.deletedAt);
+}

@@ -1,5 +1,22 @@
 # Validation — 2026-10-15
 
+## Consolidated 0.8.4 release preparation (2026-10-15)
+
+Mark authorised GitHub publication and upgrading the existing private server. Scope reconciled against the completed organisation-controls, avatar-theme and phone-grid chats and the working tree: all three feature changes are included, with MIT licence packaging from the post-0.8.3 source commit. Browser extension warnings required no product change. CHANGELOG.md and the GitHub release notes consolidate the user-facing changes.
+
+Pre-release local checks: version metadata agrees at 0.8.4; 28 frontend, 26 native and 30 server tests pass (one separate native network-login test ignored); production frontend build and 19 distribution fixtures pass. Browser organisation, theme, mobile-grid and history checks pass. Existing production preflight confirms 10 designs, 10 library items, 34 images, no active generation, original workspace/private-worker volumes and signed-in image-generation worker. Release workflow, public downloads and final deployment preservation checks are recorded separately below after completion.
+
+
+## Local organisation/appearance test builds (2026-10-15)
+
+The user authorised local builds after the initial source-only implementation. Windows x64 portable, NSIS installer and local Windows server packages are saved under `outputs/Local Test 2026-10-15-2234/`, using source version 0.8.3 with unreleased organisation and appearance changes. `README.txt` documents separate empty test-workspace launchers; `SHA256SUMS.txt` verifies the archives and installer. No publication, deployment or installer execution occurred.
+
+- Frontend: 28 tests, non-emitting TypeScript checks and production Vite build pass. Isolated browser organisation controls, theme and history checks pass.
+- Native: 26 Rust tests pass; the separate network-login test remains ignored. Organisation cascade/restore and ordering regressions pass. Packaged EXE MCP initialize/tools-list and bundled runtime 0.162.0-alpha.17.2 startup pass. Windows executable headers and full portable ZIP CRC pass. Native graphical acceptance of the test package remains for manual testing; no existing app was stopped or installed over.
+- Server: 30 Rust unit/HTTP tests and release compilation pass. The actual packaged Windows server serves its fingerprinted JS/CSS and passes real API tests on a disposable local workspace: order/rename persistence, project/design/asset/upload cascade, shared and other organisations preserved, child restore blocked, saved state across restart, and exact restore leaving previous trash untouched. Its test process was stopped afterward; the user launcher binds 127.0.0.1:18787 with generation disabled. Server ZIP CRC and final package SHA-256 checks pass.
+- Private test evidence/scripts are under ignored `work/local-test-20261015/`. Existing released artifacts and real user data remain unchanged.
+
+
 ## Release 0.8.3 and live deployment
 
 - Mark explicitly requested building all supported packages, GitHub publication and the live-server upgrade. [Release 0.8.3](https://github.com/markrugman/chatgpt-image-gen/releases/tag/v0.8.3) is public from source commit `adea90bcf5d880e5a73f92fd18196a880ff9061c`. All five jobs in [workflow 38791846064](https://github.com/markrugman/chatgpt-image-gen/actions/runs/38791846064) passed. The existing required-reviewer publication protection was retained and approved through the existing eligible reviewer after package qualification.

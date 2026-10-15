@@ -1,0 +1,93 @@
+import { createServer } from "vite";
+import { chromium, expect } from "@playwright/test";
+import assert from "node:assert/strict";
+
+// Local fixture only: no real workspace, account or server writes.
+const workspace = { formatVersion: 3, organisations: [{ id: "org", name: "Studio", color: "#8864d7" }], projects: [{ id: "project", organisationId: "org", name: "Posters", tags: [] }], documents: [{ id: "doc", projectId: "project", name: "Theme preview", width: 210, height: 297, unit: "mm", pages: [{ id: "page", name: "Page 1", messages: [], revisions: [], history: [{ imageId: null, revisionId: null, overlays: [] }], historyIndex: 0 }], tags: [], updatedAt: Date.now() }], assets: [], images: [], customSizes: [], handoffs: {} };
+const server = await createServer({ server: { host: "127.0.0.1", port: 0, strictPort: false } });
+await server.listen();
+let browser;
+try {
+  browser = await chromium.launch({ channel: process.platform === "win32" ? "msedge" : undefined, headless: true });
+  const page = await browser.newPage({ viewport: { width: 1440, height: 1000 } });
+  const errors = [];
+  page.on("pageerror", e => errors.push(e.message));
+  await page.route("**/web/session", r => r.fulfill({ json: { hasOwner: true, setupNeeded: false } }));
+  await page.route("**/health", r => r.fulfill({ json: { service: "image-gen-server", version: "0.8.3" } }));
+  await page.route("**/api/*", r => {
+    const command = r.request().url().split("/").pop();
+    return r.fulfill({ json: command === "get_workspace" ? workspace : command === "get_jobs" ? [] : command === "server_status" ? { connected: true, online: true, name: "Test workspace", pending: 0, serverVersion: "0.8.3" } : command === "connection" ? { account: null, capabilities: {} } : {} });
+  });
+  await page.goto(`http://127.0.0.1:${server.httpServer.address().port}`);
+  await expect(page.locator(".document-card")).toBeVisible();
+  const theme = () => page.locator("html");
+  const avatar = () => page.getByRole("button", { name: "User menu", exact: true });
+  const toggle = () => page.getByRole("menuitemcheckbox", { name: "Dark mode" });
+  await expect(theme()).toHaveAttribute("data-theme", "light");
+  await avatar().focus();
+  await page.keyboard.press("ArrowDown");
+  await expect(toggle()).toBeFocused();
+  await page.keyboard.press("Enter");
+  await expect(toggle()).toHaveAttribute("aria-checked", "true");
+  await expect(theme()).toHaveAttribute("data-theme", "dark");
+  await page.keyboard.press("Escape");
+  await expect(avatar()).toBeFocused();
+  await expect(page.getByRole("menu")).toHaveCount(0);
+  await avatar().click();
+  await expect(page.getByRole("button", { name: "New project", exact: true })).toHaveCSS("background-color", "rgb(34, 33, 41)");
+  await page.screenshot({ path: "work/theme-dark-desktop.png" });
+  await page.locator("h1").click();
+  await expect(page.getByRole("menu")).toHaveCount(0);
+  await page.reload();
+  await expect(theme()).toHaveAttribute("data-theme", "dark");
+  assert.equal(await page.locator(".sidebar").evaluate(el => getComputedStyle(el).backgroundColor), "rgb(34, 33, 41)");
+  await page.getByTitle("Settings and help").click();
+  await expect(page.locator("dialog")).toBeVisible();
+  assert.equal(await page.locator("dialog").evaluate(el => getComputedStyle(el).backgroundColor), "rgb(34, 33, 41)");
+  await page.screenshot({ path: "work/theme-dark-settings.png" });
+  await page.keyboard.press("Escape");
+  await page.locator(".document-card").click();
+  await expect(page.locator(".design-canvas")).toBeVisible();
+  assert.equal(await page.locator(".design-canvas").evaluate(el => getComputedStyle(el).backgroundColor), "rgb(255, 255, 255)");
+  assert.equal(await page.locator(".chat-panel").evaluate(el => getComputedStyle(el).backgroundColor), "rgb(34, 33, 41)");
+  await avatar().click();
+  await page.screenshot({ path: "work/theme-dark-editor.png" });
+  await page.keyboard.press("Tab");
+  await expect(page.getByRole("menu")).toHaveCount(0);
+  await page.setViewportSize({ width: 390, height: 844 });
+  await avatar().click();
+  await expect(toggle()).toBeVisible();
+  await page.screenshot({ path: "work/theme-dark-mobile.png" });
+  assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
+  await toggle().click();
+  await expect(theme()).toHaveAttribute("data-theme", "light");
+  await page.reload();
+  await expect(theme()).toHaveAttribute("data-theme", "light");
+  await page.setViewportSize({ width: 1440, height: 1000 });
+  await page.getByTitle("Back to workspace").click();
+  await expect(page.locator(".sidebar")).toHaveCSS("width", "224px");
+  await page.screenshot({ path: "work/theme-light-desktop.png" });
+  // Blocked storage still allows an in-session toggle.
+  await page.evaluate(() => { Storage.prototype.setItem = () => { throw new Error("Storage blocked"); }; });
+  await avatar().click();
+  await toggle().click();
+  await expect(theme()).toHaveAttribute("data-theme", "dark");
+  await page.setViewportSize({ width: 320, height: 740 });
+  await expect(avatar()).toBeVisible();
+  await avatar().click();
+  await expect(toggle()).toBeVisible();
+  const bounds = await page.getByRole("menu").boundingBox();
+  assert.ok(bounds.x >= 0 && bounds.x + bounds.width <= 320, "Menu must fit the narrow viewport");
+  await page.route("**/web/session", r => r.fulfill({ status: 401, json: {} }));
+  // The earlier blocked write did not persist, so seed the remembered preference before reload.
+  await page.addInitScript(() => { localStorage.setItem("imagegen-theme", "dark"); });
+  await page.reload();
+  await expect(page.locator(".browser-login-card")).toBeVisible();
+  await expect(theme()).toHaveAttribute("data-theme", "dark");
+  await expect(page.locator(".browser-login-card")).toHaveCSS("background-color", "rgb(34, 33, 41)");
+  assert.deepEqual(errors, []);
+  console.log("PASS: theme toggle, keyboard/focus dismissal, outside click, reload persistence, desktop/editor/mobile/dialog styling, unchanged paper, blocked storage and no runtime errors.");
+} finally {
+  await browser?.close();
+  await server.close();
+}
