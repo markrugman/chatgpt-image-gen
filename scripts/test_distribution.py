@@ -101,7 +101,9 @@ class ServerInstallerTests(unittest.TestCase):
         result = subprocess.run([BASH, "-c", command, "test", self.bin.as_posix(),
                                  source.as_posix(), "--directory", self.install.as_posix(), *args],
                                 env=self.env, capture_output=True,
-                                input=prompt_input.encode() if prompt_input is not None else None, timeout=20)
+                                # The failed-health case launches 60 curl/sleep mock pairs.
+                                # Git Bash process startup on hosted Windows can exceed 20s.
+                                input=prompt_input.encode() if prompt_input is not None else None, timeout=120)
         result.stdout = result.stdout.decode()
         result.stderr = result.stderr.decode()
         return result
