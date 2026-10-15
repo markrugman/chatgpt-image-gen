@@ -2,7 +2,7 @@
 
 ## Consolidated 0.8.4 release (2026-10-15)
 
-Mark authorised GitHub publication and upgrading the existing server, superseding the local-only holds below. Release 0.8.4 combines organisation sidebar controls, avatar appearance settings and two-column phone grids from the separate chats, plus MIT licensing in packaged distributions. The browser warning investigation required no product changes: disabling the injecting extension removed the warnings. User-facing changes are consolidated in CHANGELOG.md; release and preservation evidence is recorded in VALIDATION.md.
+Release 0.8.4 is published on GitHub and deployed to the existing server after explicit authorisation, superseding the local-only holds below. Release 0.8.4 combines organisation sidebar controls, avatar appearance settings and two-column phone grids from the separate chats, plus MIT licensing in packaged distributions. The browser warning investigation required no product changes: disabling the injecting extension removed the warnings. User-facing changes are consolidated in CHANGELOG.md; release and preservation evidence is recorded in VALIDATION.md.
 
 ## Two-column phone grids - local build (2026-10-15)
 
