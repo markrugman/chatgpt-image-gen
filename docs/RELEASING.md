@@ -6,7 +6,7 @@ On 2026-10-15, Mark authorized compilation, packaging, remaining checks and publ
 
 Windows build prerequisites: Rust stable MSVC, Microsoft C++ Build Tools, Node.js 24 and WebView2. `Build Image Gen.cmd` remains the local developer build command; it writes build artifacts outside OneDrive under `%LOCALAPPDATA%\ImageGenBuild\target`. `Run Image Gen.cmd` opens an existing local build. These commands differ from installing a published release.
 
-The Tauri wrapper downloads the pinned official managed runtime and bundles both `codex.exe` and `codex-code-mode-host.exe` plus their licence/notice. The companion release uses an existing native installation rather than bundling another app executable. Its optional plugin manifests under `companion/` remain a separate developer integration.
+The Tauri wrapper downloads the pinned official managed runtime into ignored `node_modules/.cache/imagegen-runtime` and bundles both `codex.exe` and `codex-code-mode-host.exe` plus their licence/notice. Resource paths are relative to `src-tauri`; keeping the cache on the checkout drive avoids Tauri's Windows drive-prefix removal when CI source and AppData use different drives. The companion release uses an existing native installation rather than bundling another app executable. Its optional plugin manifests under `companion/` remain a separate developer integration.
 
 Typical checks, once compilation is authorized:
 
@@ -26,7 +26,7 @@ Before the first release:
 
 1. Review the source and `.gitignore`, then create the public repository and upload approved source. Do not upload `outputs`, `work`, real `.env` files, databases, workspace images or credentials.
 2. Enable Actions with permissions to write repository contents and packages. Create the `release-publication` environment and configure required reviewers. The publication job checks that required-reviewer protection exists; an unprotected environment is insufficient.
-3. Ensure the chosen version matches package.json, package-lock.json, Tauri config, native/server Cargo manifests and lockfiles, and companion/plugin.json. `python scripts/release.py check --version 0.8.0` validates these without compiling or packaging.
+3. Ensure the chosen version matches package.json, package-lock.json, Tauri config, native/server Cargo manifests and lockfiles, and companion/plugin.json. `python scripts/release.py check --version 0.8.1` validates these without compiling or packaging.
 4. Review the Windows signing policy before public distribution. The workflow does not configure Authenticode signing; do not represent its installers as signed.
 5. When publication is authorized, update the source-only distribution status notices in README and this guide before preparing that release. Keep historical validation evidence explicit about which checks were actually run.
 

@@ -1,5 +1,9 @@
 # Next version design interview
 
+## GitHub distribution status (2026-10-15)
+
+Mark subsequently authorized compilation, packaging, remaining local checks and public distribution after checks pass. Public source is at https://github.com/markrugman/chatgpt-image-gen. [Release 0.8.1](https://github.com/markrugman/chatgpt-image-gen/releases/tag/v0.8.1) includes the distribution setup, responsive browser layout and connection polish below. Local runtime/package qualification, clean release CI, anonymous image pull and real isolated Linux installer/backup/restore checks pass. The existing private server remains on 0.8.0. See [VALIDATION.md](VALIDATION.md) for evidence and limits. Earlier hold statements below record the historical sequence.
+
 ## Source-only GitHub distribution implementation (2026-10-15)
 
 Mark authorized implementation of the README setup paths, server installer, companion installer changes and release workflow, while explicitly keeping compilation, packaging, publication and deployment on hold.
