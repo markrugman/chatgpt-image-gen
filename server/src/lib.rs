@@ -503,6 +503,8 @@ pub mod backup;
 pub mod codex;
 #[path = "../../src-tauri/src/commands.rs"]
 pub mod commands;
+#[path = "../../src-tauri/src/libraries.rs"]
+pub mod libraries;
 #[path = "../../src-tauri/src/jobs.rs"]
 pub mod jobs;
 #[path = "../../src-tauri/src/original.rs"]

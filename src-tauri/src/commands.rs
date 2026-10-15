@@ -127,13 +127,13 @@ pub async fn mutate(
     action: Value,
 ) -> Result<Value, String> {
     let operation = text(&action, "op")?;
-    if ["history", "revision", "delete", "restore"].contains(&operation.as_str()) {
+    if ["history", "revision", "delete", "restore", "transfer", "classify", "save_as_asset"].contains(&operation.as_str()) {
         let busy = state.jobs.lock().await.values().any(|j| {
             ["starting", "running", "cancelling"].contains(&j.status.as_str())
                 && (action["id"] == j.target.id || action["target"]["id"] == j.target.id)
         });
         if busy {
-            return Err("Stop this design's active request before changing its history or moving it to Trash".into());
+            return Err("Stop this item's active request before changing its history, library, or organisation".into());
         }
     }
     let base: Option<Workspace> = action
@@ -144,6 +144,7 @@ pub async fn mutate(
     let result = state
         .store
         .change_from(base.as_ref(), |w| match operation.as_str() {
+            "transfer" | "classify" | "save_as_asset" => crate::libraries::change(w, &action),
             "organisation" => {
                 let o = Organisation {
                     id: id(),
@@ -210,6 +211,7 @@ pub async fn mutate(
             }
             "asset" => {
                 let a = Asset {
+                    library_kind: "asset".into(),
                     description_json: optional(&action, "descriptionJson")
                         .map(|s| crate::analysis::validate_description(&s))
                         .transpose()?,
@@ -519,6 +521,7 @@ pub(crate) fn save_imported_asset(
         let mut page = Page::new("Asset");
         page.history[0].image_id = Some(image.id.clone());
         let asset = Asset {
+            library_kind: if source_references.is_empty() { "upload" } else { "asset" }.into(),
             description_json: None,
             source_references,
             id: id(),

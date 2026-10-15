@@ -1,5 +1,15 @@
 # Release history
 
+## New in 0.8.2
+
+Switch organisations from the header or sidebar while staying in the current library or Projects section. Asset and Upload badges count the selected organisation's own items, with shared images available separately.
+
+Imported images now live in Uploads, with an additional editor drawer and `/upload` command. The wider editor panel fits Pages, Assets, Uploads, and History. Click an image to open its Reference/Place menu. Existing assets remain Assets until explicitly moved to Uploads; Save as asset creates an independent copy of an Upload. Editing an Upload keeps it in Uploads.
+
+Copy or move Assets, Uploads, and Designs across organisations. Design transfers choose an existing or new destination project and preserve pages, conversations, revisions, overlays, and exact image versions. Used library images receive independent destination copies; source library items remain available to existing designs.
+
+Original-image placement works over private LAN HTTP. Existing workspace data, authentication, media, and installed-app identity are preserved. See [organisation libraries](ORGANISATION-LIBRARIES.md) for behaviour and validation.
+
 ## New in 0.8.1
 
 Public GitHub distribution adds separate native, server and companion setup paths, a published-image server installer with private access-key retrieval and backups before updates, installed-app companion discovery, and a manual release workflow.

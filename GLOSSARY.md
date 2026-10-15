@@ -24,10 +24,22 @@ A continuation from a particular revision and its conversation context. Other co
 A recoverable combination of a page's generated image and overlay arrangement, including the asset versions used.
 
 **Overlay**:
-An original asset placed over a page's generated image without regenerating the asset itself.
+An original asset or upload placed over a page's generated image without regenerating the placed image.
 
 **Asset**:
-A reusable imported or generated image available for reference in a generation prompt. Assets belong to an organisation or a shared library.
+Reusable artwork created, extracted, or explicitly saved as an asset, available as a generation reference or unchanged overlay. Assets belong to an organisation or a shared library.
+
+**Upload**:
+An imported image kept in the Uploads library, available as a generation reference or unchanged overlay. Editing keeps it an upload; Save as asset creates a separate reusable asset.
+
+**Shared Library**:
+Assets or uploads available across organisations, separately identified from items owned by a particular organisation.
+
+**Copy**:
+An independently editable duplicate in a destination organisation. Copying a document preserves its pages, conversations, and revision history.
+
+**Move**:
+A transfer of an item's ownership to a destination organisation that removes it from the source library. Existing designs retain the image versions they already use.
 
 **Asset Version**:
 A preserved version of an asset. Designs retain the version they used when the library asset changes or is deleted.
@@ -36,7 +48,7 @@ A preserved version of an asset. Designs retain the version they used when the l
 A workspace for creating and refining an asset, with its own conversation, preview, and revision history.
 
 **Tag**:
-A searchable label attached to a project, document, or asset.
+A searchable label attached to a project, document, asset, or upload.
 
 **Generation Reference**:
 A selected image supplied to guide generation, shown explicitly in the prompt. It is distinct from placing an original image unchanged as an overlay.

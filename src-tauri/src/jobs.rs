@@ -121,7 +121,7 @@ async fn run(
     let workspace = state.store.read()?;
     let page = workspace.page(&request.target)?.clone();
     let instructions = "You are the design assistant inside Image Gen, a personal poster and image design workspace. Use native image generation only when the user explicitly requests generation or editing. In Discuss mode answer with text only, never generate images. Do not use shell commands, filesystem tools, MCP tools, web browsing, or child agents. Original logo overlays are managed by the app; do not add unrequested logos. Never use an API key or a separately billed Image API. Keep replies concise and useful. Use only this page's context and the explicitly attached image references.";
-    let mut recovered_context = false;
+    let mut recovered_context = !request.fresh_context && page.thread_id.is_none() && !page.messages.is_empty();
     let existing = if request.fresh_context {
         None
     } else if let Some(thread_id) = page.thread_id.as_ref() {

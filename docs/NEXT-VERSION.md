@@ -1,5 +1,9 @@
 # Next version design interview
 
+## Organisation libraries — 0.8.2 (2026-10-15)
+
+Mark approved implementation and local/private-server testing of organisation switching/counts, separate Uploads and Assets, popup Reference/Place actions in a wider editor panel, and cross-organisation Copy/Move with preserved design history. Switching organisations retains the current section. After preview checks passed, Mark explicitly authorised GitHub publication and live-server deployment as 0.8.2. Implementation and preview verification are recorded in [ORGANISATION-LIBRARIES.md](ORGANISATION-LIBRARIES.md); release/deployment verification is recorded in VALIDATION.md.
+
 ## GitHub distribution status (2026-10-15)
 
 Mark subsequently authorized compilation, packaging, remaining local checks and public distribution after checks pass. Public source is at https://github.com/markrugman/chatgpt-image-gen. [Release 0.8.1](https://github.com/markrugman/chatgpt-image-gen/releases/tag/v0.8.1) includes the distribution setup, responsive browser layout and connection polish below. Local runtime/package qualification, clean release CI, anonymous image pull and real isolated Linux installer/backup/restore checks pass. The existing private server remains on 0.8.0. See [VALIDATION.md](VALIDATION.md) for evidence and limits. Earlier hold statements below record the historical sequence.

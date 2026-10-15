@@ -147,9 +147,13 @@ pub struct Overlay {
     pub height: f64,
     pub rotation: f64,
 }
+pub fn default_library_kind() -> String { "asset".into() }
+fn is_asset_kind(kind: &String) -> bool { kind == "asset" }
 #[derive(Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Asset {
+    #[serde(default = "default_library_kind", skip_serializing_if = "is_asset_kind")]
+    pub library_kind: String,
     #[serde(default)]
     pub description_json: Option<String>,
     #[serde(default)]
@@ -375,6 +379,7 @@ mod tests {
     fn deleted_asset_keeps_exact_version_reachable() {
         let mut w = Workspace::default();
         w.assets.push(Asset {
+            library_kind: "asset".into(),
             description_json: None,
             source_references: vec![],
             id: id(),

@@ -4,7 +4,6 @@ import { listen, isBrowser } from "./api";
 import {
   ArrowRight,
   ArrowUpRight,
-  ChevronDown,
   ChevronRight,
   CircleHelp,
   FileImage,
@@ -29,6 +28,7 @@ import {
 import { api, clearImageCache, importImageFile } from "./api";
 import {
   emptyWorkspace,
+  libraryKind,
   type Connection,
   type Job,
   type Workspace,
@@ -73,6 +73,8 @@ export default function App() {
     } | null>(null);
   const [storage, setStorage] = useState<ServerStatus|null>(null);
   const [toast, setToast] = useState("");
+  const [libraryScope, setLibraryScope] = useState("owned");
+  const [libraryRequest, setLibraryRequest] = useState<{kind: "assets" | "uploads"} | null>(null);
   const searchRef = useRef<HTMLInputElement>(null),
     uploadRef = useRef<HTMLInputElement>(null);
   const notify = useCallback((message: string) => setToast(message), []);
@@ -192,14 +194,25 @@ export default function App() {
   const assets = w.assets.filter(
     (a) =>
       !a.deletedAt &&
-      (orgId === "all" || !a.organisationId || a.organisationId === orgId),
+      (route === "uploads" ? libraryKind(a) === "upload" : libraryKind(a) === "asset") &&
+      (libraryScope === "shared" ? !a.organisationId : orgId === "all" || a.organisationId === orgId),
   );
   const navigate = (to: string) => {
     setRoute(to);
+    setLibraryScope("owned");
     setDocId(null);
     setAssetId(null);
     setProjectId(null);
     setQuery("");
+  };
+  const switchOrganisation = (id: string) => {
+    setOrgId(id);
+    if (editor) setRoute(document ? "projects" : asset && libraryKind(asset) === "upload" ? "uploads" : "assets");
+    setDocId(null);
+    setAssetId(null);
+    setPageId(null);
+    setProjectId(null);
+    setLibraryRequest(null);
   };
   const create = (options: CreateOptions) => {
     if (
@@ -246,17 +259,18 @@ export default function App() {
             { id: "home", name: "Overview", icon: LayoutGrid },
             { id: "projects", name: "Projects", icon: FolderOpen },
             { id: "assets", name: "Asset library", icon: Images },
+            { id: "uploads", name: "Uploads", icon: Upload },
           ].map((item) => (
             <button
               key={item.id}
               className={`nav-item ${!editor && route === item.id ? "selected" : ""}`}
-              onClick={() => navigate(item.id)}
+              onClick={() => editor && (item.id === "assets" || item.id === "uploads") ? setLibraryRequest({kind: item.id}) : navigate(item.id)}
               title={item.name}
             >
               <item.icon size={19} />
               <span>{item.name}</span>
-              {item.id === "assets" && (
-                <b>{w.assets.filter((a) => !a.deletedAt).length}</b>
+              {["assets", "uploads"].includes(item.id) && (
+                <b>{w.assets.filter((a) => !a.deletedAt && libraryKind(a) === (item.id === "uploads" ? "upload" : "asset") && (orgId === "all" || a.organisationId === orgId)).length}</b>
               )}
             </button>
           ))}
@@ -274,8 +288,7 @@ export default function App() {
         <button
           className={`org-item ${orgId === "all" ? "selected" : ""}`}
           onClick={() => {
-            setOrgId("all");
-            navigate("home");
+            switchOrganisation("all");
           }}
           title="All organisations"
         >
@@ -289,8 +302,7 @@ export default function App() {
             key={org.id}
             className={`org-item ${orgId === org.id ? "selected" : ""}`}
             onClick={() => {
-              setOrgId(org.id);
-              navigate("home");
+              switchOrganisation(org.id);
             }}
             title={org.name}
           >
@@ -363,15 +375,17 @@ export default function App() {
         type="file"
         ref={uploadRef}
         hidden
-        aria-label="Import asset file"
+        aria-label="Upload image file"
         accept="image/png,image/jpeg,image/webp"
         onChange={(e) => {
           const file = e.target.files?.[0];
           if (file)
             run(async () => {
-              await importImageFile(file, orgId === "all" ? null : orgId);
+              await importImageFile(file, libraryScope === "shared" || orgId === "all" ? null : orgId);
               await refresh();
-              notify("Asset added to your library");
+              notify("Image added to Uploads");
+              navigate("uploads");
+              if (libraryScope === "shared") setLibraryScope("shared");
             });
           e.target.value = "";
         }}
@@ -398,6 +412,7 @@ export default function App() {
             doc={document}
             asset={asset}
             pageId={pageId}
+            libraryRequest={libraryRequest}
             jobs={jobs}
             act={act}
             run={run}
@@ -433,8 +448,10 @@ export default function App() {
                   className="tiny-dot"
                   style={{ background: organisation?.color || "#8864d7" }}
                 />
-                {organisation?.name || "All organisations"}
-                <ChevronDown size={14} />
+                <select aria-label="Current organisation" value={orgId} onChange={e => switchOrganisation(e.target.value)}>
+                  <option value="all">All organisations</option>
+                  {w.organisations.map(o => <option key={o.id} value={o.id}>{o.name}</option>)}
+                </select>
               </div>
               <div className="topbar-right">
                 <div className="search-box">
@@ -530,12 +547,12 @@ export default function App() {
                     )}
                   </div>
                 </>
-              ) : route === "assets" ? (
+              ) : (route === "assets" || route === "uploads") ? (
                 <>
                   <PageHeading
-                    eyebrow="YOUR REUSABLE INGREDIENTS"
-                    title="Asset library"
-                    subtitle="Keep your logos exact. Give your next idea a head start."
+                    eyebrow={route === "uploads" ? "YOUR IMPORTED IMAGES" : "YOUR REUSABLE INGREDIENTS"}
+                    title={route === "uploads" ? "Uploads" : "Asset library"}
+                    subtitle={route === "uploads" ? "Your original images, ready to reference or place." : "Keep your logos exact. Give your next idea a head start."}
                     action={
                       <div className="button-row">
                         <button
@@ -543,15 +560,15 @@ export default function App() {
                           onClick={() => uploadRef.current?.click()}
                         >
                           <Upload size={16} />
-                          Import image
+                          Upload image
                         </button>
-                        <button
+                        {route === "assets" && <button
                           className="button primary"
                           onClick={() => create({ kind: "asset" })}
                         >
                           <Sparkles size={16} />
                           Create asset
-                        </button>
+                        </button>}
                       </div>
                     }
                   />
@@ -562,6 +579,10 @@ export default function App() {
                       a generation reference, or place it unchanged on your
                       design.
                     </span>
+                  </div>
+                  <div className="filter-tabs" aria-label="Library scope">
+                    <button className={libraryScope === "owned" ? "active" : ""} onClick={() => setLibraryScope("owned")}>{orgId === "all" ? "All organisations" : organisation?.name}</button>
+                    <button className={libraryScope === "shared" ? "active" : ""} onClick={() => setLibraryScope("shared")}>Shared</button>
                   </div>
                   <div className="asset-grid">
                     {assets.map((a) => (
@@ -578,14 +599,14 @@ export default function App() {
                     <Empty
                       icon={<Images />}
                       title="A home for your creative essentials"
-                      text="Import a logo or generate a transparent asset to use across your designs."
+                      text={route === "uploads" ? "Upload an image to use in your designs." : "Generate artwork or save an upload as an asset."}
                       action={
                         <button
                           className="button primary"
-                          onClick={() => create({ kind: "asset" })}
+                          onClick={() => route === "uploads" ? uploadRef.current?.click() : create({ kind: "asset" })}
                         >
                           <Plus size={16} />
-                          Create your first asset
+                          {route === "uploads" ? "Upload your first image" : "Create your first asset"}
                         </button>
                       }
                     />
@@ -817,7 +838,9 @@ export default function App() {
       {editing && (
         <EditDialog
           item={editing}
+          w={w}
           act={act}
+          onTransferred={id => { setOrgId(id); navigate("home"); }}
           onClose={() => setEditing(null)}
           notify={notify}
         />

@@ -10,6 +10,7 @@ import {
 import { useState } from "react";
 import {
   activeJob,
+  libraryKind,
   currentComposition,
   matchesSearch,
   versionImage,
@@ -261,7 +262,7 @@ export function SearchResults({
           matchesSearch(a.name, a.tags, query),
       )
       .map((a) => ({
-        kind: "asset",
+        kind: libraryKind(a),
         id: a.id,
         name: a.name,
         path:
@@ -278,7 +279,7 @@ export function SearchResults({
         subtitle={`${results.length} matches in your workspace`}
       />
       <div className="filter-tabs">
-        {["all", "project", "document", "asset"].map((t) => (
+        {["all", "project", "document", "asset", "upload"].map((t) => (
           <button
             key={t}
             className={type === t ? "active" : ""}
@@ -296,7 +297,7 @@ export function SearchResults({
             onClick={() =>
               r.kind === "project"
                 ? onProject(r.id)
-                : r.kind === "asset"
+                : (r.kind === "asset" || r.kind === "upload")
                   ? onAsset(r.id)
                   : onDocument(r.id)
             }
@@ -304,7 +305,7 @@ export function SearchResults({
             <span className="result-icon">
               {r.kind === "project" ? (
                 <Folder />
-              ) : r.kind === "asset" ? (
+              ) : (r.kind === "asset" || r.kind === "upload") ? (
                 <Images />
               ) : (
                 <FileImage />

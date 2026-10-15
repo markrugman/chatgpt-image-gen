@@ -10,6 +10,7 @@ import {
   History,
   ImagePlus,
   Images,
+  Upload,
   Layers,
   LoaderCircle,
   Maximize2,
@@ -32,6 +33,7 @@ import { api, importImageFile } from "./api";
 import {
   activeJob,
   currentComposition,
+  libraryKind,
   printDpi,
   referenceImage,
   versionImage,
@@ -43,7 +45,8 @@ import {
   type Target,
   type Workspace,
 } from "./types";
-import { Empty, ImageView, Modal, useCompactLayout, type Act } from "./ui";
+import { ImageView, Modal, useCompactLayout, type Act } from "./ui";
+import { LibraryImages } from "./LibraryImages";
 import { AssetJsonDialog } from "./AssetJsonDialog";
 import { ExtractAssetDialog } from "./ExtractAssetDialog";
 import { renderPage } from "./export";
@@ -54,6 +57,7 @@ export function Editor({
   doc,
   asset,
   pageId,
+  libraryRequest,
   jobs,
   act,
   run,
@@ -69,6 +73,7 @@ export function Editor({
   doc?: DesignDocument;
   asset?: Asset;
   pageId: string | null;
+  libraryRequest?: {kind: "assets" | "uploads"} | null;
   jobs: Job[];
   act: Act;
   run: (work: () => Promise<unknown>) => Promise<void>;
@@ -103,8 +108,9 @@ export function Editor({
     [prompt, setPrompt] = useState(
       () => localStorage.getItem(`draft:${page.id}`) || "",
     );
+  useEffect(() => { if (libraryRequest) { setPanel(libraryRequest.kind); if (compact) setMobilePanel("tools"); } }, [libraryRequest, compact]);
   const [references, setReferences] = useState<string[]>([]),
-    [picker, setPicker] = useState(false),
+    [picker, setPicker] = useState<"asset" | "upload" | null>(null),
     [zoom, setZoom] = useState(100),
     [selected, setSelected] = useState<string | null>(null);
   const [overlays, setOverlays] = useState<Overlay[]>(comp.overlays),
@@ -192,8 +198,8 @@ export function Editor({
     setReferences((current) =>
       current.includes(version) ? current : [...current, version],
     );
-    setPicker(false);
-    setPrompt((p) => p.replace(/\/asset\s*$/, ""));
+    setPicker(null);
+    setPrompt((p) => p.replace(/\/(asset|upload)\s*$/, ""));
     textarea.current?.focus();
   };
   const addPageReference = (sourceDoc: DesignDocument, sourcePage: Page) =>
@@ -226,7 +232,8 @@ export function Editor({
     const width = 25,
       height = Math.min(80, (width * ratio * img.height) / img.width);
     const overlay: Overlay = {
-      id: crypto.randomUUID(),
+      // getRandomValues is also available on a private server using LAN HTTP.
+      id: Array.from(crypto.getRandomValues(new Uint8Array(16)), byte => byte.toString(16).padStart(2, "0")).join(""),
       assetVersionId: version,
       x: 8,
       y: 8,
@@ -238,7 +245,7 @@ export function Editor({
     setOverlays(next);
     setSelected(overlay.id);
     saveOverlays(next);
-    setPicker(false);
+    setPicker(null);
   };
   async function submit() {
     if (!prompt.trim() || busyJob) return;
@@ -338,9 +345,9 @@ export function Editor({
           <span className="editor-title-divider" />
           <div>
             <small>
-              {asset ? "Asset library" : project?.name}
+              {asset ? libraryKind(asset) === "upload" ? "Uploads" : "Asset library" : project?.name}
               <ChevronRight size={11} />
-              {asset ? "Asset workspace" : "Design"}
+              {asset ? libraryKind(asset) === "upload" ? "Upload workspace" : "Asset workspace" : "Design"}
             </small>
             <button onClick={onEdit}>
               {doc?.name || asset?.name}
@@ -396,11 +403,11 @@ export function Editor({
           <div className="tool-tabs">
             <button
               className={panel === "pages" ? "active" : ""}
-              title={asset ? "Asset" : "Pages"}
+              title={asset ? libraryKind(asset) === "upload" ? "Upload" : "Asset" : "Pages"}
               onClick={() => setPanel("pages")}
             >
               <FileImage size={18} />
-              <span>{asset ? "Asset" : "Pages"}</span>
+              <span>{asset ? libraryKind(asset) === "upload" ? "Upload" : "Asset" : "Pages"}</span>
             </button>
             <button
               className={panel === "assets" ? "active" : ""}
@@ -410,6 +417,7 @@ export function Editor({
               <Images size={18} />
               <span>Assets</span>
             </button>
+            <button className={panel === "uploads" ? "active" : ""} title="Uploads" onClick={() => setPanel("uploads")}><Upload size={18} /><span>Uploads</span></button>
             <button
               className={panel === "history" ? "active" : ""}
               title="History"
@@ -422,7 +430,7 @@ export function Editor({
           {panel === "pages" && (
             <div className="pages-panel">
               <div className="panel-heading">
-                {asset ? "ASSET WORKSPACE" : `PAGES · ${doc!.pages.length}`}
+                {asset ? libraryKind(asset) === "upload" ? "UPLOAD WORKSPACE" : "ASSET WORKSPACE" : `PAGES · ${doc!.pages.length}`}
               </div>
               {doc ? (
                 doc.pages.map((p, i) => (
@@ -478,46 +486,10 @@ export function Editor({
               )}
             </div>
           )}
-          {panel === "assets" && (
+          {(panel === "assets" || panel === "uploads") && (
             <div className="editor-library">
-              <div className="panel-heading">YOUR ASSETS</div>
-              <p>Reference it, or place it unchanged.</p>
-              {w.assets
-                .filter(
-                  (a) =>
-                    !a.deletedAt &&
-                    a.currentVersionId &&
-                    (!a.organisationId || a.organisationId === orgId),
-                )
-                .map((a) => (
-                  <div className="mini-asset" key={a.id}>
-                    <div className="mini-asset-preview checker">
-                      <ImageView id={versionImage(w, a.currentVersionId!)} />
-                    </div>
-                    <strong>{a.name}</strong>
-                    <div>
-                      <button
-                        className="text-button"
-                        onClick={() => addReference(a.currentVersionId!)}
-                      >
-                        Reference
-                      </button>
-                      {doc && (
-                        <button
-                          className="text-button"
-                          onClick={() => placeAsset(a)}
-                        >
-                          Place
-                        </button>
-                      )}
-                    </div>
-                  </div>
-                ))}
-              {!w.assets.some((a) => !a.deletedAt && a.currentVersionId) && (
-                <p className="muted">
-                  Create or import assets in the library to use them here.
-                </p>
-              )}
+              <div className="panel-heading">{panel === "uploads" ? "YOUR UPLOADS" : "YOUR ASSETS"}</div>
+              <LibraryImages key={panel} w={w} orgId={orgId} kind={panel === "uploads" ? "upload" : "asset"} onReference={addReference} onPlace={doc ? placeAsset : undefined} />
             </div>
           )}
           {panel === "history" && (
@@ -1078,7 +1050,8 @@ export function Editor({
                 value={prompt}
                 onChange={(e) => {
                   setPrompt(e.target.value);
-                  if (/\/asset\s*$/.test(e.target.value)) setPicker(true);
+                  const command = e.target.value.match(/\/(asset|upload)\s*$/);
+                  if (command) setPicker(command[1] as "asset" | "upload");
                 }}
                 placeholder={
                   mode === "discuss"
@@ -1097,12 +1070,12 @@ export function Editor({
                 <button
                   className="icon-button"
                   title="Add an asset reference"
-                  onClick={() => setPicker(true)}
+                  onClick={() => setPicker("asset")}
                 >
                   <ImagePlus size={17} />
                 </button>
                 <small>
-                  Type <b>/asset</b> to reference
+                  Type <b>/asset</b> or <b>/upload</b>
                 </small>
                 {busyJob ? (
                   <button
@@ -1151,10 +1124,11 @@ export function Editor({
         <AssetPicker
           w={w}
           orgId={orgId}
+          kind={picker}
           onReference={addReference}
           onPageReference={addPageReference}
           onPlace={doc ? placeAsset : undefined}
-          onClose={() => setPicker(false)}
+          onClose={() => setPicker(null)}
         />
       )}
       {showExport && (
@@ -1187,6 +1161,7 @@ export function Editor({
 
 function AssetPicker({
   w,
+  kind,
   orgId,
   onReference,
   onPageReference,
@@ -1195,22 +1170,14 @@ function AssetPicker({
 }: {
   w: Workspace;
   orgId?: string | null;
+  kind: "asset" | "upload";
   onReference: (id: string) => void;
   onPageReference: (doc: DesignDocument, page: Page) => void;
   onPlace?: (asset: Asset) => void;
   onClose: () => void;
 }) {
   const [search, setSearch] = useState("");
-  const assets = w.assets.filter(
-    (a) =>
-      !a.deletedAt &&
-      a.currentVersionId &&
-      (!a.organisationId || a.organisationId === orgId) &&
-      `${a.name} ${a.tags.join(" ")}`
-        .toLowerCase()
-        .includes(search.toLowerCase()),
-  );
-  const designPages = w.documents
+  const designPages = (kind === "asset" ? w.documents : [])
     .filter(
       (d) =>
         !d.deletedAt &&
@@ -1232,58 +1199,23 @@ function AssetPicker({
     );
   return (
     <Modal
-      title="Choose an image reference"
-      subtitle="Reference a page or asset, or place an original asset unchanged."
+      title={kind === "upload" ? "Choose an upload" : "Choose an asset or design page"}
+      subtitle="Choose an image to reference or place unchanged."
       onClose={onClose}
     >
       <div className="form-body">
         <div className="search-box asset-search">
           <Search size={16} />
           <input
-            aria-label="Search assets"
+            aria-label={kind === "upload" ? "Search uploads" : "Search assets"}
             autoFocus
-            placeholder="Search assets and design pages…"
+            placeholder={kind === "upload" ? "Search uploads…" : "Search assets and design pages…"}
             value={search}
             onChange={(e) => setSearch(e.target.value)}
           />
         </div>
         <div className="asset-picker-list">
-          {assets.map((a) => (
-            <div className="asset-picker-row" key={a.id}>
-              <div className="checker">
-                <ImageView id={versionImage(w, a.currentVersionId!)} />
-              </div>
-              <span>
-                <strong>{a.name}</strong>
-                <small>
-                  {a.organisationId ? "Organisation asset" : "Shared library"}
-                </small>
-              </span>
-              <div className="button-row">
-                <button
-                  className="button secondary small"
-                  onClick={() => onReference(a.currentVersionId!)}
-                >
-                  Reference
-                </button>
-                {onPlace && (
-                  <button
-                    className="button primary small"
-                    onClick={() => onPlace(a)}
-                  >
-                    Place
-                  </button>
-                )}
-              </div>
-            </div>
-          ))}
-          {!assets.length && !designPages.length && (
-            <Empty
-              icon={<Images />}
-              title="No matching images"
-              text="Add an asset or generate a design page to reference it here."
-            />
-          )}
+          <LibraryImages key={kind} w={w} orgId={orgId} kind={kind} search={search} onReference={onReference} onPlace={onPlace} />
           {designPages.length > 0 && (
             <div className="panel-heading">
               DESIGN PAGES · IMAGE ONLY, CONVERSATIONS STAY SEPARATE

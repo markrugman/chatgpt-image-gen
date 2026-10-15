@@ -79,7 +79,10 @@ export interface AssetVersion {
   imageId: string;
   createdAt: number;
 }
+export type LibraryKind = "asset" | "upload";
+export const libraryKind = (asset: Asset): LibraryKind => asset.libraryKind || "asset";
 export interface Asset {
+  libraryKind?: LibraryKind;
   descriptionJson?: string | null;
   sourceReferences?: string[];
   id: string;

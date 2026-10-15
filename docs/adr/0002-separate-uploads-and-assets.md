@@ -1,0 +1,3 @@
+# Separate uploaded images from reusable assets
+
+Accepted 2026-10-15. Imported images will live in Uploads, while artwork created, extracted, or explicitly saved for reuse will live in Assets. Previously both were Assets; separate libraries and `/upload` and `/asset` commands distinguish source material from reusable artwork while allowing both to serve as generation references or unchanged overlays. Existing items remain Assets until explicitly reclassified because their origin cannot reliably be inferred. Editing keeps an Upload in its library, while Save as asset creates a separate Asset. The accepted product boundary is not yet implemented.

@@ -4,6 +4,7 @@ mod codex;
 mod commands;
 mod handoff;
 mod jobs;
+mod libraries;
 mod local_store;
 mod model;
 mod original;

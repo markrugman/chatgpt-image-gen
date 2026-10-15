@@ -1,3 +1,5 @@
+import { TransferDialog } from "./TransferDialog";
+import { libraryKind } from "./types";
 import { ServerSettings, type ServerStatus } from "./ServerSettings";
 import { ConnectionVersions } from "./ConnectionVersions";
 import { useRef, useState } from "react";
@@ -51,7 +53,7 @@ export function CreateDialog({
     [unit, setUnit] = useState("mm"),
     [busy, setBusy] = useState(false),
     [error, setError] = useState("");
-  const [assetScope, setAssetScope] = useState("shared");
+  const [assetScope, setAssetScope] = useState(orgId === "all" ? "shared" : "organisation");
   const [resize, setResize] = useState("fit");
   const kind = options.kind,
     projects = w.projects.filter(
@@ -457,23 +459,30 @@ export function CreateDialog({
 }
 export function EditDialog({
   item,
+  w,
+  onTransferred,
   act,
   onClose,
   notify,
 }: {
   item: { kind: string; id: string; name: string; tags: string[] };
+  w: Workspace;
+  onTransferred: (orgId: string) => void;
   act: Act;
   onClose: () => void;
   notify: (s: string) => void;
 }) {
   const originalAct = useRef(act).current;
+  const [transfer, setTransfer] = useState<"copy" | "move" | null>(null);
+  const image = w.assets.find(a => a.id === item.id);
+  const upload = image && libraryKind(image) === "upload";
   const [name, setName] = useState(item.name),
     [tags, setTags] = useState(item.tags.join(", ")),
     [busy, setBusy] = useState(false),
     [error, setError] = useState("");
   return (
     <Modal
-      title={`Edit ${item.kind}`}
+      title={`Edit ${upload ? "upload" : item.kind === "document" ? "design" : item.kind}`}
       subtitle="A useful name and a few tags make everything easier to find."
       onClose={onClose}
     >
@@ -524,7 +533,18 @@ export function EditDialog({
               Separate tags with commas. Search finds names and tags.
             </small>
           </label>
-          {error && <div className="form-error">{error}</div>}
+          {["asset", "document"].includes(item.kind) && <div className="button-row transfer-actions">
+            <button type="button" className="button secondary" disabled={busy} onClick={() => setTransfer("copy")}>Copy to…</button>
+            <button type="button" className="button secondary" disabled={busy} onClick={() => setTransfer("move")}>Move to…</button>
+            {image && <button type="button" className="button secondary" disabled={busy} onClick={async () => {
+              setBusy(true); setError("");
+              try {
+                await originalAct(upload ? { op: "save_as_asset", id: item.id } : { op: "classify", id: item.id, libraryKind: "upload" });
+                notify(upload ? "Saved a separate copy in Assets" : "Moved to Uploads"); onClose();
+              } catch (e) { setError(String(e)); } finally { setBusy(false); }
+            }}>{upload ? "Save as asset" : "Move to Uploads"}</button>}
+          </div>}
+          {error && <div className="form-error" role="alert">{error}</div>}
         </div>
         <div className="modal-footer">
           <button
@@ -548,6 +568,7 @@ export function EditDialog({
           </button>
         </div>
       </form>
+      {transfer && <TransferDialog item={item} w={w} mode={transfer} act={act} onClose={() => setTransfer(null)} onDone={orgId => { notify(transfer === "copy" ? "Copy created" : "Item moved"); onTransferred(orgId); onClose(); }} />}
     </Modal>
   );
 }
