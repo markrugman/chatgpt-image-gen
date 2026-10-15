@@ -221,7 +221,7 @@ pub fn run_mcp() {
         };
         let result = match request["method"].as_str() {
             Some("initialize") => Ok(
-                json!({"protocolVersion":request["params"]["protocolVersion"].as_str().unwrap_or("2024-11-05"),"capabilities":{"tools":{}},"serverInfo":{"name":"imagegenapp","version":"0.1.0"}}),
+                json!({"protocolVersion":request["params"]["protocolVersion"].as_str().unwrap_or("2024-11-05"),"capabilities":{"tools":{}},"serverInfo":{"name":"imagegenapp","version":env!("CARGO_PKG_VERSION")}}),
             ),
             Some("ping") => Ok(json!({})),
             Some("tools/list") => Ok(json!({"tools":[
