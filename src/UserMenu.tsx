@@ -41,7 +41,9 @@ export function UserMenu() {
   }, [open]);
 
   return <div className="user-menu" ref={root} onBlur={event => {
-    if (!event.currentTarget.contains(event.relatedTarget as Node | null)) setOpen(false);
+    // Safari can blur a button to no target before delivering a tap's click.
+    // Only a known focus destination outside the menu is a focus-based exit.
+    if (event.relatedTarget && !event.currentTarget.contains(event.relatedTarget as Node)) setOpen(false);
   }}>
     <button className="user-avatar" ref={trigger} aria-label="User menu" aria-haspopup="menu"
       aria-expanded={open} aria-controls={open ? menuId : undefined}

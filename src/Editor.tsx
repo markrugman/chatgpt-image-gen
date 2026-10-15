@@ -114,6 +114,7 @@ export function Editor({
     [picker, setPicker] = useState<"asset" | "upload" | null>(null),
     [zoom, setZoom] = useState(100),
     [selected, setSelected] = useState<string | null>(null);
+  const [uploadsPending, setUploadsPending] = useState(0);
   const [overlays, setOverlays] = useState<Overlay[]>(comp.overlays),
     [showExport, setShowExport] = useState(false);
   const [autoFit, setAutoFit] = useState(true);
@@ -249,7 +250,7 @@ export function Editor({
     setPicker(null);
   };
   async function submit() {
-    if (!prompt.trim() || busyJob) return;
+    if (!prompt.trim() || busyJob || uploadsPending) return;
     const value = prompt;
     try {
       await api("submit_prompt", {
@@ -360,37 +361,43 @@ export function Editor({
             Saved
           </span>
         </div>
-        <div className="button-row">
+        <div className="button-row editor-actions">
           {doc && comp.imageId && (
             <button
               className="button secondary small"
+              aria-label="Extract asset"
+              title="Extract asset"
               onClick={() => setExtracting(true)}
             >
               <Sparkles size={15} />
-              Extract asset
+              <span>Extract asset</span>
             </button>
           )}
           {asset && (
             <button
               className="button secondary small"
+              aria-label="Replace image"
+              title="Replace image"
               onClick={() => replacement.current?.click()}
             >
-              Replace image
+              <ImagePlus size={15} /><span>Replace image</span>
             </button>
           )}
           {comp.imageId && (
-            <button className="button secondary small" onClick={useInNew}>
+            <button className="button secondary small" aria-label="Use in new design" title="Use in new design" onClick={useInNew}>
               <ImagePlus size={15} />
-              Use in new design
+              <span>Use in new design</span>
             </button>
           )}
           <button
             className="button primary small"
+            aria-label="Export"
+            title="Export"
             disabled={!comp.imageId && !overlays.length}
             onClick={() => setShowExport(true)}
           >
             <ArrowDownToLine size={16} />
-            Export
+            <span>Export</span>
           </button>
           {!compact && <UserMenu />}
         </div>
@@ -1020,6 +1027,7 @@ export function Editor({
               </button>
             </div>
             <div className="prompt-box">
+              {uploadsPending > 0 && <div className="job-progress" role="status"><LoaderCircle size={15} className="spin" />Adding pasted image…</div>}
               {references.length > 0 && (
                 <div className="reference-chips">
                   {references.map((v) => {
@@ -1050,6 +1058,30 @@ export function Editor({
                 ref={textarea}
                 aria-label="Design prompt"
                 value={prompt}
+                onPaste={(event) => {
+                  const files = Array.from(event.clipboardData.files).filter(file => file.type.startsWith("image/"));
+                  if (!files.length) return;
+                  event.preventDefault();
+                  if (files.some(file => !["image/png", "image/jpeg", "image/webp"].includes(file.type))) {
+                    notify("Paste a PNG, JPEG or WebP image.");
+                    return;
+                  }
+                  setUploadsPending(count => count + 1);
+                  void run(async () => {
+                    try {
+                      for (const file of files) {
+                        const id = await importImageFile(file, orgId || null);
+                        const next = await api<Workspace>("get_workspace");
+                        const version = next.assets.find(item => item.id === id)?.currentVersionId;
+                        await onRefresh();
+                        if (!version) throw Error("The pasted image was uploaded but could not be attached. Find it in Uploads.");
+                        setReferences(current => current.includes(version) ? current : [...current, version]);
+                      }
+                    } finally {
+                      setUploadsPending(count => count - 1);
+                    }
+                  });
+                }}
                 onChange={(e) => {
                   setPrompt(e.target.value);
                   const command = e.target.value.match(/\/(asset|upload)\s*$/);
@@ -1095,7 +1127,7 @@ export function Editor({
                     aria-label={
                       mode === "discuss" ? "Send discussion" : "Generate image"
                     }
-                    disabled={!prompt.trim()}
+                    disabled={!prompt.trim() || uploadsPending > 0}
                     onClick={submit}
                   >
                     <ArrowUp size={18} />

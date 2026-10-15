@@ -1,5 +1,17 @@
 # Next version design interview
 
+## Project previews, compact headers and pasted references - 0.8.5 (2026-10-15)
+
+Implemented and deployed after the user explicitly requested building and deploying these changes. The scope includes newest-first project-image previews across all pages, equal grid-row/card heights, centred compact navigation, a single title/action row with icon-only actions through 600px, and image paste into the chat composer. Pasted PNG/JPEG/WebP files use the existing import route, retain original bytes in organisation-owned Uploads, and attach the saved immutable version. Pending uploads block click/keyboard submission while preserving draft editing. Errors leave the draft and prior references intact. Text-only paste keeps browser defaults.
+
+Local WebKit and Edge checks cover widths 320-1440px, multi-row project grids, long design titles, image timestamps/pages/deduplication/deleted designs, icon labels/action dialogs, actual touch input, clipboard events and the exact generation reference. A disposable instance of the built Linux server verifies real image imports and original bytes with both browser engines. Live read-only checks pass in desktop Edge and mobile WebKit; the workspace remains unchanged. The Safari toggle fix below is included. Production backup, preservation and build evidence is recorded in VALIDATION.md. The production image was built locally. Mark subsequently requested GitHub publication of 0.8.5; release builds and package qualification are now authorised.
+
+## Safari appearance-toggle fix - local only (2026-10-15)
+
+Mobile WebKit reproduced the reported failure: tapping the Dark mode label left the theme light and closed the menu. The event trace showed pointerdown, touchstart, mousedown and focusout with a null relatedTarget; blur dismissal unmounted the toggle before click. UserMenu now dismisses on blur only when focus moves to a known element outside the menu. Outside-pointer and Escape handling remain in place.
+
+Regression: node scripts/test-theme-touch.mjs runs mobile WebKit; add chromium for mobile Edge. Both verify taps on the label, switch knob and button, light/dark changes, reload persistence, outside-tap dismissal, Escape/focus restoration and Tab dismissal. The test failed on the original code and passes with the fix. Existing theme checks, 28 frontend tests and the frontend build pass. Physical iPhone Safari verification remains outstanding. No deployment or publication; no native executable rebuild for this browser fix.
+
 ## Consolidated 0.8.4 release (2026-10-15)
 
 Release 0.8.4 is published on GitHub and deployed to the existing server after explicit authorisation, superseding the local-only holds below. Release 0.8.4 combines organisation sidebar controls, avatar appearance settings and two-column phone grids from the separate chats, plus MIT licensing in packaged distributions. The browser warning investigation required no product changes: disabling the injecting extension removed the warnings. User-facing changes are consolidated in CHANGELOG.md; release and preservation evidence is recorded in VALIDATION.md.

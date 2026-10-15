@@ -36,6 +36,14 @@ export function ProjectCard({
     docs = w.documents.filter(
       (d) => d.projectId === project.id && !d.deletedAt,
     );
+  const previews = docs.flatMap(d => d.pages.flatMap(page => {
+    const current = currentComposition(page).imageId;
+    const images = page.revisions.map(r => ({ id: r.imageId, createdAt: r.createdAt }));
+    if (current && !images.some(image => image.id === current)) images.push({ id: current, createdAt: d.updatedAt });
+    return images;
+  })).sort((a, b) => b.createdAt - a.createdAt)
+    .filter((image, index, images) => images.findIndex(other => other.id === image.id) === index)
+    .slice(0, 3);
   return (
     <article className="project-card">
       <button
@@ -49,15 +57,16 @@ export function ProjectCard({
           style={{ color: org?.color || "#7654cf" }}
           strokeWidth={1.2}
         />
-        {docs.slice(0, 3).map((d, i) => (
+        {previews.map((image, i) => (
           <div
-            key={d.id}
+            key={image.id}
             className="project-paper"
             style={{
-              transform: `rotate(${(i - 1) * 9}deg) translateX(${(i - 1) * 34}px)`,
+              transform: `rotate(${[0, -9, 9][i]}deg) translateX(${[0, -34, 34][i]}px)`,
+              zIndex: 3 - i,
             }}
           >
-            <ImageView id={currentComposition(d.pages[0]).imageId} />
+            <ImageView id={image.id} alt={i === 0 ? "Latest project image" : "Recent project image"} />
           </div>
         ))}
       </button>

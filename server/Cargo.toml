@@ -1,6 +1,6 @@
 [package]
 name = "image-gen-server"
-version = "0.8.4"
+version = "0.8.5"
 license = "MIT"
 edition = "2024"
 

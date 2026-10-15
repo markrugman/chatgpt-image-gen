@@ -437,8 +437,9 @@ export default function App() {
           <header className="mobile-appbar">
             <button className="icon-button" aria-label="Open navigation" aria-expanded={navigationOpen} onClick={() => setNavigationOpen(true)}><Menu size={22} /></button>
             <span className="mobile-brand"><Sparkles size={19} /> imagegen</span>
-            <UserMenu />
+            <div className="mobile-appbar-actions"><UserMenu />
             <button className="icon-button" aria-label="Create a design" onClick={() => create({ kind: "document", projectId: projectId || undefined })}><Plus size={22} /></button>
+            </div>
           </header>
           {navigationOpen && <div className="mobile-navigation"><Modal title="Workspace navigation" onClose={() => setNavigationOpen(false)}><div className="form-body">{sidebar}</div></Modal></div>}
         </>

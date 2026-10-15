@@ -1,6 +1,6 @@
 [package]
 name = "image-gen-app"
-version = "0.8.4"
+version = "0.8.5"
 license = "MIT"
 description = "A focused desktop workspace for image generation"
 authors = ["Mark"]

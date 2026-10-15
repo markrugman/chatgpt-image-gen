@@ -4,6 +4,8 @@ On 2026-10-15, Mark authorized compilation, packaging, remaining checks and publ
 
 Release 0.8.4 and the separately authorised private production upgrade are complete; see [VALIDATION.md](VALIDATION.md). For REST-based release operations, resolve draft releases through the authenticated releases list and release ID: the tag endpoint can return 404 while the release is a draft. When updating draft notes, explicitly preserve `tag_name`, `target_commitish`, `name` and `draft`, and verify the returned tag before publication. A notes-only PATCH reset the unpublished 0.8.4 tag to an `untagged-*` value; restoring the tag allowed retrying just publication with the already verified packages.
 
+Private production is now on locally built 0.8.5 (card/header improvements, pasted references and Safari toggle fix), with a verified local Windows portable build. Mark has now explicitly requested GitHub publication of 0.8.5; the standard protected release workflow and package checks are being run. See VALIDATION.md for the 0.8.5 backup, preservation and qualification evidence.
+
 ## Local development
 
 Windows build prerequisites: Rust stable MSVC, Microsoft C++ Build Tools, Node.js 24 and WebView2. `Build Image Gen.cmd` remains the local developer build command; it writes build artifacts outside OneDrive under `%LOCALAPPDATA%\ImageGenBuild\target`. `Run Image Gen.cmd` opens an existing local build. These commands differ from installing a published release.

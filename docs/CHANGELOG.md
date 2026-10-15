@@ -1,5 +1,13 @@
 # Release history
 
+## New in 0.8.5
+
+- Project cards showcase the three most recent images across their designs and pages, with the newest in front. The new-project card matches project-card heights across every row.
+- Compact navigation keeps the menu on the left, the imagegen logo centred, and the avatar and create buttons on the right.
+- At widths up to 600px, Extract asset, Use in new design and Export appear as icons beside the design name on one row. Export stays purple; accessible names and tooltips identify each action.
+- Paste a PNG, JPEG or WebP image into the design chat to save it in that organisation's Uploads and attach its saved version as a reference. Draft text stays intact and sending waits for uploads to finish.
+- Safari touch input now toggles dark mode reliably instead of dismissing the avatar menu before the click.
+
 ## New in 0.8.4
 
 - Reorder organisations by dragging, or focus one and use Alt+Up/Down. The saved order also appears in organisation selectors.
