@@ -2,7 +2,7 @@
 
 On 2026-10-15, Mark authorized compilation, packaging, remaining checks and public distribution once checks pass. This supersedes the earlier source-only hold. Existing private production deployment remains separate.
 
-Release 0.8.2 and the separately authorised private production upgrade are complete; see [VALIDATION.md](VALIDATION.md). For REST-based release operations, resolve draft releases through the authenticated releases list and release ID: the tag endpoint can return 404 while the release is a draft.
+Release 0.8.3 and the separately authorised private production upgrade are complete; see [VALIDATION.md](VALIDATION.md). For REST-based release operations, resolve draft releases through the authenticated releases list and release ID: the tag endpoint can return 404 while the release is a draft.
 
 ## Local development
 
