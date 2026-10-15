@@ -1,5 +1,11 @@
 # Release history
 
+## New in 0.8.3
+
+Desktop generation now has its own ChatGPT OAuth sign-in and private runtime history. Image Gen uses only its bundled generation runtime, ignores inherited Codex credentials and history settings, and no longer falls back to a separately installed Codex. Sign in once inside Image Gen after upgrading. Existing designs, images and saved page conversations remain available; previous entries in Codex recent chats are not automatically removed. The browser worker retains its existing isolated server sign-in and history.
+
+Browser navigation now records workspace views in the URL and browser history. Back/Forward restore internal navigation, and refreshing reopens the selected design.
+
 ## New in 0.8.2
 
 Switch organisations from the header or sidebar while staying in the current library or Projects section. Asset and Upload badges count the selected organisation's own items, with shared images available separately.

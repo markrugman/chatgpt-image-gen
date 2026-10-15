@@ -27,60 +27,64 @@ static RESOURCE_DIR: std::sync::OnceLock<PathBuf> = std::sync::OnceLock::new();
 pub fn set_resource_dir(path: PathBuf) {
     let _ = RESOURCE_DIR.set(path);
 }
-pub fn executable() -> PathBuf {
-    if let Some(p) = std::env::var_os("IMAGEGEN_CODEX_PATH") {
-        return p.into();
+pub fn executable() -> Result<PathBuf, String> {
+    #[cfg(feature = "headless")]
+    {
+        if let Some(p) = std::env::var_os("IMAGEGEN_CODEX_PATH") {
+            return Ok(p.into());
+        }
+        return Ok(PathBuf::from("codex"));
     }
     #[cfg(not(feature = "headless"))]
-    if let Some(root) = RESOURCE_DIR.get() {
-        let candidate =
-            root.join("runtime")
-                .join(if cfg!(windows) { "codex.exe" } else { "codex" });
-        if candidate.is_file() {
-            return candidate;
-        }
-    }
-    // Bundled resources let the app run without a separate Codex installation.
-    if let Ok(app) = std::env::current_exe() {
-        if let Some(dir) = app.parent() {
-            let name = if cfg!(windows) { "codex.exe" } else { "codex" };
-            for base in [
-                dir.join("runtime"),
-                dir.join("../Resources/runtime"),
-                dir.join("../lib/Image Gen/runtime"),
-            ] {
-                let candidate = base.join(name);
-                if candidate.is_file() {
-                    return candidate;
-                }
-            }
-        }
-    }
-    #[cfg(windows)]
     {
-        if let Some(local) = std::env::var_os("LOCALAPPDATA") {
-            let base = PathBuf::from(local).join("OpenAI/Codex/bin");
-            if let Ok(entries) = std::fs::read_dir(base) {
-                let mut candidates: Vec<_> = entries
-                    .flatten()
-                    .map(|e| e.path().join("codex.exe"))
-                    .filter(|p| p.is_file())
-                    .collect();
-                candidates.sort_by_key(|p| std::fs::metadata(p).and_then(|m| m.modified()).ok());
-                if let Some(path) = candidates.pop() {
-                    return path;
-                }
+        let mut roots = Vec::new();
+        if let Some(root) = RESOURCE_DIR.get() {
+            roots.push(root.join("runtime"));
+        }
+        if let Ok(app) = std::env::current_exe() {
+            if let Some(dir) = app.parent() {
+                roots.extend([
+                    dir.join("runtime"),
+                    dir.join("../Resources/runtime"),
+                    dir.join("../lib/Image Gen/runtime"),
+                ]);
             }
         }
+        bundled_executable(&roots)
     }
-    PathBuf::from("codex")
+}
+#[cfg(not(feature = "headless"))]
+fn bundled_executable(roots: &[PathBuf]) -> Result<PathBuf, String> {
+    let name = if cfg!(windows) { "codex.exe" } else { "codex" };
+    roots.iter().map(|root| root.join(name)).find(|p| p.is_file())
+        .ok_or_else(|| "Image Gen's bundled generation runtime is missing. Reinstall Image Gen or use the complete portable folder.".into())
+}
+#[cfg(not(feature = "headless"))]
+fn isolate_desktop(command: &mut Command, cwd: &Path) -> Result<(), String> {
+    let home = std::path::absolute(cwd.join("codex")).map_err(|e| e.to_string())?;
+    std::fs::create_dir_all(&home).map_err(|e| e.to_string())?;
+    command
+        .env("CODEX_HOME", home)
+        .env_remove("OPENAI_API_KEY")
+        .env_remove("CODEX_API_KEY")
+        .env_remove("CODEX_ACCESS_TOKEN")
+        .args([
+            "-c",
+            "cli_auth_credentials_store=\"file\"",
+            "-c",
+            "forced_login_method=\"chatgpt\"",
+        ]);
+    Ok(())
 }
 impl Codex {
     pub async fn start(cwd: &Path) -> Result<Arc<Self>, String> {
+        #[cfg(feature = "headless")]
         if let Some(home) = std::env::var_os("CODEX_HOME") {
             std::fs::create_dir_all(home).map_err(|e| e.to_string())?;
         }
-        let mut command = Command::new(executable());
+        let mut command = Command::new(executable()?);
+        #[cfg(not(feature = "headless"))]
+        isolate_desktop(&mut command, cwd)?;
         command
             .args(["app-server", "--stdio"])
             .current_dir(cwd)
@@ -170,5 +174,95 @@ impl Codex {
                 Err(format!("{method} timed out. Reconnect and retry."))
             }
         }
+    }
+}
+
+#[cfg(all(test, not(feature = "headless")))]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn desktop_overrides_shared_home_and_credentials() {
+        let root =
+            std::env::temp_dir().join(format!("imagegen-isolation-{}", uuid::Uuid::new_v4()));
+        let jobs = root.join("sessions");
+        let mut command = Command::new("unused-test-program");
+        command
+            .env("CODEX_HOME", root.join("shared-codex"))
+            .env("OPENAI_API_KEY", "test-sentinel")
+            .env("CODEX_API_KEY", "test-sentinel")
+            .env("CODEX_ACCESS_TOKEN", "test-sentinel");
+        isolate_desktop(&mut command, &jobs).unwrap();
+        let env: HashMap<_, _> = command.as_std().get_envs().collect();
+        assert_eq!(
+            env[std::ffi::OsStr::new("CODEX_HOME")],
+            Some(jobs.join("codex").as_os_str())
+        );
+        for key in ["OPENAI_API_KEY", "CODEX_API_KEY", "CODEX_ACCESS_TOKEN"] {
+            assert_eq!(env[std::ffi::OsStr::new(key)], None);
+        }
+        assert!(jobs.join("codex").is_dir());
+        assert!(!root.join("shared-codex").exists());
+        let args: Vec<_> = command.as_std().get_args().collect();
+        assert!(args.contains(&std::ffi::OsStr::new("forced_login_method=\"chatgpt\"")));
+        assert!(args.contains(&std::ffi::OsStr::new("cli_auth_credentials_store=\"file\"")));
+        std::fs::remove_dir_all(root).unwrap();
+    }
+
+    #[test]
+    fn desktop_requires_bundled_runtime() {
+        assert!(
+            bundled_executable(&[])
+                .unwrap_err()
+                .contains("bundled generation runtime is missing")
+        );
+        let root = std::env::temp_dir().join(format!("imagegen-runtime-{}", uuid::Uuid::new_v4()));
+        let runtime = root.join("runtime");
+        std::fs::create_dir_all(&runtime).unwrap();
+        assert!(bundled_executable(&[runtime.clone()]).is_err());
+        let bundled = runtime.join(if cfg!(windows) { "codex.exe" } else { "codex" });
+        std::fs::write(&bundled, "fixture").unwrap();
+        assert_eq!(bundled_executable(&[runtime]).unwrap(), bundled);
+        std::fs::remove_dir_all(root).unwrap();
+    }
+
+    #[tokio::test]
+    #[ignore = "Requires IMAGEGEN_TEST_RESOURCE_DIR and network access for device login"]
+    async fn private_runtime_starts_signed_out_and_owns_device_login() {
+        set_resource_dir(
+            std::env::var_os("IMAGEGEN_TEST_RESOURCE_DIR")
+                .expect("test resources")
+                .into(),
+        );
+        let root = std::env::temp_dir().join(format!("imagegen-oauth-{}", uuid::Uuid::new_v4()));
+        std::fs::create_dir_all(&root).unwrap();
+        let codex = Codex::start(&root).await.unwrap();
+        let account = codex
+            .rpc("account/read", json!({"refreshToken":false}))
+            .await
+            .unwrap();
+        assert!(
+            account["account"].is_null(),
+            "A fresh desktop must not reuse an existing login"
+        );
+        let login = codex
+            .rpc("account/login/start", json!({"type":"chatgptDeviceCode"}))
+            .await
+            .unwrap();
+        let login_id = login["loginId"].as_str().expect("device login ID");
+        assert!(login["userCode"].as_str().is_some());
+        codex
+            .rpc("account/login/cancel", json!({"loginId":login_id}))
+            .await
+            .unwrap();
+        drop(codex);
+        // The child is killed on drop; Windows can briefly retain file handles.
+        for _ in 0..20 {
+            if std::fs::remove_dir_all(&root).is_ok() {
+                return;
+            }
+            tokio::time::sleep(Duration::from_millis(100)).await;
+        }
+        std::fs::remove_dir_all(root).unwrap();
     }
 }

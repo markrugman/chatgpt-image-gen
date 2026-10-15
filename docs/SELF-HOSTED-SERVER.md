@@ -119,7 +119,7 @@ The container runs as a non-root user, has a read-only root filesystem and keeps
 
 **Use local workspace** reopens the original creations on that computer. Connecting does not automatically merge, upload or replace them. An existing populated server cannot be overwritten by this copy operation. A lost access key can be rotated by changing the Docker `.env` and recreating the container; enter the new key on each desktop.
 
-The URL and server identity are saved locally. The access key is saved in the operating system's credential vault and is excluded from backups. On Linux, a working Secret Service credential store is required. ChatGPT tokens remain managed by the client's Codex installation.
+The URL and server identity are saved locally. The access key is saved in the operating system's credential vault and is excluded from backups. On Linux, a working Secret Service credential store is required. From 0.8.3, desktop ChatGPT tokens and generation history are managed by Image Gen's bundled runtime under its private `sessions/codex` folder, independently of any installed Codex. The browser worker retains its separate `/worker/codex` storage.
 
 ## Sync, offline use and conflicts
 

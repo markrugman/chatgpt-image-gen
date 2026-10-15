@@ -3,7 +3,7 @@ services:
     build:
       context: ..
       dockerfile: server/Dockerfile
-    image: image-gen-server:0.8.1
+    image: image-gen-server:0.8.3
     restart: unless-stopped
     init: true
     ports:

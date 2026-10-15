@@ -47,18 +47,33 @@ import { CreateDialog, EditDialog, SettingsDialog } from "./dialogs";
 import { Editor } from "./Editor";
 import "./App.css";
 
+function readNavigation() {
+  const params = new URLSearchParams(isBrowser ? window.location.hash.slice(1) : "");
+  const view = params.get("view") || "home";
+  return {
+    route: ["home", "projects", "assets", "uploads", "trash"].includes(view) ? view : "home",
+    orgId: params.get("org") || "all",
+    projectId: params.get("project"),
+    docId: params.get("design"),
+    assetId: params.get("asset"),
+    pageId: params.get("page"),
+    libraryScope: params.get("library") === "shared" ? "shared" : "owned",
+  };
+}
+
 export default function App() {
+  const [initialNavigation] = useState(readNavigation);
   const compact = useCompactLayout();
   const [navigationOpen, setNavigationOpen] = useState(false);
   useEffect(() => { if (!compact) setNavigationOpen(false); }, [compact]);
   const [w, setW] = useState<Workspace>(emptyWorkspace),
     [loaded, setLoaded] = useState(false);
-  const [route, setRoute] = useState("home"),
-    [orgId, setOrgId] = useState("all"),
-    [projectId, setProjectId] = useState<string | null>(null);
-  const [docId, setDocId] = useState<string | null>(null),
-    [assetId, setAssetId] = useState<string | null>(null),
-    [pageId, setPageId] = useState<string | null>(null);
+  const [route, setRoute] = useState(initialNavigation.route),
+    [orgId, setOrgId] = useState(initialNavigation.orgId),
+    [projectId, setProjectId] = useState(initialNavigation.projectId);
+  const [docId, setDocId] = useState(initialNavigation.docId),
+    [assetId, setAssetId] = useState(initialNavigation.assetId),
+    [pageId, setPageId] = useState(initialNavigation.pageId);
   const [query, setQuery] = useState(""),
     [jobs, setJobs] = useState<Job[]>([]),
     [connection, setConnection] = useState<Connection | null>(null),
@@ -73,8 +88,37 @@ export default function App() {
     } | null>(null);
   const [storage, setStorage] = useState<ServerStatus|null>(null);
   const [toast, setToast] = useState("");
-  const [libraryScope, setLibraryScope] = useState("owned");
+  const [libraryScope, setLibraryScope] = useState(initialNavigation.libraryScope);
   const [libraryRequest, setLibraryRequest] = useState<{kind: "assets" | "uploads"} | null>(null);
+  const historyReady = useRef(false);
+  useEffect(() => {
+    if (!isBrowser) return;
+    const restore = () => {
+      const next = readNavigation();
+      setRoute(next.route); setOrgId(next.orgId); setProjectId(next.projectId);
+      setDocId(next.docId); setAssetId(next.assetId); setPageId(next.pageId);
+      setLibraryScope(next.libraryScope); setQuery(""); setNavigationOpen(false);
+      setCreating(null); setEditing(null); setSettings(false); setLibraryRequest(null);
+    };
+    window.addEventListener("popstate", restore);
+    return () => window.removeEventListener("popstate", restore);
+  }, []);
+  useEffect(() => {
+    if (!isBrowser) return;
+    const params = new URLSearchParams({ view: route });
+    for (const [key, value] of [
+      ["org", orgId === "all" ? null : orgId], ["project", projectId],
+      ["design", docId], ["asset", assetId], ["page", docId || assetId ? pageId : null],
+      ["library", libraryScope === "shared" ? "shared" : null],
+    ]) if (value) params.set(key!, value);
+    const hash = `#${params}`;
+    if (!historyReady.current) {
+      window.history.replaceState(null, "", hash);
+      historyReady.current = true;
+    } else if (window.location.hash !== hash) {
+      window.history.pushState(null, "", hash);
+    }
+  }, [route, orgId, projectId, docId, assetId, pageId, libraryScope]);
   const searchRef = useRef<HTMLInputElement>(null),
     uploadRef = useRef<HTMLInputElement>(null);
   const notify = useCallback((message: string) => setToast(message), []);

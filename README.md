@@ -13,6 +13,8 @@ Download the Windows app, companion and server setup files from [GitHub Releases
 
 The app includes its generation runtime. Node.js, Rust and a separate Codex installation are not needed to use the native app. Windows WebView2 is required; Setup can install it if missing. macOS, Linux desktop and ARM packages await validation.
 
+From 0.8.3, desktop generation uses only Image Gen's bundled runtime and its own ChatGPT sign-in. Credentials and runtime history stay under `%LOCALAPPDATA%\com.mark.imagegenapp\sessions\codex`, separate from your normal Codex recent chats. Sign in once inside Image Gen after upgrading; existing designs and their saved conversations are retained. Old Image Gen entries already in Codex are not removed automatically.
+
 **Portable option:** download `Image-Gen-VERSION-Windows-x64-Portable.zip`, extract the entire ZIP into a permanent folder, and run `Image Gen.exe`. Keep the `runtime` folder beside it. Do not copy just the EXE.
 
 **Optional shared storage:** after installing the server below, open workspace-server management in Settings and connect using its URL and Server Access Key, or your owner username/password. Connecting does not upload existing local work. Use **Copy local workspace to server** explicitly if the server is empty. Each desktop uses its own ChatGPT sign-in for generation.
@@ -21,10 +23,10 @@ The app includes its generation runtime. Node.js, Rust and a separate Codex inst
 
 The server provides the browser editor and shared workspace. Install [Docker Engine](https://docs.docker.com/engine/install/) and the [Compose plugin](https://docs.docker.com/compose/install/linux/) first. Run installation as a user allowed to use Docker. The script requires Bash, curl, sha256sum and iproute2; it does not install Docker or change the host firewall.
 
-Choose a published version. For version `0.8.2`:
+Choose a published version. For version `0.8.3`:
 
 ```sh
-VERSION=0.8.2
+VERSION=0.8.3
 REPOSITORY=markrugman/chatgpt-image-gen
 curl -fL "https://github.com/$REPOSITORY/releases/download/v$VERSION/install.sh" -o install.sh && \
 curl -fL "https://github.com/$REPOSITORY/releases/download/v$VERSION/SHA256SUMS" -o SHA256SUMS

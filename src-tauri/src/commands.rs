@@ -49,7 +49,7 @@ pub async fn connection(state: State<'_, Arc<AppState>>) -> Result<Value, String
         .rpc("modelProvider/capabilities/read", json!({}))
         .await?;
     Ok(
-        json!({"account":account["account"],"capabilities":capabilities,"executable":crate::codex::executable()}),
+        json!({"account":account["account"],"capabilities":capabilities,"executable":crate::codex::executable()?}),
     )
 }
 #[cfg_attr(not(feature = "headless"), tauri::command)]
