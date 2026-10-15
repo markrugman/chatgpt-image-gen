@@ -2,6 +2,8 @@
 
 Updated: 2026-10-15. Mark approved implementation and local/private-server testing, then authorised GitHub publication and live-server deployment as version 0.8.2. Release and deployment verification are recorded in VALIDATION.md.
 
+[Release 0.8.2](https://github.com/markrugman/chatgpt-image-gen/releases/tag/v0.8.2) is published and the existing live server on port 8787 has been upgraded, preserving its original data and authentication. The preview below remains a separate test copy.
+
 ## Accepted behaviour
 
 - The header and sidebar organisation selectors update the current organisation, displayed content, and library counts together while preserving the current section (including Assets, Uploads, and Projects). Switching organisations clears any selected project; switching from an editor returns to the corresponding library or Projects section in the destination organisation.

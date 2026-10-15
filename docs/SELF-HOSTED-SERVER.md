@@ -1,8 +1,8 @@
-# Image Gen desktop and browser access (0.8.0)
+# Image Gen desktop and browser access (0.8.2)
 
-## Published-image installer (prepared in source)
+## Published-image installer
 
-The new `server/install.sh` and `server/compose.release.yaml` provide the [README server setup](../README.md#2-server--debianubuntu-linux-x64) once a complete GitHub release and public server image have been published. The installer is qualified separately from existing manual deployments. The existing source-build `server/compose.yaml` and current server configuration are unchanged.
+The `server/install.sh` and `server/compose.release.yaml` provide the [README server setup](../README.md#2-server--debianubuntu-linux-x64) using the public release and immutable server image. The installer is qualified separately from existing manual deployments. The source-build `server/compose.yaml` remains available for development.
 
 The installer defaults to `~/.local/share/chatgpt-image-gen-server`, uses the fixed Compose project `chatgpt-image-gen`, and creates `chatgpt-image-gen_imagegen-data` and `chatgpt-image-gen_imagegen-worker` volumes. Do not use it to adopt a manually configured deployment or the current `imagegen` deployment. Run it under the same user and with the same `--directory` for future maintenance. Keep its private `.env`, Compose file and installed script together. Do not run two copies in different directories to manage the same fixed project.
 
@@ -23,7 +23,7 @@ If the script is interrupted and leaves `.install-lock`, verify no installer is 
 
 ## Owner login and remembered browser sessions
 
-Version 0.8.1 is deployed (2026-10-15), preserving the original configuration, workspace, access key and ChatGPT worker sign-in after stopped-volume backups. Owner login was introduced in 0.8.0. Keep existing `.env`, workspace volume and worker volume unchanged when upgrading. Server login is separate from the ChatGPT account used for generation.
+Version 0.8.2 is deployed (2026-10-15), preserving the original configuration, workspace, access key, existing sessions and ChatGPT worker sign-in after stopped-volume backups. It adds [organisation libraries and transfers](ORGANISATION-LIBRARIES.md). Owner login was introduced in 0.8.0. Keep existing `.env`, workspace volume and worker volume unchanged when upgrading. Server login is separate from the ChatGPT account used for generation.
 
 1. A new server with no configured `IMAGEGEN_SERVER_TOKEN` generates its key once in `/data/server-access-key`. Retrieve it privately with `docker compose --env-file server/.env -f server/compose.yaml exec imagegen cat /data/server-access-key`. A configured access key takes precedence and is never changed by account setup. Existing deployments must retain their current environment key.
 2. Open the server in a browser and choose **Server access key** to prove ownership. First login offers a personal username/password account or **Use access key only**. There is no unauthenticated account registration.
