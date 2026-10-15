@@ -40,7 +40,8 @@ def archive(destination, entries):
 
 
 def companion_entries():
-    entries = [(ROOT / "Install Companion.cmd", "Install Companion.cmd"),
+    entries = [(ROOT / "LICENSE", "LICENSE.txt"),
+            (ROOT / "Install Companion.cmd", "Install Companion.cmd"),
             (ROOT / "companion/skills/imagegenapp/SKILL.md", "companion/skills/imagegenapp/SKILL.md"),
             (ROOT / "README.md", "README.md"), (ROOT / "GLOSSARY.md", "GLOSSARY.md")]
     entries += [(file, file.relative_to(ROOT).as_posix()) for file in sorted((ROOT / "docs").rglob("*.md"))]
@@ -50,6 +51,7 @@ def companion_entries():
 def windows(version, target, output):
     release = target / "release"
     required = [release / "image-gen-app.exe", release / "runtime/codex.exe",
+                release / "LICENSE.txt",
                 release / "runtime/codex-code-mode-host.exe", release / "runtime/LICENSE.txt",
                 release / "runtime/NOTICE.txt", release / "THIRD-PARTY-NOTICES.txt"]
     installers = list((release / "bundle/nsis").glob("*.exe"))

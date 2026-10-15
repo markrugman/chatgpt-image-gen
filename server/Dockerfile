@@ -18,10 +18,12 @@ COPY src-tauri/profiles ./src-tauri/profiles
 RUN --mount=type=cache,id=imagegen-registry,target=/usr/local/cargo/registry --mount=type=cache,id=imagegen-target,target=/src/server/target cargo build --release --locked --manifest-path server/Cargo.toml && cp server/target/release/image-gen-server /image-gen-server
 
 FROM debian:bookworm-slim
+LABEL org.opencontainers.image.licenses="MIT"
 RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates && rm -rf /var/lib/apt/lists/* && groupadd --gid 10001 imagegen && useradd --uid 10001 --gid imagegen --create-home imagegen && mkdir /data /worker /app && chown imagegen:imagegen /data /worker /app
 COPY --from=build /image-gen-server /usr/local/bin/image-gen-server
 COPY --from=codex /codex-runtime/ /usr/local/bin/
 COPY --from=web /ui/dist /app/web
+COPY LICENSE /app/LICENSE.txt
 COPY src-tauri/THIRD-PARTY-NOTICES.txt src-tauri/CODEX-LICENSE.txt src-tauri/CODEX-NOTICE.txt /app/
 USER imagegen
 WORKDIR /app

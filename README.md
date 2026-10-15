@@ -83,3 +83,7 @@ Local creations live under `%LOCALAPPDATA%\com.mark.imagegenapp`. Use Settings t
 - [Asset extraction](docs/ASSET-EXTRACTION.md) and [advanced export](docs/ADVANCED-EXPORT.md)
 - [Build and release workflow for maintainers](docs/RELEASING.md)
 - [Product design](docs/DESIGN.md) and [validation evidence](docs/VALIDATION.md)
+
+## License
+
+Image Gen is available under the [MIT License](LICENSE), allowing reuse, modification, redistribution and commercial use while retaining its copyright and license notice. Bundled third-party components retain their own licenses; see [third-party notices](src-tauri/THIRD-PARTY-NOTICES.txt) and the runtime's included license and notice files.

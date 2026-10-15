@@ -10,6 +10,7 @@ test("Tauri wrapper passes existing relative resources, independent of cache dri
     await fs.mkdir(path.join(root, "scripts"));
     await fs.copyFile("scripts/tauri.mjs", path.join(root, "scripts/tauri.mjs"));
     await fs.mkdir(path.join(root, "src-tauri"));
+    await fs.writeFile(path.join(root, "LICENSE"), "fixture");
     for (const name of ["CODEX-LICENSE.txt", "CODEX-NOTICE.txt", "THIRD-PARTY-NOTICES.txt"])
       await fs.writeFile(path.join(root, "src-tauri", name), "fixture");
     const version = "0.162.0-alpha.17.2";
@@ -34,7 +35,7 @@ test("Tauri wrapper passes existing relative resources, independent of cache dri
     const config = JSON.parse(await fs.readFile(path.join(root, "captured.json"), "utf8"));
     const resources = config.bundle.resources;
     expect(Object.values(resources).sort()).toEqual([
-      "THIRD-PARTY-NOTICES.txt", "runtime/", "runtime/LICENSE.txt", "runtime/NOTICE.txt",
+      "LICENSE.txt", "THIRD-PARTY-NOTICES.txt", "runtime/", "runtime/LICENSE.txt", "runtime/NOTICE.txt",
     ]);
     for (const resource of Object.keys(resources)) {
       expect(path.isAbsolute(resource), resource).toBe(false);

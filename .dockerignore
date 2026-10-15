@@ -1,4 +1,5 @@
 **
+!LICENSE
 !server/
 !server/Cargo.toml
 !server/Cargo.lock

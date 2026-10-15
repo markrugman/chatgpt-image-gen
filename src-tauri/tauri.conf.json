@@ -40,6 +40,7 @@
       }
     },
     "resources": {
+      "../LICENSE": "LICENSE.txt",
       "THIRD-PARTY-NOTICES.txt": "THIRD-PARTY-NOTICES.txt"
     }
   }

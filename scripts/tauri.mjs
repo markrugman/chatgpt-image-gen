@@ -91,6 +91,7 @@ if (["build", "dev"].includes(args[0])) {
   if (!runtime)
     throw Error("The official generation runtime package is incomplete");
   const resources = {
+    "../LICENSE": "LICENSE.txt",
     "CODEX-LICENSE.txt": "runtime/LICENSE.txt",
     "CODEX-NOTICE.txt": "runtime/NOTICE.txt",
     [path.relative(path.resolve("src-tauri"), runtime) + path.sep]: "runtime/",
