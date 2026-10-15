@@ -1,7 +1,6 @@
 import { spawn } from "node:child_process";
 import fs from "node:fs/promises";
 import path from "node:path";
-import os from "node:os";
 const version = "0.162.0-alpha.17.2";
 const args = process.argv.slice(2);
 function run(exe, args, options = {}) {
@@ -19,12 +18,12 @@ function run(exe, args, options = {}) {
 }
 const cli = path.resolve("node_modules/@tauri-apps/cli/tauri.js");
 if (["build", "dev"].includes(args[0])) {
-  const cache = path.join(
-    process.platform === "win32"
-      ? process.env.LOCALAPPDATA
-      : path.join(os.homedir(), ".cache"),
-    "ImageGenBuild",
-    "runtime",
+  // Tauri strips Windows drive prefixes from resources. Keep runtime resources
+  // on the checkout drive (GitHub runners use D: for source and C: for AppData).
+  const cache = path.resolve(
+    "node_modules",
+    ".cache",
+    "imagegen-runtime",
     version,
     `${process.platform}-${process.arch}`,
   );
@@ -92,10 +91,10 @@ if (["build", "dev"].includes(args[0])) {
   if (!runtime)
     throw Error("The official generation runtime package is incomplete");
   const resources = {
-    [path.resolve("src-tauri/CODEX-LICENSE.txt")]: "runtime/LICENSE.txt",
-    [path.resolve("src-tauri/CODEX-NOTICE.txt")]: "runtime/NOTICE.txt",
-    [runtime + path.sep]: "runtime/",
-    [path.resolve("src-tauri/THIRD-PARTY-NOTICES.txt")]:
+    "CODEX-LICENSE.txt": "runtime/LICENSE.txt",
+    "CODEX-NOTICE.txt": "runtime/NOTICE.txt",
+    [path.relative(path.resolve("src-tauri"), runtime) + path.sep]: "runtime/",
+    "THIRD-PARTY-NOTICES.txt":
       "THIRD-PARTY-NOTICES.txt",
   };
   // Merge an explicit caller config (for example an isolated acceptance identifier).
