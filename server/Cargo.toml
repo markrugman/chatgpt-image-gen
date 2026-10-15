@@ -1,0 +1,34 @@
+[package]
+name = "image-gen-server"
+version = "0.8.1"
+edition = "2024"
+
+[dependencies]
+argon2 = "=0.5.3"
+axum = "0.8"
+tokio = { version = "1", features = ["macros", "rt-multi-thread", "net", "signal", "fs", "process", "io-util", "sync", "time"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = { version = "1", features = ["float_roundtrip"] }
+uuid = { version = "1", features = ["v4"] }
+rusqlite = { version = "0.38", features = ["bundled"] }
+image = { version = "0.25", default-features = false, features = ["png", "jpeg", "webp"] }
+base64 = "0.22"
+zip = { version = "8", default-features = false, features = ["deflate"] }
+sha2 = "0.10"
+subtle = "2"
+
+tower-http = { version="0.6", features=["fs"] }
+ureq = { version="3", features=["json"] }
+url = "2"
+keyring = { version="3", default-features=false }
+dirs = "6"
+png = "0.18"
+lcms2 = { version="6.1", features=["static"] }
+flate2 = "1"
+
+[features]
+default = ["headless"]
+headless = []
+
+[dev-dependencies]
+reqwest = { version = "0.12", default-features = false, features = ["json"] }

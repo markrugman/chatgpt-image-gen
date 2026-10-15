@@ -1,0 +1,3 @@
+# Use native Codex app-server for ChatGPT image generation
+
+The user requires ChatGPT subscription/device access and rejected separately billed Image API access. The native Codex app-server integration was verified on 2026-10-15 with actual image generation, editing from two references, conversation restart recovery, historical forks, and interruption; the separate public Sign in with ChatGPT Responses route has different tool restrictions. Keep authentication and inference in the official app-server process, and own document history, compositions, and image copies in the app so Codex session storage is not the only copy of a finished design.

@@ -1,0 +1,56 @@
+[package]
+name = "image-gen-app"
+version = "0.8.1"
+description = "A focused desktop workspace for image generation"
+authors = ["Mark"]
+edition = "2024"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[lib]
+# The `_lib` suffix may seem redundant but it is necessary
+# to make the lib name unique and wouldn't conflict with the bin name.
+# This seems to be only an issue on Windows, see https://github.com/rust-lang/cargo/issues/8519
+name = "image_gen_app_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+tauri = { version = "2", features = [] }
+tauri-plugin-opener = "2"
+tauri-plugin-dialog = "2"
+tauri-plugin-single-instance = "2"
+serde = { version = "1", features = ["derive"] }
+serde_json = { version = "1", features = ["float_roundtrip"] }
+tokio = { version = "1", features = ["macros", "process", "io-util", "sync", "time", "net", "rt-multi-thread"] }
+uuid = { version = "1", features = ["v4"] }
+rusqlite = { version = "0.38", features = ["bundled"] }
+base64 = "0.22"
+image = { version = "0.25", default-features = false, features = ["png", "jpeg", "webp"] }
+zip = { version = "8", default-features = false, features = ["deflate"] }
+dirs = "6"
+png = "0.18"
+lcms2 = { version = "6.1", features = ["static"] }
+flate2 = "1"
+ureq = { version = "3", features = ["json"] }
+url = "2"
+sha2 = "0.10"
+keyring = { version = "3", features = ["windows-native", "apple-native", "sync-secret-service", "crypto-rust"] }
+
+
+# Read the optimization guideline for more details: https://tauri.app/concept/size/#cargo-configuration
+[profile.release]
+codegen-units = 1
+lto = true
+opt-level = 3
+panic = "abort"
+strip = true
+
+[dev-dependencies]
+image-gen-server = { path = "../server" }
+axum = "0.8"
+
+[features]
+headless = []

@@ -1,0 +1,182 @@
+name: Prepare Image Gen release
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Existing source version, without v (for example 0.8.0)'
+        required: true
+        type: string
+      publish_server_image:
+        description: 'After reviewing the draft: push server image through release-publication approval (release stays draft)'
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+concurrency:
+  group: release-${{ inputs.version }}
+  cancel-in-progress: false
+env:
+  RELEASE_VERSION: ${{ inputs.version }}
+  RUSTUP_TOOLCHAIN: stable
+
+jobs:
+  check:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - run: python scripts/release.py check --version "$RELEASE_VERSION"
+      - run: bash -n server/install.sh
+      - run: python scripts/test_distribution.py -v
+
+  windows:
+    needs: check
+    runs-on: windows-2022
+    env:
+      CARGO_TARGET_DIR: ${{ github.workspace }}\release-target
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - run: rustup update stable --no-self-update
+      - run: npm ci
+      - run: python scripts/test_distribution.py -v
+      - run: npm test
+      - run: cargo test --locked --manifest-path src-tauri/Cargo.toml --lib
+      - run: npm run tauri -- build --bundles nsis
+      - name: Verify runtime and assemble Windows downloads
+        shell: pwsh
+        run: |
+          & "$env:CARGO_TARGET_DIR\release\runtime\codex.exe" --version
+          if ($LASTEXITCODE -ne 0) { throw 'Bundled Codex runtime could not start' }
+          python scripts/release.py windows --version $env:RELEASE_VERSION --target $env:CARGO_TARGET_DIR --output release-assets
+          if ($LASTEXITCODE -ne 0) { throw 'Windows package verification failed' }
+      - uses: actions/upload-artifact@v4
+        with:
+          name: windows-downloads
+          path: release-assets/*
+          if-no-files-found: error
+
+  server:
+    needs: check
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - name: Test server
+        run: |
+          rustup update stable --no-self-update
+          cargo test --locked --manifest-path server/Cargo.toml
+      - uses: docker/setup-buildx-action@v3
+      - name: Build and check Linux x64 image
+        shell: bash
+        run: |
+          set -euo pipefail
+          image="ghcr.io/${GITHUB_REPOSITORY,,}:$RELEASE_VERSION"
+          docker buildx build --platform linux/amd64 --load -f server/Dockerfile -t "$image" --label "org.opencontainers.image.source=https://github.com/$GITHUB_REPOSITORY" --label "org.opencontainers.image.revision=$GITHUB_SHA" .
+          docker run --rm --entrypoint /usr/local/bin/codex "$image" --version
+          docker run --rm --entrypoint test "$image" -x /usr/local/bin/codex-code-mode-host
+          docker run -d --name imagegen-release-check -p 127.0.0.1:8787:8787 -e IMAGEGEN_WORKER_ENABLED=false "$image"
+          trap 'docker logs imagegen-release-check; docker rm -f imagegen-release-check' EXIT
+          for attempt in {1..60}; do
+            if curl -fsS http://127.0.0.1:8787/health > health.json; then break; fi
+            sleep 2
+          done
+          python -c 'import json,os; h=json.load(open("health.json")); assert h["service"]=="image-gen-server" and h["version"]==os.environ["RELEASE_VERSION"]'
+          test "$(curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:8787/v1/workspace)" = 401
+          docker save "$image" | gzip > server-image.tar.gz
+          python scripts/release.py server-assets --output release-assets
+      - uses: actions/upload-artifact@v4
+        with:
+          name: server-downloads
+          path: release-assets/*
+          if-no-files-found: error
+      - uses: actions/upload-artifact@v4
+        with:
+          name: server-image
+          path: server-image.tar.gz
+          retention-days: 7
+          if-no-files-found: error
+
+  draft:
+    needs: [windows, server]
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: '*-downloads'
+          merge-multiple: true
+          path: release-assets
+      - name: Prepare draft release only
+        shell: bash
+        run: |
+          set -euo pipefail
+          tag="v$RELEASE_VERSION"
+          if gh release view "$tag" --json isDraft,targetCommitish > existing.json 2>/dev/null; then
+            python -c 'import json,os; r=json.load(open("existing.json")); assert r["isDraft"] and r["targetCommitish"]==os.environ["GITHUB_SHA"], "Refusing to replace a published release or a draft from a different commit"'
+            if gh release view "$tag" --json assets --jq '.assets[].name' | grep -Fxq server-image.txt; then
+              gh release download "$tag" --pattern server-image.txt --dir release-assets
+            fi
+          else
+            printf '%s\n' "Image Gen $RELEASE_VERSION from $GITHUB_SHA." '' 'Draft for review. Builds and smoke checks are automated; fresh-machine installation and real ChatGPT generation still need qualification.' '' 'Server installation requires the immutable server-image.txt and matching SHA256SUMS. Review this draft, then rerun the same commit/version with publish_server_image enabled to push the server image through the release-publication environment. Set that GHCR package to Public and verify anonymous access before publishing this release.' > release-notes.md
+            gh release create "$tag" --draft --target "$GITHUB_SHA" --title "Image Gen $RELEASE_VERSION" --notes-file release-notes.md
+          fi
+          python scripts/release.py checksums --output release-assets
+          gh release upload "$tag" release-assets/* --clobber
+
+  publish-server-image:
+    if: ${{ inputs.publish_server_image }}
+    needs: draft
+    runs-on: ubuntu-24.04
+    # Configure required reviewers for this environment before enabling image publication.
+    environment: release-publication
+    permissions:
+      contents: write
+      packages: write
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: '*-downloads'
+          merge-multiple: true
+          path: release-assets
+      - uses: actions/download-artifact@v4
+        with:
+          name: server-image
+      - name: Push reviewed server image and complete draft assets
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(gh api "repos/$GITHUB_REPOSITORY/environments/release-publication" --jq '.protection_rules | any(.type == "required_reviewers")')" = true
+          gh release view "v$RELEASE_VERSION" --json isDraft,targetCommitish > existing.json
+          python -c 'import json,os; r=json.load(open("existing.json")); assert r["isDraft"] and r["targetCommitish"]==os.environ["GITHUB_SHA"]'
+          image="ghcr.io/${GITHUB_REPOSITORY,,}:$RELEASE_VERSION"
+          printf '%s' "$GH_TOKEN" | docker login ghcr.io -u "$GITHUB_ACTOR" --password-stdin
+          if docker manifest inspect "$image" >/dev/null 2>&1; then
+            docker pull "$image"
+            test "$(docker inspect --format '{{index .Config.Labels "org.opencontainers.image.revision"}}' "$image")" = "$GITHUB_SHA"
+          else
+            gzip -dc server-image.tar.gz | docker load
+            docker push "$image"
+          fi
+          docker inspect --format '{{index .RepoDigests 0}}' "$image" > release-assets/server-image.txt
+          python scripts/release.py checksums --output release-assets
+          gh release upload "v$RELEASE_VERSION" release-assets/server-image.txt release-assets/SHA256SUMS --clobber
+          echo 'Server image pushed. GitHub Release remains a draft. Verify public anonymous image pull and fresh-machine setup before publishing.' >> "$GITHUB_STEP_SUMMARY"

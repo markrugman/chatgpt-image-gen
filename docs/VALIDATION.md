@@ -1,0 +1,200 @@
+# Validation — 2026-10-15
+
+## GitHub distribution — source checks only
+
+- README now provides native, server and companion setup paths; release history is in CHANGELOG.md. Planned public downloads have not been published by this task.
+- 18 installer fixture tests pass via `python scripts/test_distribution.py -v`. They cover fresh setup/defaults, multiple IPs, browser-generation opt-out, unchanged reruns, existing-project/volume refusal, key preservation, stopped-volume backup ordering, pull/backup/health failures, checksums, immutable image references, downgrade refusal, companion app discovery, missing prerequisites and skill restoration after failed registration. Docker/curl/Codex are simulated; prompts use fixture input in place of a controlling terminal. The real Windows .cmd wrapper also passes its missing-skill failure check.
+- `bash -n server/install.sh` passes. Release version agreement passes via `python scripts/release.py check --version 0.8.0`. Workflow and Compose YAML parse; actionlint 1.7.7 reports no workflow errors (external shellcheck disabled).
+- No application build, package creation, workflow dispatch, registry push, real companion registration or deployment ran. Actual clean-host install/update, restored-volume recovery, Windows package execution, public anonymous pulls and real ChatGPT generation remain release qualification gates. Compilation, packaging, publication and deployment remain on hold for this distribution work.
+
+## Verified integration
+
+- Installed runtime: `codex-cli 0.162.0-alpha.17.2`, managed ChatGPT authentication, native `imageGeneration` capability enabled.
+- Initial generation produced a real transparent PNG. File retrieval, PNG dimensions, actual transparent pixels, and visual appearance were checked.
+- Editing with two explicit local references preserved a pumpkin's composition and changed its body from orange to the violet reference colour; output was visually inspected.
+- Discussion-only requests returned text without an image item.
+- A persistent conversation survived app-server restart and recalled the latest project code. A fork at an earlier turn recalled the earlier code without the later replacement.
+- A running text turn was interrupted. This verifies interruption signalling, not a guarantee about remote image-generation cancellation or usage refunds.
+- Device-code issuance and cancellation passed with an isolated authentication directory. Completing a fresh sign-in is a user interaction and was not automated. The existing managed session was left intact.
+
+Protocol exploration evidence lives in the ignored `work/integration-proof/` and `work/integration-tests/` directories. It is diagnostic material, not application state or deliverable source.
+
+## Verified native application flows
+
+The actual Tauri window was exercised through its WebView2 accessibility/browser interfaces. These checks used real Rust commands and local SQLite storage, with real image generation rather than simulated results:
+
+- Create an organisation, project, A4 document, and second page through the interface.
+- Discuss on page 2, then switch to page 1 and verify its conversation is separate.
+- Generate a Courtyard Halloween poster through the Rust backend, save the returned image into application-owned storage, and show its revision in history.
+- Search across project and document names.
+- Import an asset and compare SHA-256 hashes to verify the library copy preserves the original bytes.
+- Place the original asset, drag it, verify persisted position, then undo and redo the layout without generation.
+- Add a visible asset-reference chip.
+- Save actual PNG, JPEG, and PDF files through the native Save dialogs. The A4 PNG at 150 DPI is 1240 × 1754 px. The PDF contains two pages, each 595.2756 × 841.8898 points.
+- Create a square variation from the finished design, inspect framing preview, preserve the source link, and include a flattened snapshot of original overlays.
+- Replace a library asset and verify existing document placements still reference the original asset version.
+- Discover companion MCP tools, list the live workspace, create a discussion brief, open the intended native document, retry without duplication, and reject an unknown organisation instead of guessing.
+- Close the test application cleanly, invoke the companion again, and verify that it launches a new app process, reopens the saved workspace, and performs the handoff successfully.
+- Launch the optimized release executable, reopen the saved workspace, restore a revision's complete composition, explicitly reference another design page, and send that image through Rust to a discussion-only native conversation.
+- Inspect the release settings window and a 1024 × 760 desktop viewport; the workspace has no horizontal document overflow at that size.
+
+The first export test harness incorrectly tried to replace a protected native invoke function and waited at the native Save dialog. The actual exports were subsequently saved using Windows Computer Use and checked from disk. No export capability is claimed on the basis of that failed interception attempt.
+
+The first restart test used a SQLite database inside the OneDrive source directory and encountered a read-only WAL/database error. Moving acceptance data to local application data resolved restart and handoff. Production storage defaults to local application data; source files and ordinary export/backup files may remain in OneDrive.
+
+Native diagnostic evidence and screenshots are under ignored `work/native-test/`. Failed harness attempts remain distinguishable from the later passing checks in `final-flow-evidence.json` and `handoff-evidence.json`.
+
+## Automated source checks
+
+- Frontend production build: passed, including TypeScript checking.
+- Frontend domain tests: 3 passed (search semantics, true native print resolution, exact historical asset version selection).
+- Rust tests: 6 passed (historical context selection, future revision retention, independent page chats, original asset versions after deletion, transactional persistence/reopen, complete backup recovery, credential exclusion, and malformed-backup preservation; some tests cover multiple assertions).
+- Companion skill frontmatter and structure: validator passed.
+
+## Remaining qualification
+
+- macOS/Linux binaries, installers, and native behaviour require those hosts. Cross-platform source is present; Windows results do not establish success on other systems.
+- Fresh device sign-in completion, interrupted native-image request behaviour, and recovery after a crash during generation require further qualification.
+- Recovery of a provider conversation unavailable on a restored computer is implemented by rebuilding context from the app's saved page conversation, but that fallback has not yet been live-tested.
+- The tool bridge is live-tested and the personal `imagegenapp` skill/local connection are installed. Natural-language invocation still depends on a fresh desktop client chat discovering the addition; that language-model-driven step has not been tested here. The optional plugin ZIP is also provided.
+- The app currently relies on an installed Codex runtime. Distribution does not bundle that runtime.
+- Only the agreed small overlay editor is provided. Professional CMYK, bleed, crop marks, and collaboration remain outside this version.
+
+## Version 0.2.0 — 2026-10-15
+
+- Production frontend build and TypeScript check passed. Five frontend tests passed, including fractional-inch raster sizes, DPI reporting, and PDF point dimensions independent of raster DPI. Seven Rust tests passed, including a previous-schema database, exact backup JSON/media, custom-size persistence, and safe reopen.
+- Native acceptance ran with a separate application identifier and an isolated copy of the previous acceptance workspace (3 documents, 1 asset, 4 images). The user's installed/running application and original workspace were not replaced or edited.
+- Portrait Fit mode changed canvas width when the viewport changed from 1480 × 940 to 1024 × 760, with no canvas overflow. Manual zoom retained its width through resizing; Fit restored automatic sizing. Landscape also fit the narrow viewport.
+- A2/A5/A6 supplied their correct dimensions. An 8.5 × 11-inch document created a reusable custom size, duplicate creation did not duplicate the preset, and deleting the saved size preserved both documents using it. Complete workspace equality and saved-size visibility passed after native restart.
+- A real native image-generation request extracted an amber cocktail glass from a selected region of an existing poster. Both the crop and frozen full composition were attached as explicit references. The new organisation asset opened its own conversation and saved an asset version. The original poster's complete document state stayed unchanged.
+- The extraction PNG was 1160 × 1355. Sampling every eighth pixel found 17188 fully transparent samples out of 24650, confirming real alpha transparency. The extracted asset was then successfully referenced and placed in another document.
+- The automatic before-v0.2.0.zip contained the original workspace JSON and byte-identical copies of all four old media files, excluding credentials, bridge metadata and runtime sessions.
+- Production NSIS script identifies version 0.2.0 and the unchanged com.mark.imagegenapp bundle identity. Inspection confirms app-data removal requires explicit uninstall selection and is excluded in update mode. The installer was not executed over the user's live installation; retention evidence consists of installer inspection plus the previous-workspace compatibility, backup, and native restart tests.
+
+Ignored diagnostic scripts/evidence: work/test-v020*.mjs, work/v020-evidence.json, work/v020-reuse-evidence.json, and screenshots. The local test copy remains under ImageGenBuild/v020-acceptance. Earlier locator failures were fixed in the test harness; passing runs used real Rust commands and generation.
+
+## Version 0.3.0 — 2026-10-15
+
+The user's review found residual scenery inside the 0.2.0 glass extraction. Its alpha sampling established transparency, not complete scene removal. Version 0.3.0 adds faithful cleanup instructions, editable JSON recreation and contrast preview backgrounds; visual review remains necessary.
+
+- Production frontend/TypeScript and Windows NSIS build passed. Six frontend tests and eight Rust tests passed, including nested custom JSON fields, invalid briefs, legacy data, byte-exact backup media and transactional preservation.
+- Native acceptance used a separate app identifier and copied 0.2 workspace: seven documents, two assets, seven images and one custom size. All pre-existing documents/assets remained unchanged apart from compatible default fields, and all original media remained byte-identical. The source copy and live installed app were untouched.
+- A real managed-ChatGPT analysis of a selected cocktail glass produced structured JSON covering geometry, materials, colours, markings, lighting, viewing angle, contents, transparency and exclusions. Analysis generated text only. Editing custom JSON fields affected the saved brief and generation prompt; malformed JSON created no asset and started no generation.
+- JSON-only recreation completed with zero attached source references, while preserving the original references separately on the asset. Reopening, validating and saving the JSON did not generate an image. Recreating again started a different provider thread, preserved the first version and its exact PNG bytes, and retained both revisions in History.
+- Faithful extraction completed using the selected close-up and full source composition with explicit cleanup through glass. Visual comparison on bright pink showed a cleaner rim and stem than the 0.2 example. JSON recreations varied in geometry/reflections and still required review of glass appearance; no guarantee of physically complete transparency is implied.
+- Checkerboard, white, black and bright-pink previews switched correctly without changing stored image bytes. Their state is independent of export rendering. The preview preference, saved JSON, source references, complete workspace and image versions survived native restart. History recovered the earlier image. The optional visual-reference control was selectable; an additional recreation with that control enabled was not generated during this run.
+- The automatic before-v0.3.0.zip contained exact prior JSON and all seven old images, excluding credentials, bridge metadata and provider sessions. A format marker avoids repeated backups on ordinary reopen. Malformed backup recovery protections continue to pass.
+- The final 1024 × 760 layout had no horizontal page overflow and exposed the background controls. Native restart/smoke reported no frontend runtime errors.
+- NSIS version is 0.3.0 with the unchanged com.mark.imagegenapp identity and normal update retention logic. The live installation was not upgraded during testing; evidence combines generated-installer inspection, legacy-copy migration, byte checks and native restart.
+
+Evidence is under ignored work/v030-*.json, work/test-v030*.mjs and screenshots. One test initially compared JSON text order; its corrected check compares parsed content because formatting normalises key order. Three real image generations exercised initial JSON recreation, edited-JSON recreation and faithful extraction. Remaining platform/login/crash qualifications listed above still apply.
+
+## Version 0.3.1 — 2026-10-15
+
+- Frontend production build/TypeScript and Windows NSIS build passed. Ten frontend tests and nine Rust tests passed. Regression cases cover logo-only prompts, relevant glass/food/general profiles, explicit overrides, legacy JSON without a type, invalid analysis types, and retention of intrinsic logo words such as GLASS & STEM.
+- Native acceptance used a separate application identity and an isolated version-3 workspace copied from 0.3.0: seven documents, four assets, fourteen images and one custom size. The initial native read matched all prior saved data without migration. All pre-existing entities remained unchanged throughout acceptance; original media and the source database were retained.
+- A code-drawn circular brand mark saying BLACK ROSE SHOTS was placed in a test document. Automatic faithful extraction identified it visually as logo, saved object_type in its JSON brief, and submitted typography/symbol/spacing preservation guidance without glass, bowl, stem or garnish treatment. Real image generation returned a flat logo with its lettering and intentional white badge.
+- Explicit logo JSON analysis recorded the visible lettering, palette, badge, layout, flower symbol and graphic proportions. Logo recreation used flat artwork rules, attached the optional original references, and preserved the extracted image as an earlier asset version. A separate automatic analysis of the existing cocktail poster correctly selected glass.
+- One initial QA assertion rejected the word stem anywhere in a logo JSON payload; it matched the legitimate flower description 'No stem, leaves…'. The corrected check distinguishes app guidance from intrinsic logo content. No product sanitisation removes legitimate brand words, symbol details or typographic terms from the editable JSON.
+- Native restart retained complete workspace equality, typed JSON, source references, custom sizes and both logo revisions. History recovered the earlier image; the 1024 × 760 layout had no horizontal overflow. Restart/UI smoke recorded no frontend runtime errors.
+- before-v0.3.1.zip contained the exact original 0.3.0 JSON and byte-identical copies of all fourteen images, excluding credentials, bridge data and runtime sessions. The archive remained the original pre-release snapshot after restart. Workspace format stays at 3; this patch adds a once-per-app-version backup without altering old briefs or creations.
+- Production NSIS version is 0.3.1 and the unchanged identifier is com.mark.imagegenapp. Normal update retention remains unchanged. The live installation was not upgraded during development; installer evidence is generated-script inspection plus copied-workspace, backup, media and restart checks.
+
+Evidence: ignored work/v031-evidence.json, work/v031-restart-evidence.json, work/test-v031*.mjs and screenshots. Two image generations and three image analyses exercised the adaptive flows. AI logo extraction/recreation remains approximate and is not a pixel-exact brand reproduction guarantee. Existing platform/login/crash qualifications remain open.
+
+## Version 0.4.0 — 2026-10-15
+
+- Ten frontend tests and thirteen Rust tests pass. Added tests verify native-coordinate RGBA preservation, source immutability, connected-only alpha erasing with enclosed white artwork retained, tolerance/bounds validation, PNG gamma retention, and a preview path that never starts Codex. TypeScript/frontend and Windows NSIS builds pass.
+- An isolated NSIS installation named Image Gen Acceptance was installed as 0.3.1 and upgraded to 0.4.0; registry version and install location were verified. Native Windows inspection confirmed **Upgrade to 0.4.0 (recommended)** is the selected first choice. Same-version maintenance defaults to repair/reinstall. The optional old-program-files removal upgrade path passes /UPDATE to protect app data. The template is pinned to Tauri CLI 2.12.3, with local changes marked in its header and upstream licences included.
+- The installer test uses separate product/registry keys and a separate app identifier. It does not upgrade the user's live installation. The old installer fixture tests version detection/replacement, not the historical application's code. Native app acceptance opened a copied actual 0.3.1 workspace containing eight documents, five assets, nineteen images and one custom size. All old metadata and all nineteen original media files remained identical. before-v0.4.0.zip contains the exact pre-upgrade JSON/media; restart retains the complete updated workspace.
+- In the installed native test app, numeric cropping saved a 360×240 PNG exactly equal to its preview. Comparing every decoded RGBA channel against the 480×320 source region found zero differences. Connected-background erasing removed 89,600 outer pixels while every retained pixel, including the enclosed lettering, stayed unchanged. Undo restored the original preview. Bright-pink review, library opening and restart passed without frontend runtime errors. Saving created an asset version without provider revisions or conversation messages.
+- The stable production identifier com.mark.imagegenapp, workspace format 3 and data location remain unchanged. Existing backups are retained. Test evidence is in ignored work/v040-evidence.json, work/v040-restart-evidence.json, work/test-v040*.mjs and screenshots. Prior macOS/Linux, fresh device-login and crash-recovery qualifications remain open. Background erasing is explicit colour-connected selection, not guaranteed semantic segmentation or automatic fringe removal.
+
+Final optimized production executable smoke also passed against the isolated copied workspace: saved workspace unchanged on launch; original-pixel extraction UI available; preview bytes equal the saved PNG; source references correctly start with the saved crop and retain the full source; no generation/chat was created. Evidence: work/v040-release-evidence.json. The separately named installer fixture was uninstalled after testing; the live user installation and data were not modified.
+
+## Version 0.5.0 — 2026-10-15
+
+- Fourteen frontend tests and fifteen Rust tests pass. New checks cover physical bleed/mark geometry, mark exclusion from bleed, default/no-bleed exports, invalid bleed, base64 size accounting, real RGB→CMYK profile conversion, white alpha flattening, four-channel output and screen-proof encoding. Production TypeScript/frontend build passes.
+- Native acceptance opens a copied 0.4 workspace with nine documents, eight assets, twenty-three images and one saved custom size. Every pre-existing item, history/chat, image record and custom size remains identical after all exports and restart. All twenty-three media files are byte-identical. before-v0.5.0.zip contains exact original metadata/media. The live user installation and creations were not modified.
+- Real native exports exercise all pages of a two-page A4 document: RGB with 3 mm Extend edges bleed and marks; RGB with Crop to fill bleed and marks; CMYK with Extend edges bleed and marks; default RGB without bleed/marks; JPEG at 25% and 95%; PNG. The test intercepts only the save-dialog transport to collect produced bytes; composition rendering, PDF generation and Rust/Little CMS conversion execute normally. An initial harness attempted to replace a protected Tauri invoke function and reached the native save dialog; it was corrected to capture the file-save transport, with the isolated app restarted.
+- Independent pypdf inspection verifies two pages, exact A4 TrimBoxes, 216×303 mm BleedBoxes, correct MediaBox/mark margin, RGB images in RGB files, four-channel ICCBased images in CMYK files, exact ICC profile bytes and FOGRA39 output intent. PyMuPDF renders all PDF variants and confirms eight vector marks only where requested; rendered pages were visually inspected. No PDF/X conformance or physical printer proof is claimed.
+- JPEG 25% produces 251,430 bytes versus 1,539,468 bytes at 95%; both are 2480×3508, matching PNG resolution. Saved JPEG bytes exactly match the encoded preview and reported file size. Bleed-method previews differ. CMYK/RGB comparison switches correctly. No frontend runtime errors occur.
+- Restart and final 1024×760 layout checks pass: no horizontal page overflow, Export remains visible, enabled bleed with zero amount is rejected, correcting the amount re-enables export, and disabling bleed clears the invalid input state without editing the document.
+- Automatic approval review rejected an attempted isolated installer-fixture installation with only “blocked by policy.” No installer was executed for this version; build/package inspection and copied-workspace/native/restart checks are used instead. The NSIS template and its previously qualified default Upgrade, same-version repair and data-preserving /UPDATE fallback logic remain unchanged from 0.4.0. The live installation is left for the user to upgrade.
+
+Evidence: ignored work/v050-evidence.json, work/v050-pdf-evidence.json, work/v050-restart-evidence.json, work/test-v050*.mjs, work/verify-v050-pdf.py, actual exported files and screenshots. Existing macOS/Linux, fresh device-login and crash-recovery qualifications remain open.
+
+The final optimized Windows/NSIS build passed. The optimized executable's loader, MCP initialize/ping/tool-discovery smoke passed without opening or contacting the live app. Generated NSIS inspection confirms version 0.5.0, unchanged com.mark.imagegenapp identity, default Upgrade routing, /UPDATE fallback and third-party notices resource. The bundled ICC hash matches its documented original. Native export/data tests used the isolated debug build; the user's running production GUI was left alone. Release files use explicit 0.5.0 names because the unversioned portable executable is in use by existing MCP processes; those processes and the old unversioned release files remain untouched.
+
+
+## Version 0.6.0 — optional private Docker server (2026-10-15)
+
+- Frontend: 14 tests pass; TypeScript/Vite production build passes.
+- Desktop Rust: 17 tests pass, including an actual HTTP server with two separate client stores, OS credential-vault save/reopen, empty-server copy, conflicts, offline writes, generated-image recovery ZIP contents, cached restart, and exact local-workspace preservation.
+- Server: 7 tests pass, including authenticated HTTP workspace/media operations, stale-write conflicts, independent record merges, empty-import protection and persistence across restart. A regression fixture covers browser integer JSON versus Rust floating-point dimensions (`210` / `210.0`). Typed normalization plus round-trip float parsing prevent false conflicts and coordinate drift.
+- Native Windows/WebView UI against the actual Docker container on `TEST-VM-LAN-IP:18787`: explicit connect leaves local work separate; copy and verification succeeds; every shared original media file matches SHA-256; populated-server copy is refused; same-document conflicts preserve newer work and an unsent copy; independent documents merge; shared restore is disabled; recovery tools appear; returning local restores identical metadata.
+- Native app restart while the isolated native server is unavailable: server selection and cached images remain accessible, offline writes fail and add a recovery snapshot, local originals remain unchanged.
+- Actual client-native ChatGPT image generation against the VM test server completes and commits identical generated image bytes, version and page conversation. A deliberately unavailable provider thread recovers from the shared transcript in a fresh local conversation; Discuss correctly recalls the requested purple pumpkin without adding an image version. All pre-existing documents/assets remain unchanged by the generation test.
+- Docker test-container restart retains identical metadata and generated version/chat. Container processes are Docker init plus the Rust server; `/data` contains SQLite/media/backup only. Runtime is UID 10001, read-only root, persistent named volume, `unless-stopped` restart.
+- Preservation fixture: copied 0.5.0 workspace (9 documents, 8 assets, 23 images, 1 custom size). SQLite JSON, every original media SHA-256, and all entries in `before-v0.6.0.zip` verified unchanged. Tests do not open or change the user's installed workspace.
+- Production LAN deployment: `http://SERVER-LAN-IP:8787`, independent Compose project `imagegen`, empty authenticated workspace ready for the user's explicit copy. Health version 0.6.0 verified; unauthenticated workspace requests return 401. Existing `novel-studio` and `tales-past-midnight` container uptimes/ports remain unchanged. Acceptance container stopped, its volume retained.
+
+Qualification: Windows desktop and Linux Docker amd64 are exercised. macOS/Linux desktop packaging is not exercised here. HTTPS/public DNS/router forwarding is not configured. The Windows installer is built and inspected; it is not executed against the running user installation. Existing installer Upgrade routing remains unchanged from 0.5.0.
+
+
+Final 0.6.0 release gate: optimized Windows PE ProductVersion/FileVersion 0.6.0; companion initialize/tools-list loader smoke passed; NSIS 0.6.0 generated script retains `com.mark.imagegenapp`, default Upgrade and `/UPDATE` data protection. Public source/server/companion archives were scanned for the actual deployment/test access keys and exclude `.env`/test/work files. Companion ZIP executable SHA-256 equals the release executable. Versioned published packages match the supplied SHA256 manifest. Private connection details are a separate local handover file, excluded from all public archives.
+
+
+## Version 0.7.0 — browser access and bundled desktop runtime (2026-10-15)
+
+- Frontend: 14 tests pass; TypeScript/Vite build passes. The browser reuses the React editor and shared Rust operations, without a WebAssembly rewrite.
+- Desktop Rust: 17 tests pass. Headless server: 16 shared-core tests and 3 HTTP integration tests pass (19 total). HTTP browser tests cover session cookie flags, rejected unauthenticated/cross-origin/CSRF requests, native bearer compatibility, shared edits, credential-free backup download and logout invalidation.
+- Actual native Windows/WebView with a fresh private CODEX_HOME: bundled runtime selected before any installed Codex binary; signed-out state detected; built-in ChatGPT device-code sign-in starts and cancels. Separate Codex installation is not needed for that flow.
+- Actual native generation using the bundled Windows runtime and existing managed sign-in succeeds. Copied-workspace documents, all old assets, original media SHA-256 hashes and the pre-upgrade before-v0.7.0.zip remain exactly preserved (9 documents, 8 original assets, 23 original images).
+- Human completed managed device-code login for the Linux worker. Real Linux native image generation succeeds using the pinned official runtime 0.162.0-alpha.17.2. The entire runtime bin directory is required, including codex-code-mode-host; copying only the main executable produced a misleading tool-unavailable failure despite imageGeneration=true. Packaging now includes both executables. Credential files are stored only on the private worker volume.
+- Ordinary Edge/Chromium browser against isolated Windows Rust server: private login, shared hierarchy, editor image display, PNG download, workspace ZIP download, logout and zero frontend runtime errors.
+- Ordinary browser against actual Linux Docker image: managed server sign-in reused, image generation continues after closing originating tab, completed image/revision/page chat accessible on reopening. Browser CMYK PDF download contains print output intent and TrimBox with bleed/crop marks; JPEG quality download succeeds. Original-pixel image import/crop preview/extraction and logo-specific JSON analysis/editable-description persistence succeed without Tauri.
+- Native desktop connects to the browser's shared workspace. Stale same-document edits are rejected with a recovery copy; independent changes merge. Disconnect restores the unchanged local workspace. Shared workspace ZIP downloads successfully.
+- Docker acceptance restart preserves shared workspace, completed-job journal and managed ChatGPT login. Browser access-key login works after restart. Interrupted requests are marked failed for retry on worker startup; saved artwork remains protected.
+- Windows optimized installer 0.7.0 is built with runtime/codex.exe, runtime/codex-code-mode-host.exe and upstream licence/notice. Generated NSIS retains stable identity com.mark.imagegenapp, default Upgrade and /UPDATE fallback data protection. The live Windows installation is not changed during tests.
+
+Qualification: Windows desktop and Linux Docker amd64 exercised. macOS/Linux desktop packaging is not exercised. Browser mode requires a server connection; no browser offline-edit queue/PWA is claimed. The private server remains single-owner with one worker account. Public HTTPS/DNS/router forwarding is not configured. No installer is executed against the running user installation.
+
+
+Final 0.7.0 deployment gate: production service upgraded with stopped-volume workspace and private-worker backups. Exact workspace metadata and server identity match the immediate pre-upgrade snapshot; managed ChatGPT worker remains signed in, production job list starts empty, and live Edge browser login/editor shell has no runtime errors. Current release symlink is releases/v070. Novel Studio and Tales Past Midnight container uptimes remain unchanged. Production remains empty for the user's explicit initial local-workspace copy.
+
+
+## Version 0.7.1 — compact connection settings (2026-10-15)
+
+Workspace server and ChatGPT controls move to separate native dialogs, with compact status summaries and Manage buttons on the main Settings page. All existing connection, sign-in, storage-copy and recovery controls remain. Closing ChatGPT management cancels unfinished sign-in. Nested Escape closes only the active dialog; keyboard focus returns to the opening button. Desktop and browser UI fixtures pass at 1024×760 and 640×760, including control visibility and zero horizontal modal overflow/runtime errors. Fourteen frontend tests and the production TypeScript/Vite build pass. No storage or workspace format changes.
+
+0.7.1 live deployment: stopped-volume backups retained, exact immediate pre-upgrade workspace and server identity verified unchanged, worker managed ChatGPT sign-in retained. Live browser confirms compact settings and both management dialogs, Escape navigation and zero frontend errors. Other services unchanged.
+
+Signed-out desktop UI fixture also verifies device-code sign-in starts inside ChatGPT management, closing the dialog cancels the pending login, and reopening does not show the cancelled code.
+
+Optimized Windows 0.7.1 release loader/MCP tool discovery passed. Generated NSIS confirms 0.7.1, unchanged com.mark.imagegenapp identity, bundled runtime helper, default Upgrade and data-preserving /UPDATE routing. No installer executed over the live user installation.
+
+Final production frontend also retains main-page backup error visibility, verified with an explicit failing-backup fixture; live browser connection dialogs rechecked after the final image refresh.
+
+
+## Pending owner login — source validation only (2026-10-15)
+
+Explicit user constraint: no compilation, packaging or deployment. Production workspace, access key, service and released artifacts are untouched.
+
+- Twenty-five frontend tests pass. New checks cover exclusive credential-method submission, required fields and accessible credential controls; existing direct-dialog, version and export/domain checks stay green.
+- TypeScript source diagnostics pass with no emitted files. Rust source parsing/formatting checks pass; this is not native/server compilation or execution.
+- Prepared, unrun Rust HTTP coverage: key ownership before account creation, invalid/valid passwords, key-only dismissal, legacy access-key access, password-issued native bearer tokens, cookie/token scope separation, remembered-cookie persistence across restart, session-cookie flags, logout revocation, and identical existing organisation/custom-size metadata/server identity after setup.
+- Prepared, unrun Rust unit coverage: salted password hashes, stored token hashes, expiry, unchanged configured key and stable automatically generated new-server key.
+- Rust semantic/build checks, HTTP execution, native runtime and browser interaction/visual acceptance remain deferred until compilation is authorised. No claim of runtime qualification for this authentication change.
+
+
+## Version 0.8.0 — owner login and connection status (2026-10-15)
+
+- User explicitly authorised server compilation/deployment and Windows compilation, superseding the earlier source-only hold.
+- 25 frontend tests, production TypeScript/Vite build and source type checks pass. Windows core: 17 Rust tests pass. Server: 18 shared/auth unit tests plus 5 HTTP integration tests pass (23 total), covering ownership, password login, key-only dismissal, native-token scope, remembered sessions/restart, logout, expiry, original key and workspace preservation. Compilation corrected the SQLite session timestamp type to signed 64-bit values.
+- Actual Edge browser on an isolated Rust server and on the Linux Docker image: key-verified owner setup, password login, 90-day HttpOnly cookie, automatic sign-in after closing/relaunching a persistent browser profile, no secret localStorage writes, matching versions, direct sidebar dialogs and non-overlapping status cards. No frontend runtime errors.
+- Actual Windows/WebView against isolated Windows and Linux Docker servers: username/password exchange, OS-vault-backed native restart/reconnect, native/server versions both 0.8.0, and direct dialogs. Disconnect restores the copied local workspace exactly. Nine documents, nine assets and 24 images retained with identical original media SHA-256 and before-v0.8.0.zip contents.
+- Production Docker deployment takes complete stopped-volume workspace and private-worker backups plus private environment-key backup. The original access key/config, server identity, workspace, all 13 image SHA-256 values and job history are unchanged; two documents and three assets retained. Existing ChatGPT worker sign-in/capability remains available. First-owner account choice is deliberately left to the user; production smoke confirms setup is still pending. Read-only browser inspection verifies shared workspace, sidebar dialogs and version match.
+- Windows optimized release executable loader/MCP discovery passes; generated NSIS keeps com.mark.imagegenapp, 0.8.0, default Upgrade, /UPDATE preservation and both generation runtime executables.
+
+Qualification: no installer is executed over the running user installation. Windows desktop and Linux Docker amd64 exercised; other desktop platforms remain unqualified. Runtime is unchanged from the generation-qualified 0.7.0 pin. Public HTTPS/DNS/router forwarding remain unconfigured.

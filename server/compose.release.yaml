@@ -1,0 +1,26 @@
+# Downloaded by install.sh. The development/source-build compose.yaml is separate.
+name: chatgpt-image-gen
+services:
+  imagegen:
+    image: ${IMAGEGEN_IMAGE:?Use install.sh to select a published release}
+    restart: unless-stopped
+    init: true
+    ports:
+      - "${IMAGEGEN_BIND_ADDRESS:?}:${IMAGEGEN_PORT:-8787}:8787"
+    environment:
+      IMAGEGEN_SERVER_TOKEN: ${IMAGEGEN_SERVER_TOKEN:-}
+      IMAGEGEN_WORKER_ENABLED: ${IMAGEGEN_WORKER_ENABLED:-true}
+      IMAGEGEN_SERVER_NAME: My Image Gen Server
+    volumes:
+      - imagegen-data:/data
+      - imagegen-worker:/worker
+    read_only: true
+    tmpfs:
+      - /tmp:size=64m
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+volumes:
+  imagegen-data:
+  imagegen-worker:

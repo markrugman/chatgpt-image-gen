@@ -1,0 +1,18 @@
+{
+  "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
+  "name": "imagegenapp",
+  "version": "0.8.1",
+  "description": "Start a poster or design conversation in your local Image Gen workspace.",
+  "author": {
+    "name": "Mark"
+  },
+  "extensions": {
+    "com.openai": {
+      "requires_local_executor": true,
+      "interface": {
+        "displayName": "Image Gen",
+        "shortDescription": "Start a design in your desktop workspace"
+      }
+    }
+  }
+}

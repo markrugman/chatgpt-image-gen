@@ -1,0 +1,27 @@
+services:
+  imagegen:
+    build:
+      context: ..
+      dockerfile: server/Dockerfile
+    image: image-gen-server:0.8.1
+    restart: unless-stopped
+    init: true
+    ports:
+      - "${IMAGEGEN_BIND_ADDRESS:-127.0.0.1}:${IMAGEGEN_PORT:-8787}:8787"
+    environment:
+      IMAGEGEN_SERVER_TOKEN: ${IMAGEGEN_SERVER_TOKEN:-}
+      IMAGEGEN_WORKER_ENABLED: ${IMAGEGEN_WORKER_ENABLED:-false}
+      IMAGEGEN_SERVER_NAME: ${IMAGEGEN_SERVER_NAME:-My Image Gen Server}
+    volumes:
+      - imagegen-data:/data
+      - imagegen-worker:/worker
+    read_only: true
+    tmpfs:
+      - /tmp:size=64m
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+volumes:
+  imagegen-data:
+  imagegen-worker:

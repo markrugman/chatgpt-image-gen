@@ -1,0 +1,46 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "Image Gen",
+  "version": "0.8.1",
+  "identifier": "com.mark.imagegenapp",
+  "build": {
+    "beforeDevCommand": "npm run dev",
+    "devUrl": "http://localhost:1420",
+    "beforeBuildCommand": "npm run build",
+    "frontendDist": "../dist"
+  },
+  "app": {
+    "windows": [
+      {
+        "title": "Image Gen \u2014 Your creative workspace",
+        "width": 1480,
+        "height": 940,
+        "minWidth": 1000,
+        "minHeight": 700,
+        "backgroundColor": "#f7f7fa"
+      }
+    ],
+    "security": {
+      "csp": "default-src 'self'; img-src 'self' asset: http://asset.localhost blob: data:; style-src 'self' 'unsafe-inline'; connect-src ipc: http://ipc.localhost http://localhost:1420 ws://localhost:1420; font-src 'self' data:"
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": "all",
+    "icon": [
+      "icons/32x32.png",
+      "icons/128x128.png",
+      "icons/128x128@2x.png",
+      "icons/icon.icns",
+      "icons/icon.ico"
+    ],
+    "windows": {
+      "nsis": {
+        "template": "installer/installer.nsi"
+      }
+    },
+    "resources": {
+      "THIRD-PARTY-NOTICES.txt": "THIRD-PARTY-NOTICES.txt"
+    }
+  }
+}
