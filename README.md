@@ -1,6 +1,18 @@
 # Image Gen
 
-A personal image-design workspace powered by ChatGPT, with organisations, projects, page conversations, reusable assets and print exports. Use the native app on its own, or connect it to your private server. The optional Codex companion starts designs from a chat on the same computer.
+**Your images deserve a home of their own.**
+
+Creating an image is easy. Finding it again weeks later shouldn’t be the hard part.
+
+When you generate images across ChatGPT and Codex, they can end up scattered across conversations, mixed in with unrelated work, and buried among different ideas and versions. Finding the right one often means remembering exactly what you asked for—and where you asked it.
+
+Image Gen App gives image creation a dedicated, organised home. Group your work into **organisations** for different clients, businesses, or personal interests, then create **projects** for individual campaigns, events, or ideas. Each design can contain multiple pages, with its images, conversations, and revision history kept together.
+
+Experiment without losing earlier work: revisit previous versions, continue from an older revision, or explore a different direction while keeping the alternatives recoverable. Build libraries of reusable assets and uploads, share them across organisations, and use searchable tags to make your work easier to find.
+
+When your design is ready, export individual pages as **PNG or JPEG**, or complete documents as **multi-page PDFs**, with options for bleed, crop marks, and RGB or CMYK output. From the first prompt to the finished export, everything stays organised in one workspace—so you can spend less time searching and more time creating.
+
+Use the native app on its own, or connect it to your private server. The optional Codex companion starts designs from a chat on the same computer.
 
 Download the Windows app, companion and server setup files from [GitHub Releases](https://github.com/markrugman/chatgpt-image-gen/releases). The server image is distributed through GitHub Container Registry. Downloads do not require a GitHub account.
 
