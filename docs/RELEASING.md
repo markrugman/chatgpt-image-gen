@@ -1,5 +1,7 @@
 # Building and releasing Image Gen
 
+Private production runs locally built 0.9.1 (2026-10-16), explicitly authorised for the template page/form and drawer styling updates. Verified Windows packages are in `outputs/Desktop-0.9.1/`, and `Run Image Gen.cmd` prefers the extracted 0.9.1 portable. Source commit `6069ce7699988de30c5b1003406447b2a8d87bb5` and final preservation checks are recorded in [VALIDATION.md](VALIDATION.md). This build/deployment did not push source to GitHub or publish a release/image; the latest public release remains 0.9.0. The historical 0.9.0 private-deployment details below are superseded by 0.9.1.
+
 On 2026-10-15, Mark authorized compilation, packaging, remaining checks and public distribution once checks pass. This supersedes the earlier source-only hold. Existing private production deployment remains separate.
 
 Release 0.9.0 is published on GitHub, and private production runs its verified published immutable image; see [VALIDATION.md](VALIDATION.md). For REST-based release operations, resolve draft releases through the authenticated releases list and release ID: the tag endpoint can return 404 while the release is a draft. When updating draft notes, explicitly preserve `tag_name`, `target_commitish`, `name` and `draft`, and verify the returned tag before publication. A notes-only PATCH reset the unpublished 0.8.4 tag to an `untagged-*` value; restoring the tag allowed retrying just publication with the already verified packages.

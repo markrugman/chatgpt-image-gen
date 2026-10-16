@@ -19,20 +19,19 @@ try {
   for (const [name, engine, options] of [['Edge', chromium, { channel: 'msedge' }], ['WebKit', webkit, {}]]) {
     const browser = await engine.launch({ ...options, headless: true });
     try {
-      const page = await browser.newPage();
-      await page.addInitScript(() => { localStorage.clear(); sessionStorage.clear(); });
-      const errors = [];
-      page.on('pageerror', e => errors.push(e.message));
-      await page.route('**/web/session', r => r.fulfill({ json: { hasOwner: true, setupNeeded: false } }));
-      await page.route('**/health', r => r.fulfill({ json: { service: 'image-gen-server', version: '0.9.0' } }));
-      await page.route('**/api/*', r => {
-        const command = r.request().url().split('/').pop();
-        return r.fulfill({ json: command === 'get_workspace' ? workspace : command === 'image_data' ? image : command === 'get_jobs' ? [] : command === 'server_status' ? { connected: true, online: true, name: 'Fixture', pending: 0 } : command === 'connection' ? { account: null, capabilities: {} } : {} });
-      });
+      // A fresh page/context avoids carrying drafts or aborting in-flight preview polls on reload.
       for (const theme of ['light', 'dark']) for (const width of [320, 393, 768, 1440]) {
+        const page = await browser.newPage();
+        const errors = [];
+        page.on('pageerror', e => errors.push(e.message));
+        await page.route('**/web/session', r => r.fulfill({ json: { hasOwner: true, setupNeeded: false } }));
+        await page.route('**/health', r => r.fulfill({ json: { service: 'image-gen-server', version: '0.9.1' } }));
+        await page.route('**/api/*', r => {
+          const command = r.request().url().split('/').pop();
+          return r.fulfill({ json: command === 'get_workspace' ? workspace : command === 'image_data' ? image : command === 'get_jobs' ? [] : command === 'server_status' ? { connected: true, online: true, name: 'Fixture', pending: 0 } : command === 'connection' ? { account: null, capabilities: {} } : {} });
+        });
         await page.setViewportSize({ width, height: 950 });
         await page.goto(`${origin}/#view=projects&org=org&design=doc&page=page`);
-        await page.reload();
         await expect(page.locator('.editor')).toBeVisible();
         await page.evaluate(theme => { localStorage.setItem('imagegen-theme', theme); document.documentElement.dataset.theme = theme; }, theme);
         if (width <= 1024) await page.getByRole('button', { name: 'Tools', exact: true }).click();
@@ -74,9 +73,10 @@ try {
           if (width <= 1024) await expect(page.getByRole('button', { name: 'Chat', exact: true })).toHaveAttribute('aria-pressed', 'true');
         }
         assert(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
+        assert.deepEqual(errors, []);
+        await page.close();
         console.log(`PASS ${name} ${theme} ${width}px: three two-column drawers, image/title cards, popup bounds and keyboard controls`);
       }
-      assert.deepEqual(errors, []);
     } finally { await browser.close(); }
   }
 } finally { await new Promise(resolve => server.httpServer.close(resolve)); }
