@@ -1,5 +1,19 @@
 # Next version design interview
 
+## 0.9.3 release preparation (2026-10-16)
+
+Mark authorised fixing the physical Safari template-preview overflow, building and deploying all pending UI changes to the server and GitHub. Template example images now use explicit width/height inside a bounded, clipped preview with `object-fit: contain`, removing reliance on percentage max-height in a flex container. A tall 1024�1536 PNG fixture verifies loaded-image bounds, form layout and footer reachability in Edge/WebKit in light/dark at 320/393/768/1440px. The available modern WebKit did not reproduce the physical-phone overflow before the change; physical Safari confirmation remains outstanding.
+
+## Uniform preview backgrounds — local changes (2026-10-16)
+
+Design previews in Projects now use the same shared checkerboard as Assets, Uploads and Templates in both themes. Removed the design-specific base and dark-mode background-colour overrides that produced the harsher checkerboard; artwork and composition paper are unchanged. `npm run build` passes. Isolated Edge/WebKit computed-style checks confirm identical background colour, gradient, sizing and positioning at 320/393/1440px in light/dark; screenshots inspected under ignored `work/uniform-previews-*.png`. Not deployed or published.
+
+## Template folders — local changes (2026-10-16)
+
+The full Templates library now shows a Folders section above All templates, using the Projects page's card, folder icon and stacked image-preview styles. Cards include General and every folder in the selected library scope, show active template counts, and open a folder filter with an All templates return control. Custom folders expose Rename through their three-dot control; the existing folder dropdown and rename/delete controls remain available. Compact template pickers retain their existing layout. The Create/Rename folder dialog also uses the shared padded body and separated Cancel/Save footer.
+
+Verification: `npm run build`, all 28 frontend tests, and `node scripts/test-template-scope.mjs` pass. The browser checks cover folder navigation, General, counts/previews excluding Trash, Shared/organisation scopes, search and rename ownership in Edge/WebKit at 320/393/1440px in light/dark. Screenshots inspected under ignored `work/template-folders-*.png`. Local only; not deployed or published.
+
 ## GitHub 0.9.2 published (2026-10-16)
 
 Mark requested deploying the completed 0.9.2 changes to GitHub. Source commits are pushed and [0.9.2 is public](https://github.com/markrugman/chatgpt-image-gen/releases/tag/v0.9.2), including the previously private 0.9.1 improvements. All five workflow jobs, actual CI portable/runtime/companion checks, anonymous downloads/checksums and immutable Linux image checks pass. The existing private deployment remains in place. Publication evidence is in VALIDATION.md.

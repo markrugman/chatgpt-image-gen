@@ -1,8 +1,8 @@
 import { useState } from "react";
-import { FileImage, FolderPlus, MoreHorizontal, Plus, Trash2 } from "lucide-react";
+import { ArrowLeft, FileImage, Folder, FolderPlus, MoreHorizontal, Plus, Trash2 } from "lucide-react";
 import { api } from "./api";
 import { LibraryImageTile } from "./LibraryImages";
-import { Empty, ImageView, Modal, PageHeading, type Act } from "./ui";
+import { Empty, ImageView, Modal, PageHeading, SectionHeading, type Act } from "./ui";
 import { activeOrganisations, matchesSearch, type Message, type Template, type Workspace } from "./types";
 
 export type TemplateSource = { imageId: string; recipe: string; messages?: Message[] };
@@ -108,7 +108,8 @@ export function Templates({ w, orgId, act, run, onRefresh, onSelect, fullPage = 
   const [error, setError] = useState(""), [busy, setBusy] = useState(false);
   const [deletingFolder, setDeletingFolder] = useState(false);
   const folders = (w.templateFolders || []).filter(f => allLibraries || f.organisationId === owner).sort((a,b) => a.name.localeCompare(b.name));
-  const items = (w.templates || []).filter(t => !t.deletedAt && (allLibraries || t.organisationId === owner) && (folder === "all" || t.folderId === folder)
+  const libraryItems = (w.templates || []).filter(t => !t.deletedAt && (allLibraries || t.organisationId === owner));
+  const items = libraryItems.filter(t => (folder === "all" || t.folderId === folder)
     && matchesSearch(`${t.name} ${t.recipe}`, t.tags, query)).sort((a,b) => a.name.localeCompare(b.name));
   const actions = <div className="button-row template-library-actions">
     <button className="button secondary" onClick={() => { setError(""); setFolderDialog({ name: "" }); }}><FolderPlus size={16} />Create folder</button>
@@ -127,6 +128,27 @@ export function Templates({ w, orgId, act, run, onRefresh, onSelect, fullPage = 
       <select aria-label="Filter templates by folder" value={folder} onChange={e => setFolder(e.target.value)}><option value="all">All templates</option><option value={generalFolder}>General</option>{folders.map(f => <option key={f.id} value={f.id}>{allLibraries ? `${w.organisations.find(o => o.id === f.organisationId)?.name || "Shared library"} · ${f.name}` : f.name}</option>)}</select>
       {folder !== "all" && folder !== generalFolder && <><button className="text-button" onClick={() => { setError(""); setFolderDialog({ id: folder, name: folders.find(f => f.id === folder)?.name || "" }); }}>Rename folder</button><button className="text-button" onClick={() => setDeletingFolder(true)}>Delete folder</button></>}
     </div>
+    {fullPage && folder === "all" && <>
+      <SectionHeading title="Folders" count={folders.length + 1} />
+      <div className="project-grid" aria-label="Template folders">
+        {[{ id: generalFolder, name: "General", organisationId: owner }, ...folders].map(f => {
+          const templates = libraryItems.filter(t => t.folderId === f.id);
+          const previews = [...new Set(templates.map(t => t.exampleImageId))].slice(0, 3);
+          const org = w.organisations.find(o => o.id === f.organisationId);
+          return <article className="project-card" key={f.id}>
+            <button className="project-preview" aria-label={`Open folder ${f.name}`} onClick={() => setFolder(f.id)} style={{ background: `${org?.color || "#7654cf"}0e` }}>
+              <Folder size={38} style={{ color: org?.color || "#7654cf" }} strokeWidth={1.2} />
+              {previews.map((id, i) => <div className="project-paper" key={id} style={{ transform: `rotate(${[0, -9, 9][i]}deg) translateX(${[0, -34, 34][i]}px)`, zIndex: 3 - i }}><ImageView id={id} alt="Template preview" /></div>)}
+            </button>
+            <div className="card-caption">
+              <button className="card-name" onClick={() => setFolder(f.id)}><strong>{f.name}</strong><small>{allLibraries && f.id !== generalFolder && <>{org?.name || "Shared library"}<span>·</span></>}{templates.length} {templates.length === 1 ? "template" : "templates"}</small></button>
+              {f.id !== generalFolder && <button className="icon-button" aria-label={`Rename folder ${f.name}`} onClick={() => { setError(""); setFolderDialog({ id: f.id, name: f.name }); }}><MoreHorizontal size={18} /></button>}
+            </div>
+          </article>;
+        })}
+      </div>
+    </>}
+    {fullPage && <SectionHeading title={folder === "all" ? "All templates" : folder === generalFolder ? "General" : folders.find(f => f.id === folder)?.name || "Templates"} count={items.length} action={folder !== "all" && <button className="text-button" onClick={() => setFolder("all")}><ArrowLeft size={15} />All templates</button>} />}
     <div className={onSelect ? "library-image-grid" : "asset-grid template-grid"}>{items.map(t => onSelect ? <LibraryImageTile key={t.id} name={t.name} imageId={t.exampleImageId} actions={[
       { label: "Use Template", onSelect: () => onSelect(structuredClone(t)) },
       { label: "Use and Attach as Style", onSelect: () => onSelect(structuredClone(t), true) },
@@ -144,9 +166,15 @@ export function Templates({ w, orgId, act, run, onRefresh, onSelect, fullPage = 
       trash: async () => { await act({ op: "delete", kind: "template", id: editing.id }); setEditing(null); },
     }} />}
     {folderDialog && <Modal title={folderDialog.id ? "Rename folder" : "Create folder"} onClose={() => { if (!busy) setFolderDialog(null); }}>
-      <form className="template-form" onSubmit={async e => { e.preventDefault(); setBusy(true); setError(""); try { await act({ op: "template_folder", ...folderDialog, organisationId: folderDialog.id ? folders.find(f => f.id === folderDialog.id)?.organisationId ?? null : owner }); setFolderDialog(null); } catch(e) { setError(String(e)); } finally { setBusy(false); } }}>
+      <form onSubmit={async e => { e.preventDefault(); setBusy(true); setError(""); try { await act({ op: "template_folder", ...folderDialog, organisationId: folderDialog.id ? folders.find(f => f.id === folderDialog.id)?.organisationId ?? null : owner }); setFolderDialog(null); } catch(e) { setError(String(e)); } finally { setBusy(false); } }}>
+        <div className="form-body">
         <label>Folder name<input required value={folderDialog.name} onChange={e => setFolderDialog({ ...folderDialog, name: e.target.value })} /></label>
-        {error && <p role="alert">{error}</p>}<button className="button primary" disabled={busy || !folderDialog.name.trim()}>Save folder</button>
+        {error && <div className="form-error" role="alert">{error}</div>}
+        </div>
+        <div className="modal-footer template-form-footer">
+          <button type="button" className="button secondary" disabled={busy} onClick={() => setFolderDialog(null)}>Cancel</button>
+          <button className="button primary" disabled={busy || !folderDialog.name.trim()}>{busy ? "Saving…" : "Save folder"}</button>
+        </div>
       </form>
     </Modal>}
     {deletingFolder && <Modal title="Delete folder?" onClose={() => setDeletingFolder(false)}><p>Templates in this folder will move to General, including items in Trash.</p><button className="button primary" onClick={() => run(async () => { await act({ op: "template_folder_delete", id: folder }); setFolder("all"); setDeletingFolder(false); })}>Delete folder</button></Modal>}

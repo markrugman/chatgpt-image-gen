@@ -19,7 +19,7 @@ const origin = 'http://127.0.0.1:'+server.httpServer.address().port;
 try {
  for (const [name,engine,options] of [['Edge',chromium,{channel:'msedge'}],['WebKit',webkit,{}]]) {
  const browser = await engine.launch({...options,headless:true});
- try {for(const width of [393,1440]) {
+ try {for(const width of [320,393,1440]) {
  const page = await browser.newPage({viewport:{width,height:1000}});
  const actions = [];
  await page.route('**/web/session',r=>r.fulfill({json:{hasOwner:true,setupNeeded:false}}));
@@ -28,6 +28,32 @@ try {
  await page.goto(origin+'/#view=templates&org=all');
  const library=page.getByRole('region',{name:'Templates library'}), cards=library.locator('.template-card');
  await expect(cards).toHaveCount(3);
+ for (const theme of ['light','dark']) {
+ await page.evaluate(theme => document.documentElement.dataset.theme = theme, theme);
+ const folderGrid = library.getByLabel('Template folders', {exact:true});
+ await expect(folderGrid.locator('.project-card')).toHaveCount(4);
+ const posterFolder = folderGrid.locator('.project-card').filter({has:page.getByRole('button',{name:'Open folder Posters',exact:true})});
+ await expect(posterFolder).toContainText('Other Studio');
+ await expect(posterFolder).toContainText('1 template');
+ await expect(posterFolder.locator('.project-paper')).toHaveCount(1);
+ const portraitFolder = folderGrid.locator('.project-card').filter({has:page.getByRole('button',{name:'Open folder Portraits',exact:true})});
+ await expect(portraitFolder).toContainText('1 template'); // Excludes the trashed template.
+ await expect(portraitFolder.locator('.project-paper')).toHaveCount(1);
+ assert(await folderGrid.evaluate(grid => [...grid.children].every(card => {
+ const a=grid.getBoundingClientRect(), b=card.getBoundingClientRect();
+ return b.left>=a.left && b.right<=a.right+1;
+ })));
+ await page.screenshot({path:`work/template-folders-${name}-${width}-${theme}.png`});
+ await posterFolder.getByRole('button',{name:'Open folder Posters',exact:true}).click();
+ await expect(folderGrid).toHaveCount(0);
+ await expect(cards).toHaveCount(1);
+ await expect(cards).toContainText('Poster recipe');
+ await expect(library.getByRole('heading',{name:'Posters',exact:false})).toContainText('Posters');
+ await library.getByRole('button',{name:'All templates',exact:true}).click();
+ await folderGrid.getByRole('button',{name:'Open folder General',exact:true}).click();
+ await expect(cards).toHaveCount(0);
+ await library.getByRole('button',{name:'All templates',exact:true}).click();
+ }
  await expect(library.getByRole('button',{name:'All organisations',exact:true})).toHaveClass('active');
  await library.getByRole('textbox',{name:'Search templates'}).fill('tag1'); await expect(cards).toHaveCount(1); await expect(cards).toContainText('Poster recipe');
  await library.getByRole('textbox',{name:'Search templates'}).fill('');
@@ -38,9 +64,11 @@ try {
  await rename.getByRole('button',{name:'Save folder',exact:true}).click(); await expect(rename).toHaveCount(0);
  assert.equal(actions.at(-1).organisationId,'other'); assert.equal(actions.at(-1).id,'posters');
  await library.getByRole('button',{name:'Shared',exact:true}).click(); await expect(cards).toHaveCount(1); await expect(cards).toContainText('Shared recipe');
+ await expect(library.getByLabel('Template folders',{exact:true}).locator('.project-card')).toHaveCount(2);
  await expect(library.getByRole('combobox',{name:'Filter templates by folder'}).locator('option')).toHaveCount(3);
  await library.getByRole('button',{name:'All organisations',exact:true}).click(); await expect(cards).toHaveCount(3);
  await page.getByRole('combobox',{name:'Current organisation'}).selectOption('org'); await expect(cards).toHaveCount(1); await expect(cards).toContainText('Portrait recipe');
+ await expect(library.getByLabel('Template folders',{exact:true}).locator('.project-card')).toHaveCount(2);
  await page.getByRole('combobox',{name:'Current organisation'}).selectOption('other'); await expect(cards).toHaveCount(1); await expect(cards).toContainText('Poster recipe');
  await page.getByRole('combobox',{name:'Current organisation'}).selectOption('all'); await expect(cards).toHaveCount(3);
  assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));

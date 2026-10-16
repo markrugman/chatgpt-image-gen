@@ -1,5 +1,12 @@
 # Release history
 
+## New in 0.9.3
+
+- Bound tall template example images inside their preview so Safari cannot overlap the form fields.
+- Browse Templates folders as preview cards, matching Projects, with template counts and folder navigation.
+- Create/Rename folder dialogs use consistent padding and Cancel/Save controls.
+- Project designs share the same checkerboard background as Assets, Uploads and Templates in both themes.
+
 ## New in 0.9.2
 
 - Template cards match the compact library style, with details and Duplicate/Copy/Move/Trash inside the three-dot edit dialog.
