@@ -24,7 +24,7 @@ def check(version):
         data = tomllib.loads((ROOT / name).read_text(encoding="utf-8"))
         if data["package"]["version"] != version:
             raise ValueError(f"Version mismatch: {name}")
-    for name, package in (("src-tauri/Cargo.lock", "image-gen-app"), ("server/Cargo.lock", "image-gen-server")):
+    for name, package in (("src-tauri/Cargo.lock", "image-gen-app"), ("src-tauri/Cargo.lock", "image-gen-server"), ("server/Cargo.lock", "image-gen-server")):
         data = tomllib.loads((ROOT / name).read_text(encoding="utf-8"))
         if next(p["version"] for p in data["package"] if p["name"] == package) != version:
             raise ValueError(f"Version mismatch: {name}")
