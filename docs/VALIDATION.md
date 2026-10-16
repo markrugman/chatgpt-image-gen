@@ -1,5 +1,12 @@
 # Validation
 
+## GitHub release 0.9.2 published (2026-10-16)
+
+- Mark explicitly requested GitHub publication of the completed 0.9.2 changes, including the previously private 0.9.1 library/form improvements. [Release 0.9.2](https://github.com/markrugman/chatgpt-image-gen/releases/tag/v0.9.2) is public from source `362fe7bf0ed98b1713283faa914a4106f08aef2a`; all five jobs in [workflow 38893171000](https://github.com/markrugman/chatgpt-image-gen/actions/runs/38893171000) passed. The existing eligible reviewer approved the protected publication gate after draft qualification; reviewer protections were retained.
+- All seven public downloads are anonymously accessible and every SHA-256 matches. GitHub-built Windows archives pass integrity, licence/runtime inclusion and private-data exclusion checks. The actual CI portable reports 0.9.2 through MCP, its pinned runtime starts, and companion installation succeeds in an isolated Codex home. Downloads are in `outputs/GitHub-0.9.2/`; no installer ran over the existing app. Fresh-machine installer and physical-phone checks were not repeated; Windows installers remain unsigned.
+- Published immutable image: `ghcr.io/markrugman/chatgpt-image-gen@sha256:b1f776f9a427794d9d3bc532890182026b5d9c8b7d725f001a942f1d8b43b798`. Anonymous pull without saved registry credentials, exact source label, Linux 0.9.2 startup/authentication, real template storage/reference-purpose preview, organisation cascade/restore and restart preservation all pass in a disposable container.
+- The release application sources match the qualified private build `ba537216db936b6c180f1cee18fde035ccb12d9f`; later source changes before release are documentation and launcher only. GitHub publication did not replace the existing live `releases/v092` deployment or its qualified local image. Private operator evidence is under ignored `work/gh092/`; local deployment preservation and stopped-volume/off-host backups are recorded below.
+
 ## Local 0.9.2 build and private deployment (2026-10-16)
 
 - Mark explicitly authorised building and deploying all pending UI changes: compact template cards and management dialog, Templates All organisations, compact composer and Add as… role menus, and collapsible user chat messages. Application source is local commit `ba537216db936b6c180f1cee18fde035ccb12d9f`. No GitHub push, public release or registry publication was performed; the latest public release remains 0.9.0.

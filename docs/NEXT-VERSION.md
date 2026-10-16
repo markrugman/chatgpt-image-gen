@@ -1,8 +1,8 @@
 # Next version design interview
 
-## GitHub 0.9.2 publication authorised (2026-10-16)
+## GitHub 0.9.2 published (2026-10-16)
 
-Mark requested deploying the completed 0.9.2 changes to GitHub. This includes pushing the 0.9.1/0.9.2 source commits and publishing the verified 0.9.2 Windows downloads and immutable server image through the existing protected release workflow. The current private deployment remains in place. Publication evidence follows in VALIDATION.md after qualification.
+Mark requested deploying the completed 0.9.2 changes to GitHub. Source commits are pushed and [0.9.2 is public](https://github.com/markrugman/chatgpt-image-gen/releases/tag/v0.9.2), including the previously private 0.9.1 improvements. All five workflow jobs, actual CI portable/runtime/companion checks, anonymous downloads/checksums and immutable Linux image checks pass. The existing private deployment remains in place. Publication evidence is in VALIDATION.md.
 
 ## 0.9.2 built and deployed (2026-10-16)
 
