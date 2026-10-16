@@ -1,5 +1,9 @@
 # Next version design interview
 
+## GitHub 0.9.2 publication authorised (2026-10-16)
+
+Mark requested deploying the completed 0.9.2 changes to GitHub. This includes pushing the 0.9.1/0.9.2 source commits and publishing the verified 0.9.2 Windows downloads and immutable server image through the existing protected release workflow. The current private deployment remains in place. Publication evidence follows in VALIDATION.md after qualification.
+
 ## 0.9.2 built and deployed (2026-10-16)
 
 Mark explicitly requested building and deploying all changes below: compact template cards and management dialog, All organisations filtering, compact composer/reference-role menus and collapsible user chat messages. This supersedes their local-preview/deployment holds. Version 0.9.2 is built locally and deployed to the existing private server, with Windows installer/portable/companion packages verified. Live Edge/mobile WebKit verify the new behaviour and unchanged workspace. Complete stopped-volume/config backups have a checksum-verified off-host copy; all 49 media hashes, 16 designs, 21 library items, server identity, sign-in and sessions are preserved. See VALIDATION.md. No GitHub push or public release was performed.
