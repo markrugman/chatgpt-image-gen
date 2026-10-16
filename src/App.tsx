@@ -541,9 +541,7 @@ export default function App() {
                   }}
                 />
               ) : route === "templates" ? (
-                <><PageHeading eyebrow="REUSABLE RECIPES" title="Templates" subtitle="Save a visual recipe. Make it your own." />
-                  <Templates key={orgId} w={w} orgId={orgId === "all" ? null : orgId} act={act} run={run} onRefresh={refresh} />
-                </>
+                <Templates key={orgId} fullPage w={w} orgId={orgId === "all" ? null : orgId} act={act} run={run} onRefresh={refresh} />
               ) : route === "trash" ? (
                 <>
                   <PageHeading

@@ -1,5 +1,11 @@
 # Release history
 
+## New in 0.9.1
+
+- Templates matches Assets and Uploads with consistent header actions, tabs, information banner, image cards and empty states.
+- Assets, Uploads and Templates drawers show two image-and-title cards per row. Templates offers **Use Template** or **Use and Attach as Style** from the same popup style as other library images.
+- New/Edit Template uses padded fields, grouped help text, a styled image chooser, responsive Library/Folder controls and a separated Cancel/Save footer.
+
 ## New in 0.9.0
 
 - Save reusable image-generation Templates with example previews, editable recipes, usage notes and tags. Create them from scratch or from current images and earlier revisions.

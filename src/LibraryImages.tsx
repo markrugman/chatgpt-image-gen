@@ -57,7 +57,7 @@ export function LibraryImages({
         </div>
       )}
       {!orgId && <div className="panel-heading">SHARED</div>}
-      {items.map((a) => (
+      <div className="library-image-grid">{items.map((a) => (
         <LibraryImage
           key={a.id}
           asset={a}
@@ -65,7 +65,7 @@ export function LibraryImages({
           onReference={onReference}
           onPlace={onPlace}
         />
-      ))}
+      ))}</div>
       {!items.length && (
         <p className="muted">
           No {kind === "upload" ? "uploads" : "assets"} here yet.
@@ -85,6 +85,16 @@ function LibraryImage({
   w: Workspace;
   onReference: (id: string) => void;
   onPlace?: (asset: Asset) => void;
+}) {
+  return <LibraryImageTile name={asset.name} imageId={versionImage(w, asset.currentVersionId!)} actions={[
+    { label: "Reference", onSelect: () => onReference(asset.currentVersionId!) },
+    ...(onPlace ? [{ label: "Place", onSelect: () => onPlace(asset) }] : []),
+  ]} />;
+}
+
+export function LibraryImageTile({ name, imageId, actions }: {
+  name: string; imageId?: string | null;
+  actions: { label: string; onSelect: () => void }[];
 }) {
   const [open, setOpen] = useState(false);
   const root = useRef<HTMLDivElement>(null),
@@ -134,48 +144,38 @@ function LibraryImage({
         }
       }}
       onBlur={(e) => {
-        if (!e.currentTarget.contains(e.relatedTarget as Node)) setOpen(false);
+        if (e.relatedTarget && !e.currentTarget.contains(e.relatedTarget as Node)) setOpen(false);
       }}
     >
       <button
         ref={trigger}
         className="library-image-trigger"
-        aria-label={`Use ${asset.name}`}
+        aria-label={`Use ${name}`}
         aria-haspopup="menu"
         aria-expanded={open}
         onClick={() => setOpen(!open)}
       >
         <span className="mini-asset-preview checker">
-          <ImageView id={versionImage(w, asset.currentVersionId!)} />
+          <ImageView id={imageId} alt={name} />
         </span>
-        <strong>{asset.name}</strong>
+        <strong>{name}</strong>
       </button>
       {open && (
         <div
           className="library-image-menu"
           role="menu"
-          aria-label={`Use ${asset.name}`}
+          aria-label={`Use ${name}`}
         >
-          <button
+          {actions.map(action => <button
+            key={action.label}
             role="menuitem"
             onClick={() => {
               close();
-              onReference(asset.currentVersionId!);
+              action.onSelect();
             }}
           >
-            Reference
-          </button>
-          {onPlace && (
-            <button
-              role="menuitem"
-              onClick={() => {
-                close();
-                onPlace(asset);
-              }}
-            >
-              Place
-            </button>
-          )}
+            {action.label}
+          </button>)}
         </div>
       )}
     </div>

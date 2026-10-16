@@ -3238,6 +3238,13 @@ label small {
 .mobile-appbar-actions { display: flex; align-items: center; justify-self: end; gap: 4px; }
 .workspace-breadcrumb select { border: 0; background: transparent; color: inherit; font: inherit; max-width: 260px; cursor: pointer; padding: 8px 24px 8px 0; }
 .library-image { position: relative; overflow: visible; }
+.library-image-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.library-image-grid .mini-asset { min-width: 0; margin-bottom: 0; }
+.library-image-grid .mini-asset-preview { width: 100%; }
+.library-image-grid .mini-asset-preview img { max-width: 100%; }
+.library-image-grid .library-image:focus-within { z-index: 6; }
+.library-image-grid .mini-asset.library-image > .library-image-menu { min-width: 0; width: 190px; max-width: calc(200% + 4px); right: 0; bottom: 0; }
+.library-image-grid .library-image:nth-child(odd) > .library-image-menu { left: 0; right: auto; }
 .library-image-trigger { display: block; width: 100%; text-align: left; border-radius: 7px; overflow: hidden; }
 .library-image-trigger strong { display: block; padding: 9px; font-size: 11px; font-weight: 500; overflow-wrap: anywhere; }
 .library-image-trigger:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
@@ -3369,14 +3376,22 @@ label small {
 :root[data-theme="dark"] ::-webkit-scrollbar-thumb { background-color: #63596e; }
 .browser-app .mobile-appbar .user-avatar { width: 36px; height: 36px; }
 .templates-library { min-width: 0; }
-.template-toolbar, .template-actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin: 12px 0; }
+.template-library-actions { flex-wrap: wrap; }
+.template-toolbar, .template-actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin: 0 0 20px; }
 .template-toolbar > input { flex: 1 1 160px; min-width: 0; }
-.template-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 200px), 1fr)); gap: 16px; }
-.template-card { min-width: 0; padding: 14px; border: 1px solid var(--border); border-radius: 12px; }
-.template-card > strong, .template-card > small { display: block; overflow-wrap: anywhere; }
+.template-toolbar > select { max-width: 100%; }
+.template-card-body { padding: 14px; }
+.template-card-body > strong, .template-card-body > small { display: block; overflow-wrap: anywhere; }
+.template-card-body > small, .template-card-body > p { color: var(--theme-muted); font-size: 10px; line-height: 1.6; margin-top: 6px; overflow-wrap: anywhere; }
+.template-actions { margin: 12px 0 0; }
 .template-example { height: 160px; display: flex; align-items: center; justify-content: center; margin-bottom: 10px; }
 .template-example img { max-width: 100%; max-height: 100%; object-fit: contain; }
 .template-form { display: grid; gap: 14px; }
+.template-field { display: grid; gap: 8px; }
+.template-field > p { margin: 0; font-size: 10px; line-height: 1.7; }
+.template-field > .template-example { margin: 0; padding: 12px; border: 1px solid var(--border); border-radius: 8px; }
+.template-form-footer { justify-content: flex-end; }
+.template-image-input::file-selector-button { border: 1px solid var(--border); border-radius: 6px; padding: 7px 10px; margin-right: 10px; background: var(--theme-soft, #f3effb); color: var(--ink); font: inherit; cursor: pointer; }
 .template-form label { display: grid; gap: 6px; min-width: 0; }
 .template-form textarea, .template-form input, .template-form select { width: 100%; min-width: 0; box-sizing: border-box; }
 .template-source { max-height: 250px; overflow: auto; }
@@ -3387,9 +3402,8 @@ label small {
 .reference-chips > span { flex-wrap: wrap; max-width: 100%; }
 .reference-chips input { min-width: 80px; max-width: 180px; }
 .reference-chips select { max-width: 100px; }
-.editor-library .template-grid { grid-template-columns: 1fr; }
 .editor-library .template-toolbar > * { max-width: 100%; }
 .template-record { margin-top: 8px; }
 .selected-template pre { max-height: 180px; overflow-y: auto; }
 .composer:has(.selected-template), .composer:has(.reference-chips) { flex-shrink: 0; max-height: 75%; overflow-y: auto; }
-@media(max-width: 600px) { .template-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; } .template-card { padding: 8px; } .template-example { height: 110px; } }
+@media(max-width: 600px) { .template-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; } .template-card-body { padding: 10px; } .template-example { height: 110px; } }

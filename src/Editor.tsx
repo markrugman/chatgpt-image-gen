@@ -143,9 +143,14 @@ export function Editor({
     }, 5000);
     return () => clearInterval(timer);
   }, [template?.id, onRefresh]);
-  const selectTemplate = (t: Template) => {
+  const selectTemplate = (t: Template, attachStyle = false) => {
     setTemplate(structuredClone(t)); setMode("generate"); setShowTemplatePicker(false); setHistoricalSettings("");
     setPrompt(p => p.replace(/\/templates\s*$/, ""));
+    if (attachStyle) {
+      const reference = `image:${t.exampleImageId}`;
+      addReference(reference);
+      setReferencePurposes(p => ({ ...p, [reference]: { reference, purpose: "Style", explanation: "Template example; guide style, not subject identity." } }));
+    }
     if (compact) setMobilePanel("chat");
     textarea.current?.focus();
   };
@@ -572,7 +577,7 @@ export function Editor({
               <LibraryImages key={panel} w={w} orgId={orgId} kind={panel === "uploads" ? "upload" : "asset"} onReference={addReference} onPlace={doc ? placeAsset : undefined} />
             </div>
           )}
-          {panel === "templates" && <div className="editor-library"><Templates key={orgId} w={w} orgId={orgId} act={act} run={run} onRefresh={onRefresh} onSelect={selectTemplate} /></div>}
+          {panel === "templates" && <div className="editor-library"><div className="panel-heading">YOUR TEMPLATES</div><Templates key={orgId} w={w} orgId={orgId} act={act} run={run} onRefresh={onRefresh} onSelect={selectTemplate} /></div>}
           {panel === "history" && (
             <div className="history-panel">
               <div className="panel-heading">
