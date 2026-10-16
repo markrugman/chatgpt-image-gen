@@ -1,6 +1,6 @@
 # Building and releasing Image Gen
 
-Private production runs locally built 0.9.1 (2026-10-16), explicitly authorised for the template page/form and drawer styling updates. Verified Windows packages are in `outputs/Desktop-0.9.1/`, and `Run Image Gen.cmd` prefers the extracted 0.9.1 portable. Source commit `6069ce7699988de30c5b1003406447b2a8d87bb5` and final preservation checks are recorded in [VALIDATION.md](VALIDATION.md). This build/deployment did not push source to GitHub or publish a release/image; the latest public release remains 0.9.0. The historical 0.9.0 private-deployment details below are superseded by 0.9.1.
+Private production runs locally built 0.9.2 (2026-10-16), explicitly authorised for compact template cards, All organisations filtering, compact composer/reference-role menus and collapsible user messages. Verified Windows packages are in `outputs/Desktop-0.9.2/`, and `Run Image Gen.cmd` prefers the extracted 0.9.2 portable. Application source commit `ba537216db936b6c180f1cee18fde035ccb12d9f`, stopped-volume/off-host backups and final preservation checks are recorded in [VALIDATION.md](VALIDATION.md). This build/deployment did not push source to GitHub or publish a release/image; the latest public release remains 0.9.0. The historical private-deployment details below are superseded by 0.9.2.
 
 On 2026-10-15, Mark authorized compilation, packaging, remaining checks and public distribution once checks pass. This supersedes the earlier source-only hold. Existing private production deployment remains separate.
 
