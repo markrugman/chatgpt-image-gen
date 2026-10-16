@@ -16,7 +16,7 @@ Example: select Flat Vector Avatar, attach two photographs of the same person as
 | --- | --- |
 | Name | Required, editable display name. |
 | Recipe | Required plain-text generation instructions, editable without configurable fields or a placeholder engine. |
-| Example image | Required browsing preview. Excluded from generation unless explicitly attached as Style. |
+| Example image | Optional browsing preview; can be added later. Excluded from generation unless explicitly attached as Style. |
 | Library | One organisation or the separate Shared Library. |
 | Folder | Exactly one within that library; defaults to General. |
 | Tags | Optional multiple searchable labels. |

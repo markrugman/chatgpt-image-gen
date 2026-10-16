@@ -154,7 +154,7 @@ export function Editor({
   const selectTemplate = (t: Template, attachStyle = false) => {
     setTemplate(structuredClone(t)); setMode("generate"); setShowTemplatePicker(false); setHistoricalSettings("");
     setPrompt(p => p.replace(/\/templates\s*$/, ""));
-    if (attachStyle) {
+    if (attachStyle && t.exampleImageId) {
       const reference = `image:${t.exampleImageId}`;
       addReference(reference);
       setReferencePurposes(p => ({ ...p, [reference]: { reference, purpose: "Style", explanation: "Template example; guide style, not subject identity." } }));

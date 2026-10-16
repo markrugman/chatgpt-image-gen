@@ -29,7 +29,6 @@ export function TemplateForm({ w, act, orgId, template, source, onClose, onRefre
     <form className="template-editor-form" onSubmit={async e => {
       e.preventDefault(); setError(""); setBusy(true);
       try {
-        if (!example) throw Error("Choose an example image");
         await act({ op: "template_save", ...(template ? { id: template.id, version: template.version } : {}),
           name, recipe, exampleImageId: example, organisationId: owner || null, folderId: folder,
           tags: tags.split(",").map(s => s.trim()).filter(Boolean), usageNotes: notes });
@@ -52,7 +51,7 @@ export function TemplateForm({ w, act, orgId, template, source, onClose, onRefre
         } catch (e) { setError(String(e)); } finally { setBusy(false); }
       }} /></label>
       {example && <div className="template-example checker"><ImageView id={example} alt="Template example" /></div>}
-      <p className="muted">The example is a preview. It is sent to generation only when explicitly attached as Style.</p>
+      <p className="muted">Optional — add an example now or later. It is sent to generation only when explicitly attached as Style.</p>
       </div>
       <div className="template-field">
       <label>Recipe<textarea required rows={7} placeholder="Describe the style, composition and instructions to reuse…" value={recipe} onChange={e => setRecipe(e.target.value)} /></label>
@@ -80,7 +79,7 @@ export function TemplateForm({ w, act, orgId, template, source, onClose, onRefre
       {error && <p role="alert" className="error">{error} {template && <button type="button" onClick={async () => { try { await onRefresh(); onClose(); } catch (e) { setError(String(e)); } }}>Close and reload template</button>}</p>}
       </div>
       <div className="modal-footer template-form-footer">{management && <button type="button" className="button danger-text template-trash" disabled={busy} onClick={() => manage(management.trash)}><Trash2 size={14} />Move to Trash</button>}<button type="button" className="button secondary" disabled={busy} onClick={onClose}>Cancel</button>
-        <button className="button primary" disabled={busy || !name.trim() || !recipe.trim() || !example}>{busy ? "Saving…" : "Save template"}</button></div>
+        <button className="button primary" disabled={busy || !name.trim() || !recipe.trim()}>{busy ? "Saving…" : "Save template"}</button></div>
     </form>
   </Modal>;
 }
@@ -137,7 +136,7 @@ export function Templates({ w, orgId, act, onRefresh, onSelect, fullPage = false
   </div>;
   return <section className="templates-library" aria-label="Templates library">
     {fullPage ? <><PageHeading eyebrow="REUSABLE RECIPES" title="Templates" subtitle="Save a visual recipe. Make it your own." action={actions} />
-      <div className="info-strip"><FileImage size={18} /><span><strong>Your recipes, ready to reuse.</strong> Save instructions and an example image, then make them your own in a new design.</span></div>
+      <div className="info-strip"><FileImage size={18} /><span><strong>Your recipes, ready to reuse.</strong> Save a name and recipe. Add an example image, tags and usage notes whenever you like.</span></div>
     </> : null}
     <div className="filter-tabs" aria-label="Template library scope">
       {(orgId || fullPage) && <button className={scope === "owned" ? "active" : ""} onClick={() => { setScope("owned"); setFolder("all"); }}>{fullPage ? orgId ? w.organisations.find(o => o.id === orgId)?.name || "Organisation" : "All organisations" : "Organisation"}</button>}
@@ -152,7 +151,7 @@ export function Templates({ w, orgId, act, onRefresh, onSelect, fullPage = false
       <div className={fullPage ? "project-grid" : "library-image-grid"} aria-label="Template folders">
         {displayFolders.map(f => {
           const templates = libraryItems.filter(t => t.folderId === f.id);
-          const previews = [...new Set(templates.map(t => t.exampleImageId))].slice(0, 3);
+          const previews = [...new Set(templates.map(t => t.exampleImageId).filter(Boolean))].slice(0, 3);
           const org = w.organisations.find(o => o.id === f.organisationId);
           return <article className="project-card" key={f.id}>
             <button className="project-preview" aria-label={`Open folder ${f.name}`} onClick={() => { if (!fullPage) setQuery(""); setFolder(f.id); }} style={{ background: `${org?.color || "#7654cf"}0e` }}>
@@ -171,7 +170,7 @@ export function Templates({ w, orgId, act, onRefresh, onSelect, fullPage = false
     {(fullPage || folder !== "all") && <SectionHeading title={folder === "all" ? "All templates" : folder === generalFolder ? "General" : folders.find(f => f.id === folder)?.name || "Templates"} count={items.length} action={folder !== "all" && <div className="button-row"><button className="text-button" onClick={() => { if (!fullPage) setQuery(""); setFolder("all"); }}><ArrowLeft size={15} />{fullPage ? "All templates" : "Folders"}</button>{fullPage && folder !== generalFolder && <button className="icon-button" aria-label={`Edit folder ${folders.find(f => f.id === folder)?.name || ""}`} onClick={() => { setError(""); setFolderDialog({ id: folder, name: folders.find(f => f.id === folder)?.name || "" }); }}><MoreHorizontal size={18} /></button>}</div>} />}
     {(fullPage || folder !== "all") && <div className={onSelect ? "library-image-grid" : "asset-grid template-grid"}>{items.map(t => onSelect ? <LibraryImageTile key={t.id} name={t.name} imageId={t.exampleImageId} actions={[
       { label: "Use Template", onSelect: () => onSelect(structuredClone(t)) },
-      { label: "Use and Attach as Style", onSelect: () => onSelect(structuredClone(t), true) },
+      ...(t.exampleImageId ? [{ label: "Use and Attach as Style", onSelect: () => onSelect(structuredClone(t), true) }] : []),
     ]} /> : <article className="asset-card template-card" key={t.id}>
       <button className="asset-preview checker" aria-label={`Edit ${t.name}`} onClick={() => setEditing(t)}><ImageView id={t.exampleImageId} alt={t.name} /></button>
       <div className="card-caption">

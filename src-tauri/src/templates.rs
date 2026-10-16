@@ -46,10 +46,11 @@ pub fn validate(w: &Workspace) -> Result<(), String> {
         if !templates.insert(&t.id)
             || t.name.trim().is_empty()
             || t.recipe.trim().is_empty()
-            || !w.images.iter().any(|i| i.id == t.example_image_id)
+            || (!t.example_image_id.is_empty()
+                && !w.images.iter().any(|i| i.id == t.example_image_id))
             || !folder_exists(w, &t.folder_id, &t.organisation_id)
         {
-            return Err("Template requires a name, recipe, valid example and folder".into());
+            return Err("Template requires a name, recipe, valid folder and an existing image if supplied".into());
         }
         if let Some(org) = &t.organisation_id {
             if !w.organisations.iter().any(|o| &o.id == org) {
@@ -128,7 +129,7 @@ pub fn change(w: &mut Workspace, a: &Value) -> Result<Value, String> {
             id: a["id"].as_str().map(String::from).unwrap_or_else(id),
             name: text(a, "name")?,
             recipe: text(a, "recipe")?,
-            example_image_id: text(a, "exampleImageId")?,
+            example_image_id: a["exampleImageId"].as_str().unwrap_or("").trim().into(),
             usage_notes: a["usageNotes"].as_str().unwrap_or("").trim().into(),
             organisation_id: org,
             folder_id: a["folderId"].as_str().unwrap_or("general").into(),
@@ -278,6 +279,33 @@ mod tests {
     }
     fn save() -> Value {
         json!({"op":"template_save","name":"Avatar","recipe":"Portrait in blue","exampleImageId":"img","tags":["Vector"],"usageNotes":"Attach subject photos"})
+    }
+    #[test]
+    fn recipe_only_templates_can_be_saved_reloaded_and_enriched_later() {
+        let mut w = fixture();
+        let minimal = json!({"op":"template_save","name":"Recipe only","recipe":"Portrait in blue"});
+        let id = change(&mut w, &minimal).unwrap();
+        assert!(w.templates[0].example_image_id.is_empty());
+        assert!(w.templates[0].tags.is_empty());
+        assert!(w.templates[0].usage_notes.is_empty());
+        w = serde_json::from_str(&serde_json::to_string(&w).unwrap()).unwrap();
+        validate(&w).unwrap();
+        let mut edit = save();
+        edit["id"] = id.clone();
+        edit["version"] = json!(1);
+        change(&mut w, &edit).unwrap();
+        assert_eq!(w.templates[0].example_image_id, "img");
+        assert_eq!(w.templates[0].tags, vec!["vector"]);
+        assert_eq!(w.templates[0].usage_notes, "Attach subject photos");
+        edit["version"] = json!(2);
+        edit["exampleImageId"] = json!("");
+        change(&mut w, &edit).unwrap();
+        validate(&w).unwrap();
+        for (field, value) in [("name", " "), ("recipe", " "), ("exampleImageId", "missing")] {
+            let mut invalid = minimal.clone();
+            invalid[field] = json!(value);
+            assert!(change(&mut fixture(), &invalid).is_err(), "{field}");
+        }
     }
     #[test]
     fn library_lifecycle_and_conflicts() {
