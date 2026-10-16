@@ -1,6 +1,6 @@
 # Templates — design and acceptance specification
 
-Status: implemented and locally validated, 2026-10-16. The user approved the complete design and its four edge cases, then authorised implementation and acceptance checks. No deployment or publication has been performed.
+Status: published and deployed in 0.9.0, 2026-10-16. The user approved the complete design and its four edge cases, implementation and acceptance checks, then explicitly authorised publishing and deploying all changes. See [release validation](VALIDATION.md) for package and production-preservation evidence.
 
 ## Purpose
 
@@ -133,7 +133,7 @@ Excluded: website importing, bundled prompt packs, nested folders, configurable 
 
 Current code has generic references, page conversation continuation and stored prompt/reference history, but no template model or image-purpose binding. Integration points: src/Editor.tsx, src/LibraryImages.tsx, src/types.ts and src-tauri/src/{jobs,model,local_store,store}.rs. Metadata is Workspace JSON in SQLite; native and private-server modes share the Rust model. Existing immutable media/version handling should underpin historical references.
 
-Cover native and server/browser behaviour, backup/restore, stale-client conflicts and older workspace compatibility. Older records must load without fabricated template provenance or newly inferred historical roles. Preserve existing ordinary generation behaviour. No live migration, deployment or publication is authorised by this review.
+Cover native and server/browser behaviour, backup/restore, stale-client conflicts and older workspace compatibility. Older records must load without fabricated template provenance or newly inferred historical roles. Preserve existing ordinary generation behaviour. The design review itself did not authorise deployment; the subsequent explicit publish-and-deploy instruction authorised release 0.9.0.
 
 ## Acceptance checks
 
@@ -205,4 +205,4 @@ The native UI acceptance build used a separate `com.mark.imagegenapp.templates-t
 
 The native test additionally needs the existing pinned bundled runtime at `outputs/Image Gen 0.8.5 Portable/runtime/` and localhost port 1420 available. It copies the runtime beside the ignored debug executable and runs the frontend through Vite. It does not close or replace the running user app.
 
-Environment limits: physical iPhone interaction was not exercised. Actual provider generation used the isolated server-worker path; native storage, command registration, preview, selection and restart were exercised through the Windows app. No installer ran, no release was published, and the live workspace/service was not upgraded. Local build artifacts retain the existing development version until a release is prepared.
+Environment limits: physical iPhone interaction was not exercised. Actual provider generation used the isolated server-worker path; native storage, command registration, preview, selection and restart were exercised through the Windows app. Subsequent release 0.9.0 passed clean GitHub builds, downloaded-package and anonymous-image checks, then upgraded the live service with complete verified backups and unchanged workspace/media/sign-in. Live Edge and mobile WebKit verify `/templates` without workspace changes. No installer ran over the existing user installation.
