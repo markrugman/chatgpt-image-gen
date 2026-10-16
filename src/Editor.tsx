@@ -78,7 +78,6 @@ export function Editor({
   doc,
   asset,
   pageId,
-  libraryRequest,
   jobs,
   act,
   run,
@@ -94,7 +93,6 @@ export function Editor({
   doc?: DesignDocument;
   asset?: Asset;
   pageId: string | null;
-  libraryRequest?: {kind: "assets" | "uploads" | "templates"} | null;
   jobs: Job[];
   act: Act;
   run: (work: () => Promise<unknown>) => Promise<void>;
@@ -122,21 +120,13 @@ export function Editor({
       ? w.projects.find((p) => p.id === doc.projectId)?.organisationId
       : asset?.organisationId;
   const project = w.projects.find((p) => p.id === doc?.projectId);
-  const [panel, setPanel] = useState(libraryRequest?.kind || "pages"),
+  const [panel, setPanel] = useState("pages"),
     [mode, setMode] = useState(
       () => page.messages[page.messages.length - 1]?.mode || "generate",
     ),
     [prompt, setPrompt] = useState(
       () => localStorage.getItem(`draft:${page.id}`) || "",
     );
-  const previousLibraryRequest = useRef(libraryRequest);
-  useEffect(() => {
-    if (libraryRequest && libraryRequest !== previousLibraryRequest.current) {
-      setPanel(libraryRequest.kind);
-      if (compact) setMobilePanel("tools");
-    }
-    previousLibraryRequest.current = libraryRequest;
-  }, [libraryRequest, compact]);
   const [references, setReferences] = useState<string[]>([]),
     [picker, setPicker] = useState<"asset" | "upload" | null>(null),
     [zoom, setZoom] = useState(100),
@@ -596,7 +586,7 @@ export function Editor({
               <LibraryImages key={panel} w={w} orgId={orgId} kind={panel === "uploads" ? "upload" : "asset"} onReference={addReference} onPlace={doc ? placeAsset : undefined} />
             </div>
           )}
-          {panel === "templates" && <div className="editor-library"><div className="panel-heading">YOUR TEMPLATES</div><Templates key={orgId} w={w} orgId={orgId} act={act} run={run} onRefresh={onRefresh} onSelect={selectTemplate} /></div>}
+          {panel === "templates" && <div className="editor-library"><div className="panel-heading">YOUR TEMPLATES</div><Templates key={orgId} w={w} orgId={orgId} act={act} onRefresh={onRefresh} onSelect={selectTemplate} /></div>}
           {panel === "history" && (
             <div className="history-panel">
               <div className="panel-heading">
@@ -1259,7 +1249,7 @@ export function Editor({
         </aside>
       </div>
       {templateSource && <TemplateForm w={w} act={act} orgId={orgId} source={templateSource} onClose={() => setTemplateSource(null)} onRefresh={onRefresh} />}
-      {showTemplatePicker && <Modal title="Templates" onClose={() => setShowTemplatePicker(false)} wide><Templates w={w} orgId={orgId} act={act} run={run} onRefresh={onRefresh} onSelect={selectTemplate} /></Modal>}
+      {showTemplatePicker && <Modal title="Templates" onClose={() => setShowTemplatePicker(false)} wide><Templates w={w} orgId={orgId} act={act} onRefresh={onRefresh} onSelect={selectTemplate} /></Modal>}
       {picker && (
         <AssetPicker
           w={w}

@@ -52,34 +52,34 @@ try {
         await page.getByRole("button", { name: "Open Test design", exact: true }).click();
         await canvas();
         for (const [section, name] of [["Asset library", "asset"], ["Uploads", "upload"]]) {
-          // Explicit library navigation still opens Tools in the current editor.
+          // Sidebar library navigation leaves the editor for the full library.
           await nav(section);
-          await expect(page.locator(".editor")).toHaveClass("editor mobile-view-tools");
-          await page.getByRole("button", { name: "Back to workspace", exact: true }).click();
-          await nav(section);
+          await expect(page.locator(".editor")).toHaveCount(0);
           await page.getByRole("button", { name: `Open Test ${name}`, exact: true }).click();
           await canvas();
         }
-        // A retained library request must not override a project design's opening view.
+        // Returning through Projects still opens a design on Canvas.
         await nav("Uploads");
         await nav("Projects");
         await page.getByRole("button", { name: "Open Test project", exact: true }).click();
         await page.getByRole("button", { name: "Open Test design", exact: true }).click();
         await canvas();
         await page.goBack();
+        await expect(page.locator(".editor")).toHaveCount(0);
+        await expect(page.getByRole("button", { name: "Open Test design", exact: true })).toBeVisible();
         await page.goForward();
         await canvas();
         await page.reload();
         await canvas();
-        // Resizing must not replay an old library request over the canvas.
+        // Top library tools remain available in the editor, independently of the sidebar.
         await page.setViewportSize({ width: 1440, height: 900 });
-        await nav("Asset library");
+        await page.locator(".tool-tabs").getByRole("button", { name: "Assets", exact: true }).click();
         await expect(page.locator(".tool-tabs .active")).toHaveText("Assets");
         await expect(page.locator(".canvas-workspace")).toBeVisible();
         await expect(page.locator(".chat-panel")).toBeVisible();
         await page.setViewportSize({ width, height: 900 });
         await canvas();
-        console.log(`PASS ${engine} ${width}px: assets, uploads, project designs, explicit Tools, history, reload and resizing`);
+        console.log(`PASS ${engine} ${width}px: assets, uploads, project designs, sidebar libraries, top tools, history, reload and resizing`);
       }
       assert.deepEqual(errors, []);
     } finally {

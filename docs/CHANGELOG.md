@@ -1,5 +1,11 @@
 # Release history
 
+## New in 0.9.4
+
+- Back/Forward, reload and direct links restore template folders/details, library scopes, workspace search and search categories, projects, designs/pages, assets and uploads. Invalid/deleted destinations recover to their parent without history loops.
+- The compact editor sidebar navigates to full library pages. The top editor tools continue to open drawers.
+- Templates drawers start with alphabetically sorted folder cards and offer a Folders back button. Rename/Delete live in the full library's three-dot Edit folder dialog.
+
 ## New in 0.9.3
 
 - Bound tall template example images inside their preview so Safari cannot overlap the form fields.

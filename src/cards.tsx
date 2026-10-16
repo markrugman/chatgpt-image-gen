@@ -7,7 +7,6 @@ import {
   MoreHorizontal,
   Search,
 } from "lucide-react";
-import { useState } from "react";
 import {
   activeJob,
   libraryKind,
@@ -218,6 +217,8 @@ export function SearchResults({
   w,
   orgId,
   query,
+  type,
+  onType,
   onDocument,
   onAsset,
   onProject,
@@ -225,11 +226,12 @@ export function SearchResults({
   w: Workspace;
   orgId: string;
   query: string;
+  type: string;
+  onType: (type: string) => void;
   onDocument: (id: string) => void;
   onAsset: (id: string) => void;
   onProject: (id: string) => void;
 }) {
-  const [type, setType] = useState("all");
   const projects = w.projects.filter(
     (p) => !p.deletedAt && (orgId === "all" || p.organisationId === orgId),
   );
@@ -292,7 +294,7 @@ export function SearchResults({
           <button
             key={t}
             className={type === t ? "active" : ""}
-            onClick={() => setType(t)}
+            onClick={() => onType(t)}
           >
             {t === "all" ? "Everything" : `${t[0].toUpperCase()}${t.slice(1)}s`}
           </button>

@@ -109,6 +109,7 @@ try {
   page.on('response', async response => { if (response.url().endsWith('/api/preview_template') && response.ok()) latestPreview = await response.json(); });
   await prompt.fill('Keep glasses /templates');
   await expect(page.getByRole('dialog', { name: 'Templates', exact: true })).toBeVisible();
+  await page.getByRole('dialog').getByRole('button', { name: 'Open folder Avatars', exact: true }).click();
   await page.getByRole('dialog').getByRole('button', { name: 'Use Vector portrait', exact: true }).click();
   await page.getByRole('menuitem', { name: 'Use Template', exact: true }).click();
   await expect(page.locator('.selected-template')).toContainText('Vector portrait');
@@ -118,6 +119,7 @@ try {
   await expect(page.locator('.selected-template details')).toHaveCount(0);
   await expect(page.locator('.reference-chips')).toHaveCount(0);
   await prompt.fill('Keep glasses /templates');
+  await page.getByRole('dialog').getByRole('button', { name: 'Open folder Avatars', exact: true }).click();
   await page.getByRole('dialog').getByRole('button', { name: 'Use Vector portrait', exact: true }).click();
   await page.getByRole('menuitem', { name: 'Use and Attach as Style', exact: true }).click();
   await expect(page.locator('.reference-chips > span').filter({ hasText: 'Page image' })).toHaveAttribute('data-purpose', 'Style');
@@ -129,12 +131,14 @@ try {
   await expect(page.locator('.reference-chips input, .reference-chips select')).toHaveCount(0);
   await expect.poll(() => latestPreview?.referencePurposes.find(p => p.purpose === 'Subject')?.explanation).toBe('');
   await prompt.fill('Keep these instructions /templates');
+  await page.getByRole('dialog').getByRole('button', { name: 'Open folder General', exact: true }).click();
   await page.getByRole('dialog').getByRole('button', { name: 'Use Uploaded example', exact: true }).click();
   await page.getByRole('menuitem', { name: 'Use Template', exact: true }).click();
   await expect(page.locator('.selected-template')).toContainText('Uploaded example');
   await expect(page.locator('.reference-chips > span').filter({ hasText: 'Person one' })).toHaveAttribute('data-purpose', 'Subject');
   await expect(prompt).toHaveValue('Keep these instructions ');
   await prompt.fill('Use navy /templates');
+  await page.getByRole('dialog').getByRole('button', { name: 'Open folder Avatars', exact: true }).click();
   await page.getByRole('dialog').getByRole('button', { name: 'Use Vector portrait', exact: true }).click();
   await page.getByRole('menuitem', { name: 'Use Template', exact: true }).click();
   const updated = { ...create, id: templateId, version: template.version, recipe: 'New red portrait recipe' };

@@ -1,8 +1,8 @@
-import { preview } from 'vite';
+import { createServer } from 'vite';
 import { chromium, webkit, expect } from '@playwright/test';
 import assert from 'node:assert/strict';
 
-// Isolated built-frontend fixture: no real workspace writes or generation.
+// Isolated development-frontend fixture: no real workspace writes or generation.
 const image = 'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="400" height="200"><rect width="400" height="200" fill="#bda1f5"/><circle cx="200" cy="100" r="70" fill="#6540b7"/></svg>');
 const workspace = {
   formatVersion: 3, organisations: [{ id: 'org', name: 'Creative Studio', color: '#8864d7' }, {id:'other',name:'Other Studio',color:'#7654cf'}],
@@ -14,7 +14,7 @@ const workspace = {
 workspace.templateFolders = [{id:'portraits',name:'Portraits',organisationId:'org'}, {id:'posters',name:'Posters',organisationId:'other'}, {id:'shared-folder',name:'Shared folder',organisationId:null}];
 workspace.templates = ['org','other',null].map((organisationId,i) => ({id:'t'+i,name:['Portrait recipe','Poster recipe','Shared recipe'][i],organisationId,folderId:['portraits','posters','shared-folder'][i],recipe:'Recipe '+i,tags:['tag'+i],usageNotes:'Notes',exampleImageId:'image',version:1}));
 workspace.templates.push({...workspace.templates[0],id:'deleted',name:'Deleted recipe',deletedAt:1});
-const server = await preview({preview:{host:'127.0.0.1',port:0}});
+const server = await createServer({server:{host:'127.0.0.1',port:0,strictPort:false}}); await server.listen();
 const origin = 'http://127.0.0.1:'+server.httpServer.address().port;
 try {
  for (const [name,engine,options] of [['Edge',chromium,{channel:'msedge'}],['WebKit',webkit,{}]]) {
@@ -58,8 +58,8 @@ try {
  await library.getByRole('textbox',{name:'Search templates'}).fill('tag1'); await expect(cards).toHaveCount(1); await expect(cards).toContainText('Poster recipe');
  await library.getByRole('textbox',{name:'Search templates'}).fill('');
  await library.getByRole('combobox',{name:'Filter templates by folder'}).selectOption('posters'); await expect(cards).toHaveCount(1); await expect(cards).toContainText('Poster recipe');
- await library.getByRole('button',{name:'Rename folder',exact:true}).click();
- const rename = page.getByRole('dialog',{name:'Rename folder',exact:true});
+ await library.getByRole('button',{name:'Edit folder Posters',exact:true}).click();
+ const rename = page.getByRole('dialog',{name:'Edit folder',exact:true});
  await rename.getByRole('textbox',{name:'Folder name'}).fill('Updated posters');
  await rename.getByRole('button',{name:'Save folder',exact:true}).click(); await expect(rename).toHaveCount(0);
  assert.equal(actions.at(-1).organisationId,'other'); assert.equal(actions.at(-1).id,'posters');
@@ -75,4 +75,4 @@ try {
  await page.close(); console.log('PASS '+name+' '+width+': all organisations, Shared, search, folders and organisation switching');
  }}finally{await browser.close();}
  }
-}finally{await new Promise(resolve=>server.httpServer.close(resolve));}
+}finally{await server.close();}

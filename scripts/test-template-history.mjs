@@ -98,7 +98,8 @@ try {
     if(width<=1024)await page.getByRole('button',{name:'Chat',exact:true}).click();
     await page.getByRole('textbox',{name:'Design prompt'}).fill('/templates');
     await expect(page.getByRole('dialog',{name:'Templates',exact:true})).toBeVisible();
-    await page.getByRole('dialog').getByRole('button',{name:'Use Flat vector acceptance',exact:true}).click();
+    await page.getByRole('dialog').getByRole('button',{name:'Open folder General',exact:true}).click();
+  await page.getByRole('dialog').getByRole('button',{name:'Use Flat vector acceptance',exact:true}).click();
     await page.getByRole('menuitem',{name:'Use Template',exact:true}).click();
     await expect(page.locator('.selected-template')).toBeVisible();
     assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),`Editor overflow at ${width}`);

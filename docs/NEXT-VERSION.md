@@ -1,5 +1,27 @@
 # Next version design interview
 
+## 0.9.4 release authorised (2026-10-16)
+
+Mark explicitly requested building and deploying the completed navigation and Templates drawer changes to the server and GitHub. This supersedes the wait/source-only holds below. Release qualification and preservation evidence will be recorded in VALIDATION.md.
+
+## Templates drawer folders and library-only management — source only (2026-10-16)
+
+Mark requested folder-first browsing in the design Templates sidebar. Compact Templates pickers now initially show alphabetically sorted folder preview cards, including General. Selecting a folder shows only its templates; a Folders back button returns to the folder list. Folder-name search is available at the root, with template name/tag/recipe search inside a folder. Scope changes return to the folder list. The drawer has no folder dropdown, rename/delete controls or folder-management dialogs; template Use Template / Use and Attach as Style popups remain available.
+
+Folder management lives in the full library's three-dot Edit folder dialog: edit the name, Save/Cancel, or Delete folder with a separate padded confirmation. The library toolbar no longer displays inline rename/delete actions. The selected-folder heading also exposes the three-dot dialog. General has no management action. Deletion uses the dialog's folder ID, including from the overview, and retains the existing move-to-General behaviour.
+
+Verification: `npx tsc --noEmit`, all 37 frontend tests, the navigation matrix and the Templates scope checks pass against development source. `node scripts/test-template-folders.mjs` covers sorted folders, search, back/empty/scope transitions, selection, absence of drawer management, and mocked library rename/delete at 320/393/768/1440px in light/dark in Edge/WebKit. Screenshots inspected under ignored `work/template-folder-drawer-*.png`. Existing drawer checks include opening General before template selection; affected server/native acceptance scripts are updated for folder-first pickers but their runtime suites were not repeated. No release build, version bump, source push or deployment; the earlier request to wait for more changes remains in effect.
+
+## Navigation and compact sidebar — source only (2026-10-16)
+
+Mark approved implementation and navigation testing, then explicitly requested waiting for more changes. Do not release-build, publish or deploy this pending work. Production and the published release remain 0.9.3.
+
+The compact editor sidebar now navigates to the full Overview, Projects, Assets, Uploads, Templates and Trash pages, using the same handlers as the main sidebar. The editor's top library tools remain local drawers. Removed the obsolete sidebar-to-drawer request path.
+
+Shared navigation state now serializes organisation, project, design/page, asset/upload, library scope, Templates folder/detail/filter, and workspace search/query category into the existing hash URLs. Back/Forward, direct hash changes and reload restore these destinations. Search typing updates one search entry rather than adding an entry per character. Template-detail Cancel returns to its parent entry where available; direct-link closure replaces the detail with its parent. Temporary creation/management dialogs and editor tools add no history entries. Copy/Move dialogs retain the detail route and return to details when cancelled. Missing/deleted targets recover to a valid parent, with canonical URL corrections replacing the current entry instead of creating a loop. Avoid redundant history writes on restoration because Safari enforces a write-rate limit. Ctrl+K focuses workspace search after leaving the editor.
+
+Verification without a release build: `npx tsc --noEmit`, all 37 frontend tests, `node scripts/test-browser-history.mjs`, `node scripts/test-editor-opening.mjs` and `node scripts/test-navigation-paths.mjs` pass. The new matrix covers 21 direct-link/reload destinations and folder/detail/scope/filter, every sidebar destination from design mode, top tools, design-page selection, organisation switching, workspace search return, Ctrl+K, transient dialogs, live hash changes, and invalid/deleted targets in Edge and WebKit at 393/1440px. The editor-opening regression also covers 393/768/1024px and desktop resizing in both engines. All browser fixtures are isolated from production and reject workspace mutations. Physical Safari and native operating-system deep-link registration were not tested or changed. No production build, packaging, version bump, source push or deployment was performed.
+
 ## 0.9.3 deployed and published (2026-10-16)
 
 The Safari template-example containment, visible Templates folder cards, Create/Rename folder spacing and uniform preview backgrounds below are now deployed on the private server and published in [GitHub 0.9.3](https://github.com/markrugman/chatgpt-image-gen/releases/tag/v0.9.3). All tests/builds and anonymous package/image qualification pass; workspace/media, access key, sessions and worker sign-in are preserved. This supersedes the local-only/pending status below. Physical Safari confirmation remains pending. See [VALIDATION.md](VALIDATION.md) for source, workflow, backups and evidence.

@@ -51,36 +51,25 @@ import "./App.css";
 import { OrganisationList } from "./OrganisationList";
 import { Templates } from "./Templates";
 import { UserMenu } from "./UserMenu";
-
-function readNavigation() {
-  const params = new URLSearchParams(isBrowser ? window.location.hash.slice(1) : "");
-  const view = params.get("view") || "home";
-  return {
-    route: ["home", "projects", "assets", "uploads", "templates", "trash"].includes(view) ? view : "home",
-    orgId: params.get("org") || "all",
-    projectId: params.get("project"),
-    docId: params.get("design"),
-    assetId: params.get("asset"),
-    pageId: params.get("page"),
-    libraryScope: params.get("library") === "shared" ? "shared" : "owned",
-  };
-}
+import { useNavigation } from "./navigation";
 
 export default function App() {
-  const [initialNavigation] = useState(readNavigation);
   const compact = useCompactLayout();
   const [navigationOpen, setNavigationOpen] = useState(false);
   useEffect(() => { if (!compact) setNavigationOpen(false); }, [compact]);
   const [w, setW] = useState<Workspace>(emptyWorkspace),
     [loaded, setLoaded] = useState(false);
-  const [route, setRoute] = useState(initialNavigation.route),
-    [orgId, setOrgId] = useState(initialNavigation.orgId),
-    [projectId, setProjectId] = useState(initialNavigation.projectId);
-  const [docId, setDocId] = useState(initialNavigation.docId),
-    [assetId, setAssetId] = useState(initialNavigation.assetId),
-    [pageId, setPageId] = useState(initialNavigation.pageId);
-  const [query, setQuery] = useState(""),
-    [jobs, setJobs] = useState<Job[]>([]),
+  const { navigation, updateNavigation, closeTemplate } = useNavigation(loaded ? w : null, isBrowser);
+  const { route, orgId, projectId, docId, assetId, pageId, query, libraryScope } = navigation;
+  const setRoute = (route: string) => updateNavigation({ route });
+  const setOrgId = (orgId: string) => updateNavigation({ orgId });
+  const setProjectId = (projectId: string | null) => updateNavigation({ projectId });
+  const setDocId = (docId: string | null) => updateNavigation({ docId });
+  const setAssetId = (assetId: string | null) => updateNavigation({ assetId });
+  const setPageId = (pageId: string | null) => updateNavigation({ pageId });
+  const setQuery = (query: string) => updateNavigation({ query });
+  const setLibraryScope = (libraryScope: string) => updateNavigation({ libraryScope });
+  const [jobs, setJobs] = useState<Job[]>([]),
     [connection, setConnection] = useState<Connection | null>(null),
     [connectionError, setConnectionError] = useState("");
   const [creating, setCreating] = useState<CreateOptions | null>(null),
@@ -93,37 +82,14 @@ export default function App() {
     } | null>(null);
   const [storage, setStorage] = useState<ServerStatus|null>(null);
   const [toast, setToast] = useState("");
-  const [libraryScope, setLibraryScope] = useState(initialNavigation.libraryScope);
-  const [libraryRequest, setLibraryRequest] = useState<{kind: "assets" | "uploads" | "templates"} | null>(null);
-  const historyReady = useRef(false);
   useEffect(() => {
-    if (!isBrowser) return;
     const restore = () => {
-      const next = readNavigation();
-      setRoute(next.route); setOrgId(next.orgId); setProjectId(next.projectId);
-      setDocId(next.docId); setAssetId(next.assetId); setPageId(next.pageId);
-      setLibraryScope(next.libraryScope); setQuery(""); setNavigationOpen(false);
-      setCreating(null); setEditing(null); setSettings(false); setLibraryRequest(null);
+      setNavigationOpen(false); setCreating(null); setEditing(null); setSettings(false);
     };
     window.addEventListener("popstate", restore);
-    return () => window.removeEventListener("popstate", restore);
+    window.addEventListener("hashchange", restore);
+    return () => { window.removeEventListener("popstate", restore); window.removeEventListener("hashchange", restore); };
   }, []);
-  useEffect(() => {
-    if (!isBrowser) return;
-    const params = new URLSearchParams({ view: route });
-    for (const [key, value] of [
-      ["org", orgId === "all" ? null : orgId], ["project", projectId],
-      ["design", docId], ["asset", assetId], ["page", docId || assetId ? pageId : null],
-      ["library", libraryScope === "shared" ? "shared" : null],
-    ]) if (value) params.set(key!, value);
-    const hash = `#${params}`;
-    if (!historyReady.current) {
-      window.history.replaceState(null, "", hash);
-      historyReady.current = true;
-    } else if (window.location.hash !== hash) {
-      window.history.pushState(null, "", hash);
-    }
-  }, [route, orgId, projectId, docId, assetId, pageId, libraryScope]);
   const searchRef = useRef<HTMLInputElement>(null),
     uploadRef = useRef<HTMLInputElement>(null);
   const notify = useCallback((message: string) => setToast(message), []);
@@ -133,11 +99,6 @@ export default function App() {
     setStorage(await api<ServerStatus>("server_status"));
     setLoaded(true);
   }, []);
-  useEffect(() => {
-    if (loaded && orgId !== "all" && !w.organisations.some(o => o.id === orgId && !o.deletedAt)) {
-      setOrgId("all"); setProjectId(null); setDocId(null); setAssetId(null); setPageId(null);
-    }
-  }, [loaded, w.organisations, orgId]);
   const completedJobs = useRef(new Set<string>());
   const refreshJobs = useCallback(async () => {
     const next = await api<Job[]>("get_jobs");setJobs(next);
@@ -226,7 +187,7 @@ export default function App() {
         e.preventDefault();
         setDocId(null);
         setAssetId(null);
-        searchRef.current?.focus();
+        requestAnimationFrame(() => searchRef.current?.focus());
       }
     };
     window.addEventListener("keydown", handler);
@@ -259,6 +220,9 @@ export default function App() {
     setAssetId(null);
     setProjectId(null);
     setQuery("");
+    setPageId(null);
+    updateNavigation({ templateFolder: "all", templateQuery: "", templateId: null });
+    if (compact) setNavigationOpen(false);
   };
   const switchOrganisation = (id: string) => {
     setOrgId(id);
@@ -267,7 +231,7 @@ export default function App() {
     setAssetId(null);
     setPageId(null);
     setProjectId(null);
-    setLibraryRequest(null);
+    updateNavigation({ templateFolder: "all", templateQuery: "", templateId: null, query: "" });
   };
   const create = (options: CreateOptions) => {
     if (
@@ -320,7 +284,7 @@ export default function App() {
             <button
               key={item.id}
               className={`nav-item ${!editor && route === item.id ? "selected" : ""}`}
-              onClick={() => editor && (item.id === "assets" || item.id === "uploads" || item.id === "templates") ? setLibraryRequest({kind: item.id}) : navigate(item.id)}
+              onClick={() => navigate(item.id)}
               title={item.name}
             >
               <item.icon size={19} />
@@ -458,7 +422,6 @@ export default function App() {
             doc={document}
             asset={asset}
             pageId={pageId}
-            libraryRequest={libraryRequest}
             jobs={jobs}
             act={act}
             run={run}
@@ -532,6 +495,8 @@ export default function App() {
                   w={w}
                   orgId={orgId}
                   query={query}
+                  type={navigation.searchType}
+                  onType={searchType => updateNavigation({ searchType })}
                   onDocument={openDocument}
                   onAsset={openAsset}
                   onProject={(id) => {
@@ -541,7 +506,14 @@ export default function App() {
                   }}
                 />
               ) : route === "templates" ? (
-                <Templates key={orgId} fullPage w={w} orgId={orgId === "all" ? null : orgId} act={act} run={run} onRefresh={refresh} />
+                <Templates key={orgId} fullPage w={w} orgId={orgId === "all" ? null : orgId} act={act} onRefresh={refresh}
+                  navigation={{ scope: libraryScope, folder: navigation.templateFolder, query: navigation.templateQuery, templateId: navigation.templateId }}
+                  onNavigate={next => next.templateId === null && navigation.templateId ? closeTemplate() : updateNavigation({
+                    ...(next.scope !== undefined ? { libraryScope: next.scope } : {}),
+                    ...(next.folder !== undefined ? { templateFolder: next.folder } : {}),
+                    ...(next.query !== undefined ? { templateQuery: next.query } : {}),
+                    ...(next.templateId !== undefined ? { templateId: next.templateId } : {}),
+                  })} />
               ) : route === "trash" ? (
                 <>
                   <PageHeading

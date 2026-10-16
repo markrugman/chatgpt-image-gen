@@ -1,8 +1,8 @@
-import { preview } from 'vite';
+import { createServer } from 'vite';
 import { chromium, webkit, expect } from '@playwright/test';
 import assert from 'node:assert/strict';
 
-// Isolated built-frontend fixture: no real workspace writes or generation.
+// Isolated development-frontend fixture: no real workspace writes or generation.
 const image = 'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="400" height="200"><rect width="400" height="200" fill="#bda1f5"/><circle cx="200" cy="100" r="70" fill="#6540b7"/></svg>');
 const pageData = { id: 'page', name: 'Page 1', messages: [], revisions: [], history: [{ imageId: null, revisionId: null, overlays: [] }], historyIndex: 0 };
 const workspace = {
@@ -13,7 +13,7 @@ const workspace = {
   images: [{ id: 'image', width: 400, height: 200, mime: 'image/svg+xml' }], customSizes: [], handoffs: {}, templateFolders: [],
   templates: Array.from({ length: 3 }, (_, i) => ({ id: `template${i}`, name: `Template ${i}`, recipe: 'Hidden recipe text', usageNotes: 'Hidden usage notes', exampleImageId: 'image', organisationId: 'org', folderId: 'general', tags: ['hidden tag'], version: 1 })),
 };
-const server = await preview({ preview: { host: '127.0.0.1', port: 0 } });
+const server = await createServer({ server: { host: '127.0.0.1', port: 0, strictPort:false } }); await server.listen();
 const origin = `http://127.0.0.1:${server.httpServer.address().port}`;
 try {
   for (const [name, engine, options] of [['Edge', chromium, { channel: 'msedge' }], ['WebKit', webkit, {}]]) {
@@ -38,6 +38,7 @@ try {
         for (const tab of ['Assets', 'Uploads', 'Templates']) {
           await page.locator('.tool-tabs').getByRole('button', { name: tab, exact: true }).click();
           const drawer = page.locator('.editor-library');
+          if (tab === 'Templates') await drawer.getByRole('button', { name: 'Open folder General', exact: true }).click();
           const grid = drawer.locator('.library-image-grid');
           await expect(grid.locator('.library-image')).toHaveCount(3);
           assert.equal(await grid.evaluate(el => getComputedStyle(el).gridTemplateColumns.split(' ').length), 2);
@@ -87,4 +88,4 @@ try {
       }
     } finally { await browser.close(); }
   }
-} finally { await new Promise(resolve => server.httpServer.close(resolve)); }
+} finally { await server.close(); }
