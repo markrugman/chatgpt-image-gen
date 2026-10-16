@@ -49,13 +49,14 @@ import { CreateDialog, EditDialog, SettingsDialog } from "./dialogs";
 import { Editor } from "./Editor";
 import "./App.css";
 import { OrganisationList } from "./OrganisationList";
+import { Templates } from "./Templates";
 import { UserMenu } from "./UserMenu";
 
 function readNavigation() {
   const params = new URLSearchParams(isBrowser ? window.location.hash.slice(1) : "");
   const view = params.get("view") || "home";
   return {
-    route: ["home", "projects", "assets", "uploads", "trash"].includes(view) ? view : "home",
+    route: ["home", "projects", "assets", "uploads", "templates", "trash"].includes(view) ? view : "home",
     orgId: params.get("org") || "all",
     projectId: params.get("project"),
     docId: params.get("design"),
@@ -93,7 +94,7 @@ export default function App() {
   const [storage, setStorage] = useState<ServerStatus|null>(null);
   const [toast, setToast] = useState("");
   const [libraryScope, setLibraryScope] = useState(initialNavigation.libraryScope);
-  const [libraryRequest, setLibraryRequest] = useState<{kind: "assets" | "uploads"} | null>(null);
+  const [libraryRequest, setLibraryRequest] = useState<{kind: "assets" | "uploads" | "templates"} | null>(null);
   const historyReady = useRef(false);
   useEffect(() => {
     if (!isBrowser) return;
@@ -314,11 +315,12 @@ export default function App() {
             { id: "projects", name: "Projects", icon: FolderOpen },
             { id: "assets", name: "Asset library", icon: Images },
             { id: "uploads", name: "Uploads", icon: Upload },
+            { id: "templates", name: "Templates", icon: FileImage },
           ].map((item) => (
             <button
               key={item.id}
               className={`nav-item ${!editor && route === item.id ? "selected" : ""}`}
-              onClick={() => editor && (item.id === "assets" || item.id === "uploads") ? setLibraryRequest({kind: item.id}) : navigate(item.id)}
+              onClick={() => editor && (item.id === "assets" || item.id === "uploads" || item.id === "templates") ? setLibraryRequest({kind: item.id}) : navigate(item.id)}
               title={item.name}
             >
               <item.icon size={19} />
@@ -538,6 +540,10 @@ export default function App() {
                     setQuery("");
                   }}
                 />
+              ) : route === "templates" ? (
+                <><PageHeading eyebrow="REUSABLE RECIPES" title="Templates" subtitle="Save a visual recipe. Make it your own." />
+                  <Templates key={orgId} w={w} orgId={orgId === "all" ? null : orgId} act={act} run={run} onRefresh={refresh} />
+                </>
               ) : route === "trash" ? (
                 <>
                   <PageHeading
@@ -556,6 +562,7 @@ export default function App() {
                       ...w.documents
                         .filter((d) => d.deletedAt)
                         .map((d) => ({ ...d, kind: "document" })),
+                      ...(w.templates || []).filter(t => t.deletedAt).map(t => ({ ...t, kind: "template" })),
                       ...w.assets
                         .filter((a) => a.deletedAt)
                         .map((a) => ({ ...a, kind: "asset" })),
@@ -585,7 +592,7 @@ export default function App() {
                         </button>
                       </div>
                     ))}
-                    {![...w.organisations, ...w.projects, ...w.documents, ...w.assets].some(
+                    {![...w.organisations, ...w.projects, ...w.documents, ...w.assets, ...(w.templates || [])].some(
                       (i) => i.deletedAt,
                     ) && (
                       <Empty

@@ -22,6 +22,8 @@ use subtle::ConstantTimeEq;
 mod local_store;
 #[path = "../../src-tauri/src/model.rs"]
 pub mod model;
+#[path = "../../src-tauri/src/templates.rs"]
+pub mod templates;
 
 #[derive(Clone)]
 struct Service {
@@ -72,9 +74,11 @@ fn workspace_empty(w: &Value) -> bool {
         "assets",
         "images",
         "customSizes",
+        "templates",
+        "templateFolders",
     ]
     .iter()
-    .all(|key| w[key].as_array().is_some_and(Vec::is_empty))
+    .all(|key| w[key].as_array().is_none_or(Vec::is_empty))
 }
 pub fn valid_file(file: &str) -> bool {
     file.len() < 160
@@ -90,6 +94,7 @@ pub fn validate(workspace: &Value) -> Result<(), String> {
     let w: model::Workspace =
         serde_json::from_value(workspace.clone()).map_err(|_| "Workspace data is invalid")?;
     organisations::validate(&w)?;
+    templates::validate(&w)?;
     if w.format_version > 3 {
         return Err("This workspace needs a newer server".into());
     }
@@ -191,9 +196,15 @@ pub fn merge(current: &Value, base: &Value, next: &Value) -> Result<Value, Strin
         "assets",
         "images",
         "customSizes",
+        "templates",
+        "templateFolders",
     ] {
-        let old = base[key].as_array().ok_or("Invalid base workspace")?;
-        let new = next[key].as_array().ok_or("Invalid workspace")?;
+        let optional = ["templates", "templateFolders"].contains(&key);
+        if optional && base.get(key).is_none() && next.get(key).is_none() { continue; }
+        let empty = vec![];
+        let old = if optional && base.get(key).is_none() { &empty } else { base[key].as_array().ok_or("Invalid base workspace")? };
+        let new = if optional && next.get(key).is_none() { &empty } else { next[key].as_array().ok_or("Invalid workspace")? };
+        if optional && result.get(key).is_none() { result[key] = json!([]); }
         let items = result[key]
             .as_array_mut()
             .ok_or("Invalid stored workspace")?;

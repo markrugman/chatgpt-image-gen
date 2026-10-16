@@ -33,7 +33,7 @@ Reusable artwork created, extracted, or explicitly saved as an asset, available 
 An imported image kept in the Uploads library, available as a generation reference or unchanged overlay. Editing keeps it an upload; Save as asset creates a separate reusable asset.
 
 **Shared Library**:
-Assets or uploads available across organisations, separately identified from items owned by a particular organisation.
+Assets, uploads or templates available across organisations, separately identified from items owned by a particular organisation.
 
 **Copy**:
 An independently editable duplicate in a destination organisation. Copying a document preserves its pages, conversations, and revision history.
@@ -48,10 +48,22 @@ A preserved version of an asset. Designs retain the version they used when the l
 A workspace for creating and refining an asset, with its own conversation, preview, and revision history.
 
 **Tag**:
-A searchable label attached to a project, document, asset, or upload.
+A searchable label attached to a project, document, asset, upload, or template.
 
 **Generation Reference**:
 A selected image supplied to guide generation, shown explicitly in the prompt. It is distinct from placing an original image unchanged as an overlay.
+
+**Template**:
+A reusable image-generation prompt with an example image, selected to guide a new generation. A generation can use at most one template.
+
+**Template Folder**:
+A user-created, single-level grouping of templates, such as Avatars or Posters. Each template belongs to one folder.
+
+**Template Snapshot**:
+The preserved name and recipe of a template selected for a draft or used in a generation. Later library edits do not change that captured content.
+
+**Template Usage Notes**:
+Guidance for applying a template, such as which subject photographs to attach. Usage notes are shown to the user separately from the generation recipe.
 
 **Fit to Window**:
 A display mode that automatically scales a page to the available editor space without changing its document dimensions.

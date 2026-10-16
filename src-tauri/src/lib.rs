@@ -5,6 +5,7 @@ mod commands;
 mod handoff;
 mod jobs;
 mod libraries;
+mod templates;
 mod local_store;
 mod model;
 mod original;
@@ -88,6 +89,7 @@ pub fn run() {
             commands::start_login,
             commands::cancel_login,
             commands::submit_prompt,
+            commands::preview_template,
             commands::cancel_job,
             commands::mutate,
             commands::import_asset_data,

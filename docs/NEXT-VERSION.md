@@ -1,5 +1,15 @@
 # Next version design interview
 
+## Templates — implemented locally (2026-10-16)
+
+The approved [Templates design and acceptance specification](TEMPLATES.md) is implemented with organisation/Shared libraries, user folders and General, tags/search, creation from images/revisions or uploads, editing/duplication/transfers/Trash, and `/templates` selection alongside `/asset` and `/upload`. Generation uses explicit reference purposes, a canonical visible request, fresh initial context and immutable request snapshots for draft/history reuse. T01–T24 have local coverage, including real server/browser and hidden native IPC/WebView checks, backup/restart/compatibility tests, plus two actual managed-ChatGPT generations. The linked specification records evidence and environment limits. No deployment, publication or installer execution; development versions remain unchanged pending release preparation.
+
+## Canvas on opening compact editors - local source (2026-10-16)
+
+Assets, uploads and designs opened from projects start on Canvas in compact browser layouts (through 1024px), even after a previous editor opened a library drawer. The editor retains the requested desktop library tab but only switches the compact view to Tools for a new explicit library request within the current editor. Resizing no longer replays a previous request. The existing Canvas/Tools/Chat controls remain available.
+
+Verification: TypeScript checks, all 28 frontend tests and `node scripts/test-editor-opening.mjs` pass. Isolated Edge and WebKit fixtures cover assets, uploads, project designs, explicit library navigation, Back/Forward, reload and resizing at 393/768/1024px, plus simultaneous canvas/chat/library visibility at 1440px. No deployment or publication.
+
 ## Project previews, compact headers and pasted references - 0.8.5 (2026-10-15)
 
 Implemented and deployed after the user explicitly requested building and deploying these changes. The scope includes newest-first project-image previews across all pages, equal grid-row/card heights, centred compact navigation, a single title/action row with icon-only actions through 600px, and image paste into the chat composer. Pasted PNG/JPEG/WebP files use the existing import route, retain original bytes in organisation-owned Uploads, and attach the saved immutable version. Pending uploads block click/keyboard submission while preserving draft editing. Errors leave the draft and prior references intact. Text-only paste keeps browser defaults.

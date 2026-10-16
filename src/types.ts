@@ -35,9 +35,43 @@ export interface Composition {
   overlays: Overlay[];
   framing?: "fit" | "crop" | null;
 }
+export interface Template {
+  id: string;
+  name: string;
+  recipe: string;
+  exampleImageId: string;
+  usageNotes: string;
+  organisationId: string | null;
+  folderId: string;
+  tags: string[];
+  version: number;
+  deletedAt: number | null;
+}
+export interface TemplateFolder {
+  id: string;
+  name: string;
+  organisationId: string | null;
+}
+export interface ReferencePurpose {
+  reference: string;
+  purpose: "Subject" | "Style" | "Logo" | "Other";
+  explanation: string;
+}
+export interface TemplateRequest {
+  template: Template;
+  additionalInstructions: string;
+  referencePurposes: ReferencePurpose[];
+  width: number;
+  height: number;
+  unit: string;
+  transparent: boolean;
+  instructions: string;
+}
 export interface Message {
   id: string;
   role: string;
+  templateRequest?: TemplateRequest | null;
+  referencePurposes?: ReferencePurpose[];
   text: string;
   mode: string;
   createdAt: number;
@@ -104,6 +138,8 @@ export interface CustomSize {
   unit: string;
 }
 export interface Workspace {
+  templates?: Template[];
+  templateFolders?: TemplateFolder[];
   formatVersion?: number;
   customSizes: CustomSize[];
   organisations: Organisation[];
@@ -253,6 +289,6 @@ export function activeOrganisations(w: Workspace): Organisation[] {
 
 export function trashedOrganisationForItem(w: Workspace, id: string): Organisation | undefined {
   const project = w.projects.find(p => p.id === id) || w.projects.find(p => p.id === w.documents.find(d => d.id === id)?.projectId);
-  const owner = project?.organisationId || w.assets.find(a => a.id === id)?.organisationId;
+  const owner = project?.organisationId || w.assets.find(a => a.id === id)?.organisationId || w.templates?.find(t => t.id === id)?.organisationId;
   return w.organisations.find(o => o.id === owner && !!o.deletedAt);
 }

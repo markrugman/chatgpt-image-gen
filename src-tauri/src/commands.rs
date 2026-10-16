@@ -96,6 +96,10 @@ pub async fn cancel_login(state: State<'_, Arc<AppState>>, login_id: String) -> 
     Ok(())
 }
 #[cfg_attr(not(feature = "headless"), tauri::command)]
+pub async fn preview_template(state: State<'_, Arc<AppState>>, request: jobs::Submit) -> Result<TemplateRequest, String> {
+    crate::templates::prepare(&state.store.refresh()?, &request.target, request.template.as_ref().ok_or("Select a template")?, &request.prompt, &request.references, &request.reference_purposes, request.transparent)
+}
+#[cfg_attr(not(feature = "headless"), tauri::command)]
 pub async fn submit_prompt(
     app: crate::runtime::AppHandle,
     state: State<'_, Arc<AppState>>,
@@ -146,6 +150,7 @@ pub async fn mutate(
     let result = state
         .store
         .change_from(base.as_ref(), |w| match operation.as_str() {
+            "template_save" | "template_duplicate" | "template_transfer" | "template_folder" | "template_folder_delete" => crate::templates::change(w, &action),
             "reorder_organisations" => crate::organisations::reorder(w, &action),
             "transfer" | "classify" | "save_as_asset" => crate::libraries::change(w, &action),
             "organisation" => {
@@ -406,6 +411,9 @@ pub async fn mutate(
                     None
                 };
                 match action["kind"].as_str() {
+                    Some("template") => {
+                        crate::templates::set_deleted(w, &id, deleted)?;
+                    }
                     Some("document") => {
                         w.documents
                             .iter_mut()

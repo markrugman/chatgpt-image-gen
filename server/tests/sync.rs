@@ -2,6 +2,24 @@ use image_gen_server::{merge, model, router};
 use reqwest::{Client, StatusCode};
 use serde_json::{Value, json};
 const KEY: &str = "test-only-key-012345678901234567890123456789";
+
+#[test]
+fn template_entities_merge_additively_and_stale_edits_cannot_erase_them() {
+    let base = empty();
+    assert!(base.get("templates").is_none());
+    let mut next = base.clone();
+    next["templates"] = json!([{"id":"t","name":"Vector","recipe":"Portrait","version":1}]);
+    next["templateFolders"] = json!([{"id":"f","name":"Avatars","organisationId":null}]);
+    let current = merge(&base, &base, &next).unwrap();
+    let mut older_client = base.clone();
+    older_client["organisations"] = json!([{"id":"o","name":"Studio","color":"purple"}]);
+    let combined = merge(&current, &base, &older_client).unwrap();
+    assert_eq!(combined["templates"], next["templates"]);
+    assert_eq!(combined["templateFolders"], next["templateFolders"]);
+    let mut first = current.clone(); first["templates"][0]["recipe"] = json!("New recipe");
+    let mut second = current.clone(); second["templates"][0]["name"] = json!("Rename");
+    assert!(merge(&first, &current, &second).is_err());
+}
 fn empty() -> Value {
     serde_json::to_value(model::Workspace {
         format_version: 3,

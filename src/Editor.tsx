@@ -51,6 +51,8 @@ import { LibraryImages } from "./LibraryImages";
 import { AssetJsonDialog } from "./AssetJsonDialog";
 import { ExtractAssetDialog } from "./ExtractAssetDialog";
 import { renderPage } from "./export";
+import { Templates, TemplateForm, type TemplateSource } from "./Templates";
+import type { Template, TemplateRequest, ReferencePurpose, Message } from "./types";
 import { ExportDialog } from "./ExportDialog";
 
 export function Editor({
@@ -74,7 +76,7 @@ export function Editor({
   doc?: DesignDocument;
   asset?: Asset;
   pageId: string | null;
-  libraryRequest?: {kind: "assets" | "uploads"} | null;
+  libraryRequest?: {kind: "assets" | "uploads" | "templates"} | null;
   jobs: Job[];
   act: Act;
   run: (work: () => Promise<unknown>) => Promise<void>;
@@ -102,18 +104,70 @@ export function Editor({
       ? w.projects.find((p) => p.id === doc.projectId)?.organisationId
       : asset?.organisationId;
   const project = w.projects.find((p) => p.id === doc?.projectId);
-  const [panel, setPanel] = useState("pages"),
+  const [panel, setPanel] = useState(libraryRequest?.kind || "pages"),
     [mode, setMode] = useState(
       () => page.messages[page.messages.length - 1]?.mode || "generate",
     ),
     [prompt, setPrompt] = useState(
       () => localStorage.getItem(`draft:${page.id}`) || "",
     );
-  useEffect(() => { if (libraryRequest) { setPanel(libraryRequest.kind); if (compact) setMobilePanel("tools"); } }, [libraryRequest, compact]);
+  const previousLibraryRequest = useRef(libraryRequest);
+  useEffect(() => {
+    if (libraryRequest && libraryRequest !== previousLibraryRequest.current) {
+      setPanel(libraryRequest.kind);
+      if (compact) setMobilePanel("tools");
+    }
+    previousLibraryRequest.current = libraryRequest;
+  }, [libraryRequest, compact]);
   const [references, setReferences] = useState<string[]>([]),
     [picker, setPicker] = useState<"asset" | "upload" | null>(null),
     [zoom, setZoom] = useState(100),
     [selected, setSelected] = useState<string | null>(null);
+  const [template, setTemplate] = useState<Template | null>(null);
+  const [referencePurposes, setReferencePurposes] = useState<Record<string, ReferencePurpose>>({});
+  const [templateSource, setTemplateSource] = useState<TemplateSource | null>(null);
+  const [requestPreview, setRequestPreview] = useState<TemplateRequest | null>(null);
+  const [previewError, setPreviewError] = useState("");
+  const [historicalSettings, setHistoricalSettings] = useState("");
+  const [showTemplatePicker, setShowTemplatePicker] = useState(false);
+  const currentTemplate = w.templates?.find(t => t.id === template?.id);
+  useEffect(() => {
+    if (!template) return;
+    // The normal workspace poll pauses while typing; selected recipes still need update notices.
+    let pending = false;
+    const timer = setInterval(async () => {
+      if (pending || document.hidden) return;
+      pending = true;
+      try { await onRefresh(); } catch { /* Keep the captured draft available offline. */ }
+      finally { pending = false; }
+    }, 5000);
+    return () => clearInterval(timer);
+  }, [template?.id, onRefresh]);
+  const selectTemplate = (t: Template) => {
+    setTemplate(structuredClone(t)); setMode("generate"); setShowTemplatePicker(false); setHistoricalSettings("");
+    setPrompt(p => p.replace(/\/templates\s*$/, ""));
+    if (compact) setMobilePanel("chat");
+    textarea.current?.focus();
+  };
+  const reuseRequest = (m: Message) => {
+    const snapshot = m.templateRequest;
+    if (snapshot) {
+      setTemplate(structuredClone(snapshot.template)); setTransparent(snapshot.transparent);
+      setReferencePurposes(Object.fromEntries(snapshot.referencePurposes.map(p => [p.reference, p])));
+      if (doc && (doc.width !== snapshot.width || doc.height !== snapshot.height || doc.unit !== snapshot.unit)) {
+        setHistoricalSettings(`Historical output was ${snapshot.width} × ${snapshot.height} ${snapshot.unit}. This document is ${doc.width} × ${doc.height} ${doc.unit}.`);
+      } else {
+        setHistoricalSettings("");
+      }
+    } else { setTemplate(null); setReferencePurposes(Object.fromEntries((m.referencePurposes || []).map(p => [p.reference, p]))); }
+    setPrompt(m.text); setReferences(m.references); setMode(m.mode);
+    if (compact) setMobilePanel("chat");
+  };
+  const sourceFor = (imageId: string, messages: Message[], fallback: string): TemplateSource => {
+    const last = [...messages].reverse().find(m => m.role === "user" && m.mode === "generate");
+    const snapshot = last?.templateRequest;
+    return { imageId, recipe: snapshot ? `${snapshot.template.recipe}\n\n${snapshot.additionalInstructions}`.trim() : last?.text || fallback, messages };
+  };
   const [uploadsPending, setUploadsPending] = useState(0);
   const [overlays, setOverlays] = useState<Overlay[]>(comp.overlays),
     [showExport, setShowExport] = useState(false);
@@ -132,6 +186,17 @@ export function Editor({
   );
   const viewportRef = useRef<HTMLDivElement>(null);
   const [transparent, setTransparent] = useState(!!asset);
+  useEffect(() => {
+    if (!template) { setRequestPreview(null); setPreviewError(""); return; }
+    let active = true;
+    setRequestPreview(null); setPreviewError("");
+    const timer = setTimeout(() => {
+      api<TemplateRequest>("preview_template", { request: { target, template, prompt, mode: "generate", references,
+        referencePurposes: references.map(reference => referencePurposes[reference] || { reference, purpose: "Other", explanation: "" }), transparent } })
+        .then(p => { if (active) setRequestPreview(p); }).catch(e => { if (active) setPreviewError(String(e)); });
+    }, 150);
+    return () => { active = false; clearTimeout(timer); };
+  }, [template, prompt, references, referencePurposes, transparent, doc?.width, doc?.height, doc?.unit, page.id]);
   const canvas = useRef<HTMLDivElement>(null),
     end = useRef<HTMLDivElement>(null),
     textarea = useRef<HTMLTextAreaElement>(null),
@@ -250,14 +315,15 @@ export function Editor({
     setPicker(null);
   };
   async function submit() {
-    if (!prompt.trim() || busyJob || uploadsPending) return;
+    if ((!prompt.trim() && !template) || busyJob || uploadsPending || (template && (mode !== "generate" || !requestPreview || previewError || historicalSettings))) return;
     const value = prompt;
     try {
       await api("submit_prompt", {
-        request: { target, prompt: value, mode, references, transparent },
+        request: { target, prompt: value, mode, references, transparent, template, expectedInstructions: template ? requestPreview?.instructions : undefined,
+          referencePurposes: references.map(reference => referencePurposes[reference] || { reference, purpose: "Other", explanation: "" }) },
       });
       setPrompt("");
-      setReferences([]);
+      setReferences([]); setTemplate(null); setReferencePurposes({});
       await onRefresh();
     } catch (error) {
       notify(String(error));
@@ -362,6 +428,10 @@ export function Editor({
           </span>
         </div>
         <div className="button-row editor-actions">
+          {comp.imageId && <button className="button secondary small" aria-label="Save as template" title="Save as template" onClick={() => {
+            const revision = page.revisions.find(r => r.id === comp.revisionId);
+            setTemplateSource(sourceFor(comp.imageId!, revision?.messages || page.messages, revision?.prompt || ""));
+          }}><FileImage size={15} /><span>Save as template</span></button>}
           {doc && comp.imageId && (
             <button
               className="button secondary small"
@@ -426,6 +496,7 @@ export function Editor({
               <Images size={18} />
               <span>Assets</span>
             </button>
+            <button className={panel === "templates" ? "active" : ""} title="Templates" onClick={() => setPanel("templates")}><FileImage size={18} /><span>Templates</span></button>
             <button className={panel === "uploads" ? "active" : ""} title="Uploads" onClick={() => setPanel("uploads")}><Upload size={18} /><span>Uploads</span></button>
             <button
               className={panel === "history" ? "active" : ""}
@@ -501,6 +572,7 @@ export function Editor({
               <LibraryImages key={panel} w={w} orgId={orgId} kind={panel === "uploads" ? "upload" : "asset"} onReference={addReference} onPlace={doc ? placeAsset : undefined} />
             </div>
           )}
+          {panel === "templates" && <div className="editor-library"><Templates key={orgId} w={w} orgId={orgId} act={act} run={run} onRefresh={onRefresh} onSelect={selectTemplate} /></div>}
           {panel === "history" && (
             <div className="history-panel">
               <div className="panel-heading">
@@ -508,7 +580,7 @@ export function Editor({
               </div>
               <p>Return to any version. Later work is always preserved.</p>
               {[...page.revisions].reverse().map((r, reverseIndex) => (
-                <button
+                <div key={r.id}><button
                   className={`history-tile ${r.id === comp.revisionId ? "active" : ""}`}
                   key={r.id}
                   disabled={!!busyJob}
@@ -524,7 +596,7 @@ export function Editor({
                     <small>{r.prompt}</small>
                   </span>
                   {r.id === comp.revisionId && <Check size={13} />}
-                </button>
+                </button><button className="text-button" onClick={() => setTemplateSource(sourceFor(r.imageId, r.messages, r.prompt))}>Save revision as template</button></div>
               ))}
               {!page.revisions.length && (
                 <p className="muted">Your first image will appear here.</p>
@@ -971,6 +1043,7 @@ export function Editor({
                   </span>
                 </div>
                 <div className="message-text">{message.text}</div>
+                {message.templateRequest && <details className="template-record"><summary>Template: {message.templateRequest.template.name}</summary><pre>{message.templateRequest.instructions}</pre><button className="text-button" onClick={() => reuseRequest(message)}>Reuse these instructions</button></details>}
                 {message.references.length > 0 && (
                   <div className="message-references">
                     {message.references.map((v) => (
@@ -997,9 +1070,7 @@ export function Editor({
                       .reverse()
                       .find((m) => m.role === "user");
                     if (last) {
-                      setPrompt(last.text);
-                      setReferences(last.references);
-                      setMode(last.mode);
+                      reuseRequest(last);
                     }
                   }}
                 >
@@ -1027,6 +1098,19 @@ export function Editor({
               </button>
             </div>
             <div className="prompt-box">
+              {template && <div className="selected-template">
+                <ImageView id={template.exampleImageId} alt="Selected template example" /><strong>{template.name}</strong>
+                <button className="text-button" onClick={() => setTemplate(null)}>Remove template</button>
+                {historicalSettings && <p role="alert">{historicalSettings} <button className="text-button" onClick={() => setHistoricalSettings("")}>Use current document settings</button></p>}
+                {(!currentTemplate || currentTemplate.deletedAt) ? <small>Template deleted</small> : currentTemplate.version !== template.version && <small>Template updated <button className="text-button" onClick={() => setTemplate(structuredClone(currentTemplate))}>Use latest</button></small>}
+                {template.usageNotes && <p>{template.usageNotes}</p>}
+                <button className="text-button" onClick={() => {
+                  const reference = `image:${template.exampleImageId}`;
+                  addReference(reference); setReferencePurposes(p => ({ ...p, [reference]: { reference, purpose: "Style", explanation: "Template example; guide style, not subject identity." } }));
+                }}>Attach example as Style</button>
+                <details><summary>View generation instructions</summary><pre>{previewError || requestPreview?.instructions || "Preparing preview…"}</pre></details>
+                {mode === "discuss" && <p role="alert">Choose Generate to use this template, or remove it to discuss.</p>}
+              </div>}
               {uploadsPending > 0 && <div className="job-progress" role="status"><LoaderCircle size={15} className="spin" />Adding pasted image…</div>}
               {references.length > 0 && (
                 <div className="reference-chips">
@@ -1038,7 +1122,9 @@ export function Editor({
                     return (
                       <span key={v}>
                         <ImageView id={referenceImage(w, v)} />
-                        {name}
+                        <span className="reference-name">{name}</span>
+                        <select aria-label={`Purpose for ${name}`} value={referencePurposes[v]?.purpose || "Other"} onChange={e => setReferencePurposes(p => ({ ...p, [v]: { reference: v, purpose: e.target.value as ReferencePurpose["purpose"], explanation: p[v]?.explanation || "" } }))}>{["Subject", "Style", "Logo", "Other"].map(role => <option key={role}>{role}</option>)}</select>
+                        <input aria-label={`Explanation for ${name}`} placeholder="Purpose details (optional)" value={referencePurposes[v]?.explanation || ""} onChange={e => setReferencePurposes(p => ({ ...p, [v]: { reference: v, purpose: p[v]?.purpose || "Other", explanation: e.target.value } }))} />
                         <button
                           aria-label={`Remove ${name} reference`}
                           onClick={() =>
@@ -1084,8 +1170,9 @@ export function Editor({
                 }}
                 onChange={(e) => {
                   setPrompt(e.target.value);
-                  const command = e.target.value.match(/\/(asset|upload)\s*$/);
-                  if (command) setPicker(command[1] as "asset" | "upload");
+                  const command = e.target.value.match(/\/(asset|upload|templates)\s*$/);
+                  if (command?.[1] === "templates") { setShowTemplatePicker(true); setPrompt(e.target.value.replace(/\/templates\s*$/, "")); }
+                  else if (command) setPicker(command[1] as "asset" | "upload");
                 }}
                 placeholder={
                   mode === "discuss"
@@ -1109,7 +1196,7 @@ export function Editor({
                   <ImagePlus size={17} />
                 </button>
                 <small>
-                  Type <b>/asset</b> or <b>/upload</b>
+                  Type <b>/asset</b>, <b>/upload</b> or <b>/templates</b>
                 </small>
                 {busyJob ? (
                   <button
@@ -1127,7 +1214,7 @@ export function Editor({
                     aria-label={
                       mode === "discuss" ? "Send discussion" : "Generate image"
                     }
-                    disabled={!prompt.trim() || uploadsPending > 0}
+                    disabled={(!prompt.trim() && !template) || uploadsPending > 0 || (!!template && (mode !== "generate" || !requestPreview || !!previewError || !!historicalSettings))}
                     onClick={submit}
                   >
                     <ArrowUp size={18} />
@@ -1154,6 +1241,8 @@ export function Editor({
           </div>
         </aside>
       </div>
+      {templateSource && <TemplateForm w={w} act={act} orgId={orgId} source={templateSource} onClose={() => setTemplateSource(null)} onRefresh={onRefresh} />}
+      {showTemplatePicker && <Modal title="Templates" onClose={() => setShowTemplatePicker(false)} wide><Templates w={w} orgId={orgId} act={act} run={run} onRefresh={onRefresh} onSelect={selectTemplate} /></Modal>}
       {picker && (
         <AssetPicker
           w={w}

@@ -61,7 +61,8 @@ try {
   await prompt.fill('Keep this draft and my new words');
   await expect.poll(() => typeof releaseUpload).toBe('function');
   releaseUpload();
-  await expect(page.locator('.reference-chips')).toHaveText('Clipboard');
+  await expect(page.locator('.reference-chips .reference-name')).toHaveText('Clipboard');
+  await expect(page.getByRole('combobox', { name: 'Purpose for Clipboard' })).toHaveValue('Other');
   await expect(prompt).toHaveValue('Keep this draft and my new words');
   await expect(send).toBeEnabled();
   assert.equal(workspace.assets[0].libraryKind, 'upload');
@@ -78,7 +79,7 @@ try {
   await expect(page.locator('.toast')).toContainText('Clipboard upload failed');
   await expect(page.locator('.prompt-box [role="status"]')).toHaveCount(0);
   await expect(prompt).toHaveValue('Keep this draft and my new words');
-  await expect(page.locator('.reference-chips')).toHaveText('Clipboard');
+  await expect(page.locator('.reference-chips .reference-name')).toHaveText('Clipboard');
   await expect(send).toBeEnabled();
   await pasteImage('image/gif');
   await expect(page.locator('.toast')).toContainText('Paste a PNG, JPEG or WebP image.');

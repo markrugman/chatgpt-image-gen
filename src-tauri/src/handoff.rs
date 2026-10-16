@@ -123,6 +123,7 @@ async fn handle(
                 state.clone(),
                 app.clone(),
                 jobs::Submit {
+                    template: None, reference_purposes: vec![], template_request: None, expected_instructions: None,
                     target: target.clone(),
                     prompt: prompt.clone(),
                     mode,
@@ -135,6 +136,7 @@ async fn handle(
         } else {
             state.store.change(|w| {
                 w.page_mut(&target)?.messages.push(Message {
+            template_request: None, reference_purposes: vec![],
                     id: id(),
                     role: "user".into(),
                     text: prompt,

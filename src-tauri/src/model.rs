@@ -14,6 +14,10 @@ pub fn now() -> u64 {
 #[derive(Clone, Serialize, Deserialize, Default)]
 #[serde(rename_all = "camelCase")]
 pub struct Workspace {
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub templates: Vec<Template>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub template_folders: Vec<TemplateFolder>,
     #[serde(default)]
     pub format_version: u32,
     pub organisations: Vec<Organisation>,
@@ -113,6 +117,10 @@ impl Page {
 #[derive(Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Message {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub template_request: Option<TemplateRequest>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub reference_purposes: Vec<ReferencePurpose>,
     pub id: String,
     pub role: String,
     pub text: String,
@@ -152,6 +160,46 @@ pub struct Overlay {
     pub width: f64,
     pub height: f64,
     pub rotation: f64,
+}
+#[derive(Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Template {
+    pub id: String,
+    pub name: String,
+    pub recipe: String,
+    pub example_image_id: String,
+    pub usage_notes: String,
+    pub organisation_id: Option<String>,
+    pub folder_id: String,
+    pub tags: Vec<String>,
+    pub version: u64,
+    pub deleted_at: Option<u64>,
+}
+#[derive(Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct TemplateFolder {
+    pub id: String,
+    pub name: String,
+    pub organisation_id: Option<String>,
+}
+#[derive(Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ReferencePurpose {
+    pub reference: String,
+    pub purpose: String,
+    pub explanation: String,
+}
+#[derive(Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct TemplateRequest {
+    pub template: Template,
+    pub additional_instructions: String,
+    pub reference_purposes: Vec<ReferencePurpose>,
+    pub width: f64,
+    pub height: f64,
+    pub unit: String,
+    pub transparent: bool,
+    pub instructions: String,
 }
 pub fn default_library_kind() -> String { "asset".into() }
 fn is_asset_kind(kind: &String) -> bool { kind == "asset" }
@@ -420,6 +468,7 @@ mod tests {
         );
         w.documents[0].pages.push(Page::new("Page 2"));
         w.page_mut(&t).unwrap().messages.push(Message {
+            template_request: None, reference_purposes: vec![],
             id: id(),
             role: "user".into(),
             text: "Private page context".into(),

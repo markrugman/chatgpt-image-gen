@@ -319,6 +319,7 @@ async fn dispatch(
             commands::cancel_login(s(), argument(&args, "loginId")?).await?;
             Ok(Value::Null)
         }
+        "preview_template" => value(commands::preview_template(s(), argument(&args, "request")?).await?),
         "submit_prompt" => {
             value(commands::submit_prompt(app, s(), argument(&args, "request")?).await?)
         }

@@ -12,6 +12,7 @@ pub fn owns(w: &Workspace, org: &str, item: &str) -> bool {
                     .iter()
                     .any(|p| p.id == d.project_id && p.organisation_id == org)
         })
+        || w.templates.iter().any(|t| t.id == item && t.organisation_id.as_deref() == Some(org))
         || w.assets
             .iter()
             .any(|a| a.id == item && a.organisation_id.as_deref() == Some(org))
@@ -87,6 +88,7 @@ pub fn trash(w: &mut Workspace, id: &str, deleting: bool) -> Result<Value, Strin
                 .filter(|a| a.organisation_id.as_deref() == Some(id))
                 .map(|a| (&a.id, &mut a.deleted_at)),
         )
+        .chain(w.templates.iter_mut().filter(|t| t.organisation_id.as_deref() == Some(id)).map(|t| (&t.id, &mut t.deleted_at)))
     {
         if deleting && timestamp.is_none() {
             items.push(item.clone());
@@ -120,6 +122,7 @@ pub fn validate(w: &Workspace) -> Result<(), String> {
             || w.documents
                 .iter()
                 .any(|d| d.deleted_at.is_none() && owns(w, &org.id, &d.id))
+            || w.templates.iter().any(|t| t.organisation_id.as_deref() == Some(org.id.as_str()) && t.deleted_at.is_none())
             || w.assets.iter().any(|a| {
                 a.organisation_id.as_deref() == Some(org.id.as_str()) && a.deleted_at.is_none()
             })

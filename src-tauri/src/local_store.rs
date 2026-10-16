@@ -92,6 +92,7 @@ impl Store {
         let mut workspace: Workspace = serde_json::from_str(&data).map_err(|e| e.to_string())?;
         let result = edit(&mut workspace)?;
         crate::organisations::validate(&workspace)?;
+        crate::templates::validate(&workspace)?;
         tx.execute(
             "UPDATE workspace SET data=?1 WHERE id=1",
             params![serde_json::to_string(&workspace).map_err(|e| e.to_string())?],

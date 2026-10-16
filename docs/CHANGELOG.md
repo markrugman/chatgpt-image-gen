@@ -1,5 +1,13 @@
 # Release history
 
+## New in 0.9.0
+
+- Save reusable image-generation Templates with example previews, editable recipes, usage notes and tags. Create them from scratch or from current images and earlier revisions.
+- Organise templates into user-created folders in organisation or Shared libraries; search, edit, duplicate, copy, move, trash and restore them.
+- Type `/templates` in chat to open the selector alongside `/asset` and `/upload`. Use one template per generation, with optional extra instructions and explicit Subject, Style, Logo or Other reference purposes.
+- Inspect the assembled generation instructions. Template generations start fresh; normal follow-up edits continue from the result. Saved snapshots preserve historical recipes and exact references after library edits or deletion.
+- Assets, uploads and project designs open on Canvas in compact layouts. Explicit library navigation still opens Tools, and resizing no longer replays an earlier library request.
+
 ## New in 0.8.5
 
 - Project cards showcase the three most recent images across their designs and pages, with the newest in front. The new-project card matches project-card heights across every row.

@@ -293,6 +293,7 @@ mod tests {
         let doc = w.documents.iter_mut().find(|d| d.id == document).unwrap();
         let page = &mut doc.pages[0];
         page.messages.push(Message {
+            template_request: None, reference_purposes: vec![],
             id: "message".into(),
             role: "user".into(),
             text: "Logo".into(),
