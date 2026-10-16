@@ -1,5 +1,12 @@
 # Release history
 
+## New in 0.9.2
+
+- Template cards match the compact library style, with details and Duplicate/Copy/Move/Trash inside the three-dot edit dialog.
+- Templates in All organisations includes every active template, with a separate Shared tab and library-labelled folders.
+- Selected templates and reference pills take less space in the composer. Asset/upload menus offer Add as… with Style, Subject, Logo and Other choices.
+- Long user messages in Discuss and Generate/Edit show five lines with More… and Show less controls. Full saved prompts are preserved.
+
 ## New in 0.9.1
 
 - Templates matches Assets and Uploads with consistent header actions, tabs, information banner, image cards and empty states.

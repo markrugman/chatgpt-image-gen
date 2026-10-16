@@ -61,8 +61,6 @@ try {
   await expect(page.locator('.selected-template')).toContainText('Historical output was 1080 × 1080 px');
   await expect(page.getByRole('button',{name:'Generate image',exact:true})).toBeDisabled();
   await page.getByRole('button',{name:'Use current document settings',exact:true}).click();
-  await page.getByText('View generation instructions',{exact:true}).click();
-  await expect(page.locator('.selected-template pre')).toContainText('600 × 1080 px');
   // The worker is disabled, but choosing settings still resolves the composer gate.
   await expect(page.locator('.selected-template [role="alert"]')).toHaveCount(0);
   console.log('PASS T14/T15 historical input restoration with explicit output-setting resolution');
@@ -100,11 +98,9 @@ try {
     if(width<=1024)await page.getByRole('button',{name:'Chat',exact:true}).click();
     await page.getByRole('textbox',{name:'Design prompt'}).fill('/templates');
     await expect(page.getByRole('dialog',{name:'Templates',exact:true})).toBeVisible();
-    const pick=page.getByRole('dialog').locator('.template-card').filter({hasText:'Flat vector acceptance'});
-    await pick.getByRole('button',{name:'Use template',exact:true}).click();
+    await page.getByRole('dialog').getByRole('button',{name:'Use Flat vector acceptance',exact:true}).click();
+    await page.getByRole('menuitem',{name:'Use Template',exact:true}).click();
     await expect(page.locator('.selected-template')).toBeVisible();
-    await page.getByText('View generation instructions',{exact:true}).click();
-    await expect(page.locator('.selected-template pre')).toContainText('600 × 1080 px');
     assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),`Editor overflow at ${width}`);
     await page.getByRole('button',{name:'Generate image',exact:true}).scrollIntoViewIfNeeded();
     await expect(page.getByRole('button',{name:'Generate image',exact:true})).toBeInViewport();
@@ -119,10 +115,10 @@ try {
     assert((await sc.request.post(url+'/web/login',{headers,data:{accessKey:key,remember:true}})).ok());
     const sp=await sc.newPage();sp.on('pageerror',e=>errors.push(e.message));await sp.goto(editorURL);
     await sp.getByRole('button',{name:'Chat',exact:true}).click();await sp.getByRole('textbox',{name:'Design prompt'}).fill('/templates');
-    await sp.getByRole('dialog').locator('.template-card').filter({hasText:'Flat vector acceptance'}).getByRole('button',{name:'Use template',exact:true}).click();
+    await sp.getByRole('dialog').getByRole('button',{name:'Use Flat vector acceptance',exact:true}).click();
+    await sp.getByRole('menuitem',{name:'Use and Attach as Style',exact:true}).click();
     await expect(sp.locator('.selected-template')).toBeVisible();
-    await sp.getByRole('button',{name:'Attach example as Style',exact:true}).click();
-    await expect(sp.getByRole('combobox',{name:'Purpose for Page image'})).toHaveValue('Style');
+    await expect(sp.locator('.reference-chips > span').filter({hasText:'Page image'})).toHaveAttribute('data-purpose','Style');
     assert(await sp.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
   }finally{await safari.close();}
   assert.deepEqual(errors,[]);

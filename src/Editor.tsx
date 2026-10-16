@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import { UserMenu } from "./UserMenu";
 import {
   ArrowDownToLine,
@@ -54,6 +54,24 @@ import { renderPage } from "./export";
 import { Templates, TemplateForm, type TemplateSource } from "./Templates";
 import type { Template, TemplateRequest, ReferencePurpose, Message } from "./types";
 import { ExportDialog } from "./ExportDialog";
+
+function UserMessageText({ text }: { text: string }) {
+  const [expanded, setExpanded] = useState(false), [long, setLong] = useState(false);
+  const content = useRef<HTMLSpanElement>(null);
+  const id = useId();
+  useEffect(() => {
+    const element = content.current!;
+    const measure = () => setLong(element.scrollHeight > parseFloat(getComputedStyle(element).lineHeight) * 5 + 1);
+    measure();
+    const observer = new ResizeObserver(measure);
+    observer.observe(element);
+    return () => observer.disconnect();
+  }, [text]);
+  return <div className="message-text">
+    <span ref={content} id={id} className={`user-message-content${expanded ? "" : " collapsed"}`}>{text}</span>
+    {long && <button className="text-button message-expand" aria-expanded={expanded} aria-controls={id} onClick={() => setExpanded(!expanded)}>{expanded ? "Show less" : "More…"}</button>}
+  </div>;
+}
 
 export function Editor({
   w,
@@ -266,10 +284,11 @@ export function Editor({
     setOverlays(next);
     saveOverlays(next);
   };
-  const addReference = (version: string) => {
+  const addReference = (version: string, purpose?: ReferencePurpose["purpose"]) => {
     setReferences((current) =>
       current.includes(version) ? current : [...current, version],
     );
+    if (purpose) setReferencePurposes(current => ({ ...current, [version]: { reference: version, purpose, explanation: "" } }));
     setPicker(null);
     setPrompt((p) => p.replace(/\/(asset|upload)\s*$/, ""));
     textarea.current?.focus();
@@ -1047,7 +1066,7 @@ export function Editor({
                       : "Image generation"}
                   </span>
                 </div>
-                <div className="message-text">{message.text}</div>
+                {message.role === "user" ? <UserMessageText text={message.text} /> : <div className="message-text">{message.text}</div>}
                 {message.templateRequest && <details className="template-record"><summary>Template: {message.templateRequest.template.name}</summary><pre>{message.templateRequest.instructions}</pre><button className="text-button" onClick={() => reuseRequest(message)}>Reuse these instructions</button></details>}
                 {message.references.length > 0 && (
                   <div className="message-references">
@@ -1108,12 +1127,7 @@ export function Editor({
                 <button className="text-button" onClick={() => setTemplate(null)}>Remove template</button>
                 {historicalSettings && <p role="alert">{historicalSettings} <button className="text-button" onClick={() => setHistoricalSettings("")}>Use current document settings</button></p>}
                 {(!currentTemplate || currentTemplate.deletedAt) ? <small>Template deleted</small> : currentTemplate.version !== template.version && <small>Template updated <button className="text-button" onClick={() => setTemplate(structuredClone(currentTemplate))}>Use latest</button></small>}
-                {template.usageNotes && <p>{template.usageNotes}</p>}
-                <button className="text-button" onClick={() => {
-                  const reference = `image:${template.exampleImageId}`;
-                  addReference(reference); setReferencePurposes(p => ({ ...p, [reference]: { reference, purpose: "Style", explanation: "Template example; guide style, not subject identity." } }));
-                }}>Attach example as Style</button>
-                <details><summary>View generation instructions</summary><pre>{previewError || requestPreview?.instructions || "Preparing preview…"}</pre></details>
+                {previewError && <p role="alert">{previewError}</p>}
                 {mode === "discuss" && <p role="alert">Choose Generate to use this template, or remove it to discuss.</p>}
               </div>}
               {uploadsPending > 0 && <div className="job-progress" role="status"><LoaderCircle size={15} className="spin" />Adding pasted image…</div>}
@@ -1125,11 +1139,9 @@ export function Editor({
                     );
                     const name = a?.name || "Page image";
                     return (
-                      <span key={v}>
+                      <span key={v} title={`${name} · ${referencePurposes[v]?.purpose || "Other"}`} data-purpose={referencePurposes[v]?.purpose || "Other"}>
                         <ImageView id={referenceImage(w, v)} />
                         <span className="reference-name">{name}</span>
-                        <select aria-label={`Purpose for ${name}`} value={referencePurposes[v]?.purpose || "Other"} onChange={e => setReferencePurposes(p => ({ ...p, [v]: { reference: v, purpose: e.target.value as ReferencePurpose["purpose"], explanation: p[v]?.explanation || "" } }))}>{["Subject", "Style", "Logo", "Other"].map(role => <option key={role}>{role}</option>)}</select>
-                        <input aria-label={`Explanation for ${name}`} placeholder="Purpose details (optional)" value={referencePurposes[v]?.explanation || ""} onChange={e => setReferencePurposes(p => ({ ...p, [v]: { reference: v, purpose: p[v]?.purpose || "Other", explanation: e.target.value } }))} />
                         <button
                           aria-label={`Remove ${name} reference`}
                           onClick={() =>
@@ -1299,7 +1311,7 @@ function AssetPicker({
   w: Workspace;
   orgId?: string | null;
   kind: "asset" | "upload";
-  onReference: (id: string) => void;
+  onReference: (id: string, purpose?: ReferencePurpose["purpose"]) => void;
   onPageReference: (doc: DesignDocument, page: Page) => void;
   onPlace?: (asset: Asset) => void;
   onClose: () => void;

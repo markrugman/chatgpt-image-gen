@@ -1,10 +1,12 @@
 import { useEffect, useRef, useState } from "react";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 import { ImageView } from "./ui";
 import {
   libraryKind,
   versionImage,
   type Asset,
   type LibraryKind,
+  type ReferencePurpose,
   type Workspace,
 } from "./types";
 
@@ -20,7 +22,7 @@ export function LibraryImages({
   orgId?: string | null;
   kind: LibraryKind;
   search?: string;
-  onReference: (id: string) => void;
+  onReference: (id: string, purpose?: ReferencePurpose["purpose"]) => void;
   onPlace?: (asset: Asset) => void;
 }) {
   const [scope, setScope] = useState("owned");
@@ -83,20 +85,23 @@ function LibraryImage({
 }: {
   asset: Asset;
   w: Workspace;
-  onReference: (id: string) => void;
+  onReference: (id: string, purpose?: ReferencePurpose["purpose"]) => void;
   onPlace?: (asset: Asset) => void;
 }) {
   return <LibraryImageTile name={asset.name} imageId={versionImage(w, asset.currentVersionId!)} actions={[
-    { label: "Reference", onSelect: () => onReference(asset.currentVersionId!) },
+    { label: "Add as…", items: (["Style", "Subject", "Logo", "Other"] as const).map(purpose => ({ label: purpose, onSelect: () => onReference(asset.currentVersionId!, purpose) })) },
     ...(onPlace ? [{ label: "Place", onSelect: () => onPlace(asset) }] : []),
   ]} />;
 }
 
+type LibraryAction = { label: string; onSelect: () => void } | { label: string; items: { label: string; onSelect: () => void }[] };
+
 export function LibraryImageTile({ name, imageId, actions }: {
   name: string; imageId?: string | null;
-  actions: { label: string; onSelect: () => void }[];
+  actions: LibraryAction[];
 }) {
   const [open, setOpen] = useState(false);
+  const [submenu, setSubmenu] = useState<Extract<LibraryAction, { items: unknown }> | null>(null);
   const root = useRef<HTMLDivElement>(null),
     trigger = useRef<HTMLButtonElement>(null);
   useEffect(() => {
@@ -105,13 +110,14 @@ export function LibraryImageTile({ name, imageId, actions }: {
       ?.querySelector<HTMLButtonElement>('[role="menuitem"]')
       ?.focus();
     const outside = (e: PointerEvent) => {
-      if (!root.current?.contains(e.target as Node)) setOpen(false);
+      if (!root.current?.contains(e.target as Node)) { setOpen(false); setSubmenu(null); }
     };
     document.addEventListener("pointerdown", outside);
     return () => document.removeEventListener("pointerdown", outside);
-  }, [open]);
+  }, [open, submenu]);
   const close = () => {
     setOpen(false);
+    setSubmenu(null);
     trigger.current?.focus();
   };
   return (
@@ -121,7 +127,15 @@ export function LibraryImageTile({ name, imageId, actions }: {
       onKeyDown={(e) => {
         if (e.key === "Escape" && open) {
           e.stopPropagation();
-          close();
+          if (submenu) setSubmenu(null); else close();
+        }
+        if (e.key === "ArrowLeft" && submenu) {
+          e.preventDefault(); setSubmenu(null);
+        }
+        if (e.key === "ArrowRight" && open && !submenu) {
+          const index = Array.from(root.current!.querySelectorAll('[role="menuitem"]')).indexOf(document.activeElement!);
+          const action = actions[index];
+          if (action && "items" in action) { e.preventDefault(); setSubmenu(action); }
         }
         if (open && ["ArrowDown", "ArrowUp", "Home", "End"].includes(e.key)) {
           e.preventDefault();
@@ -144,7 +158,7 @@ export function LibraryImageTile({ name, imageId, actions }: {
         }
       }}
       onBlur={(e) => {
-        if (e.relatedTarget && !e.currentTarget.contains(e.relatedTarget as Node)) setOpen(false);
+        if (e.relatedTarget && !e.currentTarget.contains(e.relatedTarget as Node)) { setOpen(false); setSubmenu(null); }
       }}
     >
       <button
@@ -153,7 +167,7 @@ export function LibraryImageTile({ name, imageId, actions }: {
         aria-label={`Use ${name}`}
         aria-haspopup="menu"
         aria-expanded={open}
-        onClick={() => setOpen(!open)}
+        onClick={() => { setSubmenu(null); setOpen(!open); }}
       >
         <span className="mini-asset-preview checker">
           <ImageView id={imageId} alt={name} />
@@ -164,17 +178,19 @@ export function LibraryImageTile({ name, imageId, actions }: {
         <div
           className="library-image-menu"
           role="menu"
-          aria-label={`Use ${name}`}
+          aria-label={submenu ? `Add ${name} as` : `Use ${name}`}
         >
-          {actions.map(action => <button
+          {submenu && <button className="library-menu-back" role="menuitem" onClick={() => setSubmenu(null)}><ChevronLeft size={14} />Back</button>}
+          {(submenu?.items || actions).map(action => <button
             key={action.label}
             role="menuitem"
+            aria-haspopup={"items" in action ? "menu" : undefined}
             onClick={() => {
-              close();
-              action.onSelect();
+              if ("items" in action) setSubmenu(action);
+              else { close(); action.onSelect(); }
             }}
           >
-            {action.label}
+            {action.label}{"items" in action && <ChevronRight size={14} />}
           </button>)}
         </div>
       )}

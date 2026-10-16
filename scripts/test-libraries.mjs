@@ -217,7 +217,7 @@ try {
     .getByRole("button", { name: "Use Preview upload", exact: true })
     .click();
   await expect(
-    page.getByRole("menuitem", { name: "Reference", exact: true }),
+    page.getByRole("menuitem", { name: "Add as…", exact: true }),
   ).toBeFocused();
   await page.keyboard.press("ArrowDown");
   await expect(
@@ -225,14 +225,15 @@ try {
   ).toBeFocused();
   await page.keyboard.press("ArrowUp");
   await expect(
-    page.getByRole("menuitem", { name: "Reference", exact: true }),
+    page.getByRole("menuitem", { name: "Add as…", exact: true }),
   ).toBeFocused();
   await page.keyboard.press("Escape");
   await expect(page.getByRole("menuitem")).toHaveCount(0);
   await page
     .getByRole("button", { name: "Use Preview upload", exact: true })
     .click();
-  await page.getByRole("menuitem", { name: "Reference", exact: true }).click();
+  await page.getByRole("menuitem", { name: "Add as…", exact: true }).click();
+  await page.getByRole("menuitem", { name: "Other", exact: true }).click();
   await expect(page.locator(".reference-chips")).toContainText(
     "Preview upload",
   );
@@ -257,7 +258,8 @@ try {
     .getByRole("dialog")
     .getByRole("button", { name: "Use Preview upload", exact: true })
     .click();
-  await page.getByRole("menuitem", { name: "Reference", exact: true }).click();
+  await page.getByRole("menuitem", { name: "Add as…", exact: true }).click();
+  await page.getByRole("menuitem", { name: "Other", exact: true }).click();
   await expect(composer).toHaveValue("Use ");
   await composer.fill("/asset");
   await expect(

@@ -41,10 +41,9 @@ try{
   await page.getByRole('dialog').getByRole('button',{name:'Shared',exact:true}).click();
   // Select owner scope after opening native workspace from All organisations.
   await page.getByRole('dialog').getByRole('button',{name:'Organisation',exact:true}).click();
-  await page.getByRole('dialog').getByRole('button',{name:'Use template',exact:true}).click();
+  await page.getByRole('dialog').getByRole('button',{name:'Use Native vector',exact:true}).click();
+  await page.getByRole('menuitem',{name:'Use Template',exact:true}).click();
   await expect(page.locator('.selected-template')).toContainText('Native vector');
-  await page.getByText('View generation instructions',{exact:true}).click();
-  await expect(page.locator('.selected-template pre')).toContainText('Keep details');
   await expect(page.getByRole('textbox',{name:'Design prompt'})).toHaveValue('Keep details ');
   console.log('PASS hidden native WebView /templates picker, selection and preview');
   const original=JSON.stringify(await invoke('get_workspace'));

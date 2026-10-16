@@ -48,7 +48,7 @@ try {
             await trigger.click();
             const menu = drawer.getByRole('menu');
             await expect(menu).toBeVisible();
-            await expect(menu.getByRole('menuitem')).toHaveText(tab === 'Templates' ? ['Use Template', 'Use and Attach as Style'] : ['Reference', 'Place']);
+            await expect(menu.getByRole('menuitem')).toHaveText(tab === 'Templates' ? ['Use Template', 'Use and Attach as Style'] : ['Add as…', 'Place']);
             const bounds = await menu.boundingBox(), container = await drawer.boundingBox();
             assert(bounds.x >= container.x && bounds.x + bounds.width <= container.x + container.width, `${tab} popup clipped`);
             await page.keyboard.press('End');
@@ -56,6 +56,14 @@ try {
             await page.keyboard.press('Escape');
             await expect(menu).toHaveCount(0);
             await expect(trigger).toBeFocused();
+          }
+          if (tab !== 'Templates') {
+            await grid.locator('.library-image-trigger').first().click();
+            await page.getByRole('menuitem', { name: 'Add as…', exact: true }).click();
+            await expect(drawer.getByRole('menuitem')).toHaveText(['Back', 'Style', 'Subject', 'Logo', 'Other']);
+            await page.keyboard.press('Escape');
+            await expect(drawer.getByRole('menuitem', { name: 'Add as…', exact: true })).toBeFocused();
+            await page.keyboard.press('Escape');
           }
           if (name === 'Edge' && theme === 'dark' && [393, 1440].includes(width)) await drawer.screenshot({ path: `work/drawer-${tab.toLowerCase()}-${width}.png` });
         }
@@ -68,7 +76,7 @@ try {
           if (width <= 1024) await page.getByRole('button', { name: 'Tools', exact: true }).click();
           await templateTrigger.click();
           await page.getByRole('menuitem', { name: 'Use and Attach as Style', exact: true }).click();
-          await expect(page.getByRole('combobox', { name: 'Purpose for Page image' })).toHaveValue('Style');
+          await expect(page.locator('.reference-chips > span')).toHaveAttribute('data-purpose', 'Style');
           await expect(page.locator('.reference-chips > span')).toHaveCount(1);
           if (width <= 1024) await expect(page.getByRole('button', { name: 'Chat', exact: true })).toHaveAttribute('aria-pressed', 'true');
         }

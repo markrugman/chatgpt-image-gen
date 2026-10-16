@@ -1,5 +1,31 @@
 # Next version design interview
 
+## 0.9.2 build and deployment authorised (2026-10-16)
+
+Mark explicitly requested building and deploying all pending changes below: compact template cards and management dialog, All organisations filtering, compact composer/reference-role menus and collapsible user chat messages. This supersedes their local-preview/deployment holds. Qualification and deployment evidence will be recorded in VALIDATION.md. Public GitHub publication is separate from this private build/deployment.
+
+## Collapsible user chat messages - local preview (2026-10-16)
+
+Mark requested that large prompts occupy only a few lines in the design chat. User messages in Discuss and Generate/Edit now show at most five rendered lines by default, with More… and Show less buttons for independent expansion. The control appears only when text exceeds five lines at the current width, and remeasures when the layout changes. Full text remains in the message and DOM; saved history, request payloads, references, template records and assistant responses are unchanged. The button exposes expansion state and its controlled content for accessibility.
+
+Verification: production frontend build and all 28 frontend tests pass. The isolated built-frontend fixture `work/test-message-collapse.mjs` passes in Edge/WebKit at 393/1440px, covering multiline and long paragraph prompts, full text preservation, independent expansion, keyboard collapse, short messages, assistant messages and no browser errors. Light/dark screenshots inspected under `work/message-collapse-*.png`. Local only; not deployed.
+
+## Compact Templates page cards - local preview (2026-10-16)
+
+The All organisations view now lists every active template across organisation and Shared libraries, matching Assets/Uploads; Shared remains a separate filter. The previous code mapped no selected organisation to Shared and hid the All organisations tab. All-library folder choices and card subtitles identify the owning library; renaming a folder retains its original organisation. `node scripts/test-template-scope.mjs` reproduces the original missing-template bug and passes after the fix in Edge/WebKit at 393/1440px, covering Shared, organisation switching, tag search, folder filtering, Trash exclusion and folder-rename ownership. Build, 28 frontend tests and ten real-server acceptance groups also pass. Local only.
+
+Mark requested the same card aesthetic as Assets, Uploads and designs, with details behind the three-dot button. Full-page Templates now uses the shared asset preview, card caption, truncated title, folder subtitle and ellipsis button. Recipe, tags and usage notes appear in Edit template; Duplicate, Copy to…, Move to… and Move to Trash are available inside that dialog. Clicking the preview or title also opens it. Drawer selection remains unchanged.
+
+Verification: production frontend build, all 28 frontend tests and ten real-server template acceptance groups pass. Isolated Edge/WebKit checks cover light/dark at 320/393/768/1440px, compact card contents, dialog fields, Save/Duplicate/Copy/Move/Trash request routing, keyboard opening/Escape/focus restoration and overflow. Local screenshots are under ignored `work/template-cards-*.png` and `work/template-details-*.png`; the fixture is `work/test-template-cards.mjs`. This revision is local only, pending review alongside the composer preview below.
+
+## Compact composer and reference-role menus - local preview (2026-10-16)
+
+Mark requested screenshots before deployment. The selected template normally shows only its image, title and Remove template; usage notes, Attach example as Style and generation-instruction disclosure are removed from the composer. Existing actionable update/deletion/output-setting notices and preview errors remain available. Canonical request preparation and historical request snapshots are preserved internally.
+
+References return to small image/title/remove pills, with their role available as a tooltip. Asset/upload popup menus replace Reference with **Add as…**, opening a contained menu for **Style, Subject, Logo, Other**. This applies in drawers and slash-command pickers. Choosing a role sets it directly on the request without duplicating an existing reference. Inline role selectors and optional purpose-detail inputs are removed; existing saved explanations remain intact in historical snapshots.
+
+Local production frontend build, 28 frontend tests, ten real-server template acceptance groups and Edge/WebKit drawer checks pass. A local preview using copies of existing library images verifies all eight asset/upload role choices in intercepted submission payloads on desktop Edge and mobile WebKit, including empty explanations and compact composer layout. No preview generation, workspace mutation, native rebuild, GitHub push or deployment was performed. Screenshots and evidence are under ignored `work/reference-ui-preview/`; the live site remains the deployed 0.9.1 build pending screenshot review.
+
 ## Templates library styling - built and deployed in 0.9.1 (2026-10-16)
 
 Mark authorised building and deploying all of these template/drawer/form updates on 2026-10-16. Version 0.9.1 Windows installer/portable/companion packages are built and verified locally, and the existing private server runs the qualified local Linux image. Source is committed locally; no GitHub push or public release was performed. See [final validation and preservation evidence](VALIDATION.md).

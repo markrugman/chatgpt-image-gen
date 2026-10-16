@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { FileImage, FolderPlus, Plus } from "lucide-react";
+import { FileImage, FolderPlus, MoreHorizontal, Plus, Trash2 } from "lucide-react";
 import { api } from "./api";
 import { LibraryImageTile } from "./LibraryImages";
 import { Empty, ImageView, Modal, PageHeading, type Act } from "./ui";
@@ -8,9 +8,10 @@ import { activeOrganisations, matchesSearch, type Message, type Template, type W
 export type TemplateSource = { imageId: string; recipe: string; messages?: Message[] };
 export const generalFolder = "general";
 
-export function TemplateForm({ w, act, orgId, template, source, onClose, onRefresh }: {
+export function TemplateForm({ w, act, orgId, template, source, onClose, onRefresh, management }: {
   w: Workspace; act: Act; orgId?: string | null; template?: Template; source?: TemplateSource;
   onClose: () => void; onRefresh: () => Promise<void>;
+  management?: { duplicate: () => Promise<void>; transfer: (copy: boolean) => void; trash: () => Promise<void> };
 }) {
   const [name, setName] = useState(template?.name || "");
   const [recipe, setRecipe] = useState(template?.recipe || source?.recipe || "");
@@ -20,6 +21,10 @@ export function TemplateForm({ w, act, orgId, template, source, onClose, onRefre
   const [tags, setTags] = useState(template?.tags.join(", ") || "");
   const [notes, setNotes] = useState(template?.usageNotes || "");
   const [error, setError] = useState(""), [busy, setBusy] = useState(false);
+  const manage = async (action: () => Promise<void>) => {
+    setBusy(true); setError("");
+    try { await action(); } catch (e) { setError(String(e)); } finally { setBusy(false); }
+  };
   return <Modal title={template ? "Edit template" : "New template"} onClose={() => { if (!busy) onClose(); }} wide>
     <form className="template-editor-form" onSubmit={async e => {
       e.preventDefault(); setError(""); setBusy(true);
@@ -67,9 +72,14 @@ export function TemplateForm({ w, act, orgId, template, source, onClose, onRefre
       </div>
       <label>Tags (comma separated)<input placeholder="e.g. portrait, illustration, product" value={tags} onChange={e => setTags(e.target.value)} /></label>
       <label>Usage notes<textarea rows={2} placeholder="Optional tips for using this template" value={notes} onChange={e => setNotes(e.target.value)} /></label>
+      {management && <div className="button-row">
+        <button type="button" className="button secondary" disabled={busy} onClick={() => manage(management.duplicate)}>Duplicate</button>
+        <button type="button" className="button secondary" disabled={busy} onClick={() => management.transfer(true)}>Copy to…</button>
+        <button type="button" className="button secondary" disabled={busy} onClick={() => management.transfer(false)}>Move to…</button>
+      </div>}
       {error && <p role="alert" className="error">{error} {template && <button type="button" onClick={async () => { try { await onRefresh(); onClose(); } catch (e) { setError(String(e)); } }}>Close and reload template</button>}</p>}
       </div>
-      <div className="modal-footer template-form-footer"><button type="button" className="button secondary" disabled={busy} onClick={onClose}>Cancel</button>
+      <div className="modal-footer template-form-footer">{management && <button type="button" className="button danger-text template-trash" disabled={busy} onClick={() => manage(management.trash)}><Trash2 size={14} />Move to Trash</button>}<button type="button" className="button secondary" disabled={busy} onClick={onClose}>Cancel</button>
         <button className="button primary" disabled={busy || !name.trim() || !recipe.trim() || !example}>{busy ? "Saving…" : "Save template"}</button></div>
     </form>
   </Modal>;
@@ -89,6 +99,7 @@ export function Templates({ w, orgId, act, run, onRefresh, onSelect, fullPage = 
 }) {
   const [scope, setScope] = useState("owned"), [query, setQuery] = useState("");
   const owner = scope === "shared" ? null : orgId || null;
+  const allLibraries = fullPage && !orgId && scope === "owned";
   const [folder, setFolder] = useState("all");
   const [editing, setEditing] = useState<Template | "new" | null>(null);
   const [folderDialog, setFolderDialog] = useState<{ id?: string; name: string } | null>(null);
@@ -96,8 +107,8 @@ export function Templates({ w, orgId, act, run, onRefresh, onSelect, fullPage = 
   const [destination, setDestination] = useState(""), [destinationFolder, setDestinationFolder] = useState(generalFolder);
   const [error, setError] = useState(""), [busy, setBusy] = useState(false);
   const [deletingFolder, setDeletingFolder] = useState(false);
-  const folders = (w.templateFolders || []).filter(f => f.organisationId === owner).sort((a,b) => a.name.localeCompare(b.name));
-  const items = (w.templates || []).filter(t => !t.deletedAt && t.organisationId === owner && (folder === "all" || t.folderId === folder)
+  const folders = (w.templateFolders || []).filter(f => allLibraries || f.organisationId === owner).sort((a,b) => a.name.localeCompare(b.name));
+  const items = (w.templates || []).filter(t => !t.deletedAt && (allLibraries || t.organisationId === owner) && (folder === "all" || t.folderId === folder)
     && matchesSearch(`${t.name} ${t.recipe}`, t.tags, query)).sort((a,b) => a.name.localeCompare(b.name));
   const actions = <div className="button-row template-library-actions">
     <button className="button secondary" onClick={() => { setError(""); setFolderDialog({ name: "" }); }}><FolderPlus size={16} />Create folder</button>
@@ -108,32 +119,32 @@ export function Templates({ w, orgId, act, run, onRefresh, onSelect, fullPage = 
       <div className="info-strip"><FileImage size={18} /><span><strong>Your recipes, ready to reuse.</strong> Save instructions and an example image, then make them your own in a new design.</span></div>
     </> : null}
     <div className="filter-tabs" aria-label="Template library scope">
-      {orgId && <button className={scope === "owned" ? "active" : ""} onClick={() => { setScope("owned"); setFolder("all"); }}>{fullPage ? w.organisations.find(o => o.id === orgId)?.name || "Organisation" : "Organisation"}</button>}
-      <button className={!orgId || scope === "shared" ? "active" : ""} onClick={() => { setScope("shared"); setFolder("all"); }}>Shared</button>
+      {(orgId || fullPage) && <button className={scope === "owned" ? "active" : ""} onClick={() => { setScope("owned"); setFolder("all"); }}>{fullPage ? orgId ? w.organisations.find(o => o.id === orgId)?.name || "Organisation" : "All organisations" : "Organisation"}</button>}
+      <button className={scope === "shared" || (!orgId && !fullPage) ? "active" : ""} onClick={() => { setScope("shared"); setFolder("all"); }}>Shared</button>
     </div>
     <div className="template-toolbar">
       <input aria-label="Search templates" placeholder="Search names, tags and recipes…" value={query} onChange={e => setQuery(e.target.value)} />
-      <select aria-label="Filter templates by folder" value={folder} onChange={e => setFolder(e.target.value)}><option value="all">All templates</option><option value={generalFolder}>General</option>{folders.map(f => <option key={f.id} value={f.id}>{f.name}</option>)}</select>
+      <select aria-label="Filter templates by folder" value={folder} onChange={e => setFolder(e.target.value)}><option value="all">All templates</option><option value={generalFolder}>General</option>{folders.map(f => <option key={f.id} value={f.id}>{allLibraries ? `${w.organisations.find(o => o.id === f.organisationId)?.name || "Shared library"} · ${f.name}` : f.name}</option>)}</select>
       {folder !== "all" && folder !== generalFolder && <><button className="text-button" onClick={() => { setError(""); setFolderDialog({ id: folder, name: folders.find(f => f.id === folder)?.name || "" }); }}>Rename folder</button><button className="text-button" onClick={() => setDeletingFolder(true)}>Delete folder</button></>}
     </div>
     <div className={onSelect ? "library-image-grid" : "asset-grid template-grid"}>{items.map(t => onSelect ? <LibraryImageTile key={t.id} name={t.name} imageId={t.exampleImageId} actions={[
       { label: "Use Template", onSelect: () => onSelect(structuredClone(t)) },
       { label: "Use and Attach as Style", onSelect: () => onSelect(structuredClone(t), true) },
     ]} /> : <article className="asset-card template-card" key={t.id}>
-      <div className="asset-preview checker"><ImageView id={t.exampleImageId} alt={t.name} /></div><div className="template-card-body"><strong>{t.name}</strong>
-      <small>{folders.find(f => f.id === t.folderId)?.name || "General"}{t.tags.length ? ` · ${t.tags.join(", ")}` : ""}</small>
-      <p>{t.usageNotes}</p><div className="template-actions">
-        <button className="text-button" onClick={() => setEditing(t)}>Edit</button>
-        <button className="text-button" onClick={() => run(() => act({ op: "template_duplicate", id: t.id }))}>Duplicate</button>
-        <button className="text-button" onClick={() => { setDestination(""); setDestinationFolder(generalFolder); setError(""); setTransfer({ template: t, copy: true }); }}>Copy to…</button>
-        <button className="text-button" onClick={() => { setDestination(""); setDestinationFolder(generalFolder); setError(""); setTransfer({ template: t, copy: false }); }}>Move to…</button>
-        <button className="text-button" onClick={() => run(() => act({ op: "delete", kind: "template", id: t.id }))}>Trash</button>
-      </div></div>
+      <button className="asset-preview checker" aria-label={`Edit ${t.name}`} onClick={() => setEditing(t)}><ImageView id={t.exampleImageId} alt={t.name} /></button>
+      <div className="card-caption">
+        <button className="card-name" onClick={() => setEditing(t)}><strong>{t.name}</strong><small>{allLibraries && `${w.organisations.find(o => o.id === t.organisationId)?.name || "Shared library"} · `}{folders.find(f => f.id === t.folderId)?.name || "General"}</small></button>
+        <button className="icon-button" aria-label={`Edit ${t.name}`} onClick={() => setEditing(t)}><MoreHorizontal size={18} /></button>
+      </div>
     </article>)}</div>
     {!items.length && <Empty icon={<FileImage />} title={query || folder !== "all" ? "No matching templates" : "A home for your reusable recipes"} text={query || folder !== "all" ? "Try another search or folder to find your template." : "Save a visual recipe to give your next design a head start."} action={<button className="button primary" onClick={() => setEditing("new")}><Plus size={16} />New template</button>} />}
-    {editing && <TemplateForm w={w} act={act} orgId={owner} template={editing === "new" ? undefined : editing} onClose={() => setEditing(null)} onRefresh={onRefresh} />}
+    {editing && <TemplateForm w={w} act={act} orgId={owner} template={editing === "new" ? undefined : editing} onClose={() => setEditing(null)} onRefresh={onRefresh} management={editing === "new" ? undefined : {
+      duplicate: async () => { await act({ op: "template_duplicate", id: editing.id }); setEditing(null); },
+      transfer: copy => { setDestination(""); setDestinationFolder(generalFolder); setError(""); setTransfer({ template: editing, copy }); setEditing(null); },
+      trash: async () => { await act({ op: "delete", kind: "template", id: editing.id }); setEditing(null); },
+    }} />}
     {folderDialog && <Modal title={folderDialog.id ? "Rename folder" : "Create folder"} onClose={() => { if (!busy) setFolderDialog(null); }}>
-      <form className="template-form" onSubmit={async e => { e.preventDefault(); setBusy(true); setError(""); try { await act({ op: "template_folder", ...folderDialog, organisationId: owner }); setFolderDialog(null); } catch(e) { setError(String(e)); } finally { setBusy(false); } }}>
+      <form className="template-form" onSubmit={async e => { e.preventDefault(); setBusy(true); setError(""); try { await act({ op: "template_folder", ...folderDialog, organisationId: folderDialog.id ? folders.find(f => f.id === folderDialog.id)?.organisationId ?? null : owner }); setFolderDialog(null); } catch(e) { setError(String(e)); } finally { setBusy(false); } }}>
         <label>Folder name<input required value={folderDialog.name} onChange={e => setFolderDialog({ ...folderDialog, name: e.target.value })} /></label>
         {error && <p role="alert">{error}</p>}<button className="button primary" disabled={busy || !folderDialog.name.trim()}>Save folder</button>
       </form>

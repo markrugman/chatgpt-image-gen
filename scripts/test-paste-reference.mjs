@@ -62,7 +62,7 @@ try {
   await expect.poll(() => typeof releaseUpload).toBe('function');
   releaseUpload();
   await expect(page.locator('.reference-chips .reference-name')).toHaveText('Clipboard');
-  await expect(page.getByRole('combobox', { name: 'Purpose for Clipboard' })).toHaveValue('Other');
+  await expect(page.locator('.reference-chips > span').filter({ hasText: 'Clipboard' })).toHaveAttribute('data-purpose', 'Other');
   await expect(prompt).toHaveValue('Keep this draft and my new words');
   await expect(send).toBeEnabled();
   assert.equal(workspace.assets[0].libraryKind, 'upload');
