@@ -1,8 +1,8 @@
 # Next version design interview
 
-## 0.9.4 release authorised (2026-10-16)
+## 0.9.4 deployed and published (2026-10-16)
 
-Mark explicitly requested building and deploying the completed navigation and Templates drawer changes to the server and GitHub. This supersedes the wait/source-only holds below. Release qualification and preservation evidence will be recorded in VALIDATION.md.
+Mark explicitly authorised building and deploying all completed navigation and Templates drawer changes. They are now deployed on the private server and public in [GitHub 0.9.4](https://github.com/markrugman/chatgpt-image-gen/releases/tag/v0.9.4) from `8f430f3ee587eb3189bc9bb1bfddd38640a977e6`. All builds/tests, compiled Edge/WebKit UI matrices, live read-only browser checks, package/runtime checks and anonymous image/download qualification pass. Workspace/media, access key, sessions/jobs and worker sign-in are preserved with stopped-volume and off-host backups. This supersedes the wait/source-only/pending statuses below. See [VALIDATION.md](VALIDATION.md) for evidence.
 
 ## Templates drawer folders and library-only management — source only (2026-10-16)
 

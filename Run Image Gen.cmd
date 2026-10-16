@@ -2,6 +2,10 @@
 setlocal
 cd /d "%~dp0"
 set "IMAGEGEN_BUILD=%LOCALAPPDATA%\ImageGenBuild\target"
+if exist "%~dp0outputs\Image Gen 0.9.4 Portable\Image Gen.exe" (
+  start "" "%~dp0outputs\Image Gen 0.9.4 Portable\Image Gen.exe"
+  exit /b 0
+)
 if exist "%~dp0outputs\Image Gen 0.9.3 Portable\Image Gen.exe" (
   start "" "%~dp0outputs\Image Gen 0.9.3 Portable\Image Gen.exe"
   exit /b 0

@@ -35,10 +35,10 @@ From 0.8.3, desktop generation uses only Image Gen's bundled runtime and its own
 
 The server provides the browser editor and shared workspace. Install [Docker Engine](https://docs.docker.com/engine/install/) and the [Compose plugin](https://docs.docker.com/compose/install/linux/) first. Run installation as a user allowed to use Docker. The script requires Bash, curl, sha256sum and iproute2; it does not install Docker or change the host firewall.
 
-Choose a published version. For version [0.9.3](https://github.com/markrugman/chatgpt-image-gen/releases/tag/v0.9.3):
+Choose a published version. For version [0.9.4](https://github.com/markrugman/chatgpt-image-gen/releases/tag/v0.9.4):
 
 ```sh
-VERSION=0.9.3
+VERSION=0.9.4
 REPOSITORY=markrugman/chatgpt-image-gen
 curl -fL "https://github.com/$REPOSITORY/releases/download/v$VERSION/install.sh" -o install.sh && \
 curl -fL "https://github.com/$REPOSITORY/releases/download/v$VERSION/SHA256SUMS" -o SHA256SUMS
