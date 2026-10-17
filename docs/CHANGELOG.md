@@ -8,7 +8,7 @@
 - Record precise modification times for edits and use newest-first ordering throughout libraries, folders, drawers and pickers.
 - Copy or move designs between projects within the same organisation, defaulting to the current organisation and excluding the current location. Templates follow the same folder-selection flow.
 - Drag designs onto Projects and templates onto Template Folders. Reject cross-type and invalid drops; preserve source history and library references.
-- Windows packages and the immutable server image are being qualified for release and the existing server update.
+- Windows Setup, Portable and Companion downloads and the immutable Linux image are published; the existing server is upgraded with data and sign-in preserved.
 
 ## New in 0.10.2 — file drops and portrait proportions (2026-10-17)
 

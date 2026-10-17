@@ -1,5 +1,9 @@
 # Next version design interview
 
+## 0.10.3 — all current updates released and deployed (2026-10-17)
+
+Mark authorised the complete pending set. All canvas transforms, drawer/clipboard, precise recency and same-organisation Copy/Move/type-safe drag changes are published in [0.10.3](https://github.com/markrugman/chatgpt-image-gen/releases/tag/v0.10.3) from `55180e8f5b4c47bd83e4e2834f299f2ba6b52416` and deployed to the existing server with workspace/media, configuration, sessions/jobs and signed-in worker preserved. Verified stopped-volume/off-host backups and successful [workflow](https://github.com/markrugman/chatgpt-image-gen/actions/runs/39059113530); [VALIDATION.md](VALIDATION.md) is canonical. Earlier holds/statuses below are historical.
+
 ## 0.10.3 release and deployment authorised (2026-10-17)
 
 Mark explicitly requested building, deploying and releasing all current updates. This lifts the earlier publication/deployment holds for canvas corner/Shift resizing and rotation, drawer left-click Place/right-click options, clipboard permission recovery, precise edit recency across libraries, same-organisation Copy/Move and typed library drag moves. Windows packages, immutable server image and the existing local server upgrade are in scope. Qualification/preservation evidence will be added here after verification.
