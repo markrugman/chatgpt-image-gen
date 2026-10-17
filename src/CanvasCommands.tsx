@@ -35,7 +35,7 @@ export function useCanvasCommands({ w, overlays, setOverlays, selected, setSelec
     if (!menu) return;
     menuRef.current?.querySelector<HTMLButtonElement>('button:not(:disabled)')?.focus();
     const outside = (e: PointerEvent) => { if (!menuRef.current?.contains(e.target as Node)) { setMenu(null); setSubmenu(false); } };
-    const dismiss = () => { setMenu(null); setSubmenu(false); };
+    const dismiss = (e: Event) => { if (e.type === "scroll" && e.target instanceof Node && menuRef.current?.contains(e.target)) return; setMenu(null); setSubmenu(false); };
     window.addEventListener("pointerdown", outside);
     window.addEventListener("resize", dismiss);
     window.addEventListener("scroll", dismiss, true);
@@ -161,10 +161,13 @@ export function useCanvasCommands({ w, overlays, setOverlays, selected, setSelec
   }
   const index = overlays.findIndex(o => o.id === selected);
   const mod = /Mac/i.test(navigator.platform) ? "⌘" : "Ctrl+";
+  const menuTop = menu ? Math.max(8, Math.min(menu.y, window.innerHeight - (menu.id ? 380 : 140))) : 8;
   const item = (id: string, label: string, shortcut = "", disabled = false) => <button role="menuitem" aria-label={label} key={id} disabled={disabled} onClick={() => void action(id)}>{label}<span>{shortcut}</span></button>;
-  const ui = menu && createPortal(<div ref={menuRef} className="canvas-context-menu" role="menu" aria-label="Canvas actions" style={{ left: Math.max(8, Math.min(menu.x, window.innerWidth - 238)), top: Math.max(8, Math.min(menu.y, window.innerHeight - (menu.id ? 380 : 140))) }}
+  const ui = menu && createPortal(<div ref={menuRef} className="canvas-context-menu" role="menu" aria-label="Canvas actions" style={{ left: Math.max(8, Math.min(menu.x, window.innerWidth - 238)), top: menuTop, maxHeight: window.innerHeight - menuTop - 8 }}
+    onCopy={e => { onCopy(e); close(); }} onCut={e => { onCopy(e, true); close(); }} onPaste={e => { onPaste(e); close(); }}
     onKeyDown={e => {
-      if (e.key === "Escape") { e.preventDefault(); e.stopPropagation(); if (submenu) { setSubmenu(false); menuRef.current?.querySelector<HTMLButtonElement>('[aria-haspopup="menu"]')?.focus(); } else close(); }
+      if (((e.ctrlKey || e.metaKey) && ["z", "y", "d", "c", "x", "v"].includes(e.key.toLowerCase())) || ["Delete", "Backspace"].includes(e.key)) { e.stopPropagation(); onKeyDown(e); }
+      else if (e.key === "Escape") { e.preventDefault(); e.stopPropagation(); if (submenu) { setSubmenu(false); menuRef.current?.querySelector<HTMLButtonElement>('[aria-haspopup="menu"]')?.focus(); } else close(); }
       else if (e.key === "ArrowLeft" && submenu) { e.preventDefault(); setSubmenu(false); menuRef.current?.querySelector<HTMLButtonElement>('[aria-haspopup="menu"]')?.focus(); }
       else if (e.key === "ArrowRight" && (e.target as HTMLElement).getAttribute("aria-haspopup") === "menu") { e.preventDefault(); setSubmenu(true); }
       else if (["ArrowDown", "ArrowUp", "Home", "End"].includes(e.key)) {
@@ -184,7 +187,7 @@ export function useCanvasCommands({ w, overlays, setOverlays, selected, setSelec
       {item("duplicate", "Duplicate", mod + "D", blocked || !object)}
       {item("delete", "Delete", "Del", !editable)}<hr />
       <div className="canvas-layer-menu" onMouseEnter={() => { if (editable) setSubmenu(true); }} onMouseLeave={() => setSubmenu(false)}>
-        <button role="menuitem" aria-haspopup="menu" aria-expanded={submenu} disabled={!editable} onClick={() => setSubmenu(!submenu)}>Layer<ChevronRight size={15} /></button>
+        <button role="menuitem" aria-haspopup="menu" aria-expanded={submenu} disabled={!editable} onClick={() => setSubmenu(true)}>Layer<ChevronRight size={15} /></button>
         {submenu && <div role="menu" aria-label="Layer" className={menu.x > window.innerWidth - 460 ? "opens-left" : ""}>
           {item("top", "Move to top", "", index === overlays.length - 1)}{item("up", "Move up", "", index === overlays.length - 1)}
           {item("down", "Move down", "", index <= 0)}{item("bottom", "Move to bottom", "", index <= 0)}

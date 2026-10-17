@@ -3276,7 +3276,7 @@ label small {
 .canvas-context-menu button:hover:not(:disabled), .canvas-context-menu button:focus-visible { background: var(--theme-soft, #f0eafa); outline: 2px solid transparent; }
 .canvas-context-menu hr { border: 0; border-top: 1px solid var(--border); margin: 4px 0; }
 .canvas-layer-menu { position: relative; }
-.canvas-layer-menu > [role="menu"] { position: absolute; left: 100%; top: -5px; }
+.canvas-layer-menu > [role="menu"] { position: absolute; left: 100%; bottom: 0; }
 .canvas-layer-menu > .opens-left { left: auto; right: 100%; }
 .canvas-overlay.locked { cursor: default; }
 .overlay-lock { position: absolute; top: -8px; right: -8px; padding: 3px; border-radius: 4px; background: var(--accent); color: white; display: flex; }

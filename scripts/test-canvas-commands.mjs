@@ -143,7 +143,8 @@ try {
         await page.evaluate(async png => { const blob = new Blob([Uint8Array.from(atob(png), c => c.charCodeAt(0))], { type: 'image/png' }); await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]); }, png.toString('base64'));
         await surface.press('Control+v'); await expect.poll(async () => (await state(doc2)).overlays.length).toBe(2);
         console.log('PASS Edge: actual operating-system image clipboard Ctrl+V imports and places');
-        await page.locator('.canvas-overlay').last().click(); await surface.press('Control+c');
+        await page.locator('.canvas-overlay').last().click({button:'right'}); await page.keyboard.press('Control+c');
+        await expect(menu).toHaveCount(0);
         const realToken = await page.evaluate(() => navigator.clipboard.readText()); assert(realToken.startsWith('imagegen-overlay:'));
         await surface.press('Control+v'); await expect.poll(async () => (await state(doc2)).overlays.length).toBe(3);
         console.log('PASS Edge: actual operating-system overlay Ctrl+C / Ctrl+V');
@@ -153,6 +154,10 @@ try {
       await page.locator('.canvas-overlay').first().click({ button: 'right' });
       await expect(menu).toBeVisible(); assert(await menu.evaluate(el => { const r = el.getBoundingClientRect(); return r.left >= 0 && r.right <= innerWidth && r.bottom <= innerHeight; }));
       await page.screenshot({ path: `work/canvas-commands-${engineName}-phone.png` });
+      await page.keyboard.press('Escape');
+      await page.locator('.canvas-overlay').last().evaluate(el => el.dispatchEvent(new MouseEvent('contextmenu', { clientX: 380, clientY: 940, bubbles: true })));
+      await menu.getByRole('menuitem', { name: 'Layer', exact: true }).click();
+      assert(await menu.evaluate(el => el.getBoundingClientRect().bottom <= innerHeight), 'Expanded phone submenu stays inside the viewport');
       assert.deepEqual(errors, []);
       console.log(`PASS ${engineName}: real layer/lock/history persistence, duplicate/nudge/undo, clipboard across orgs, image batch failures/bytes/undo, denied-read fallback, typing and responsive menu`);
     } finally { await browser.close(); }
