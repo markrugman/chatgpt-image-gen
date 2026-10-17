@@ -143,6 +143,8 @@ async fn authenticated_sync_media_conflicts_and_restart() {
     browser_doc["organisations"] = next["organisations"].clone();
     let mut typed: model::Workspace = serde_json::from_value(browser_doc).unwrap();
     typed.projects.push(model::Project {
+        created_at: model::now(),
+        updated_at: model::now(),
         id: "p".into(),
         organisation_id: "o".into(),
         name: "Project".into(),

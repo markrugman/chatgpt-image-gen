@@ -102,7 +102,7 @@ async fn handle(
         let matches:Vec<_>=w.organisations.iter().filter(|o|o.deleted_at.is_none() && o.name.eq_ignore_ascii_case(&org_name)).collect();if matches.len()!=1{return Err("Choose exactly one existing organisation using list_workspace; ambiguous or missing organisation".into());}let org_id=matches[0].id.clone();
         let projects:Vec<_>=w.projects.iter().filter(|p|p.organisation_id==org_id && p.name.eq_ignore_ascii_case(&project_name) && p.deleted_at.is_none()).collect();
         if projects.len()>1{return Err("Multiple matching projects. Rename or select the intended project in Image Gen first.".into());}
-        let project_id=if let Some(p)=projects.first(){p.id.clone()}else{let p=Project{id:id(),organisation_id:org_id,name:project_name,tags:vec![],deleted_at:None};let id=p.id.clone();w.projects.push(p);id};
+        let project_id=if let Some(p)=projects.first(){p.id.clone()}else{let p=Project{created_at:now(),updated_at:now(),id:id(),organisation_id:org_id,name:project_name,tags:vec![],deleted_at:None};let id=p.id.clone();w.projects.push(p);id};
         let doc_id=w.add_document(project_id,name,args["width"].as_f64().unwrap_or(210.),args["height"].as_f64().unwrap_or(297.),args["unit"].as_str().unwrap_or("mm").into(),None,None)?;
         w.handoffs.insert(request_id,doc_id.clone());Ok((doc_id,true))
     })?;
