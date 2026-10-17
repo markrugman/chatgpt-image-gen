@@ -1,5 +1,7 @@
 # Templates — design and acceptance specification
 
+Current implementation: configurable Templates and the simplified authoring layout are published in [0.11.0](https://github.com/markrugman/chatgpt-image-gen/releases/tag/v0.11.0). The configurable-input specification later in this document supersedes the historical recipe-only baseline. See [VALIDATION.md](VALIDATION.md) for release qualification.
+
 Status: published and deployed in 0.9.0, 2026-10-16. The user approved the complete design and its four edge cases, implementation and acceptance checks, then explicitly authorised publishing and deploying all changes. See [release validation](VALIDATION.md) for package and production-preservation evidence.
 
 Pending UI revision (2026-10-16, local screenshot preview only): Mark now wants the composer template summary reduced to image/title/Remove template, compact image/title reference pills, and asset/upload **Add as… → Style/Subject/Logo/Other** menus. Optional purpose details and the composer instruction disclosure are removed; request preparation, saved roles/explanations and historical snapshots remain intact. This supersedes the corresponding UI descriptions below once approved and deployed; current implementation/verification and the deployment hold are recorded in [NEXT-VERSION.md](NEXT-VERSION.md).

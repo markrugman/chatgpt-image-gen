@@ -1,5 +1,15 @@
 # Building and releasing Image Gen
 
+## 0.11.0 — published and deployed (2026-10-18)
+
+[Image Gen 0.11.0](https://github.com/markrugman/chatgpt-image-gen/releases/tag/v0.11.0) is published from `09d3471ed6daf26711626b78196366e3b03b9a3e`; every job in the [clean release workflow](https://github.com/markrugman/chatgpt-image-gen/actions/runs/39078806260) passed. Includes configurable Templates with simplified authoring and mobile layouts, faithful Generate/Discuss request composition and captured inputs, transparent document PNG exports, current-design project previews and documented server retention.
+
+Windows Setup/Portable/Companion and the immutable Linux image `ghcr.io/markrugman/chatgpt-image-gen@sha256:803f7fe96e876450e5ff632166c123305d1cb7035701651485076aed20d6cb0a` are public. All seven anonymous downloads match SHA256SUMS. GitHub-built portable MCP reports 0.11.0; bundled runtime and actual isolated Companion installation pass. Anonymous image pull, exact source label, Linux authentication, configured inputs/Subject enforcement/Discuss, organisation lifecycle and restart preservation pass.
+
+Production is `releases/v0110-release` at the existing LAN URL, retaining the original workspace/worker volumes. Stopped-volume backup `before-v0110-20261017T233905Z` and its complete off-host copy pass checksums. Raw workspace, all 79 original media hashes, 29 designs and 28 library items are preserved, along with configuration, sessions/jobs and byte-identical signed-in worker credentials. Edge desktop/WebKit mobile checks pass authoring, input dialogs, themes, layout bounds, current-design previews, canvas/inline editing and real transparent PNG export. Other services were not restarted.
+
+Retention was registered and applied: `project-previews-20261017` is the single Image Gen rollback, six images remain across the three apps, two recent backups per app remain, and superseded artifacts were archived/verified off-host. Final disk usage is 46% with ~24 GiB available; deployment preflight passes and no further artifact candidates remain. The existing daily maintenance remains active. Earlier local-only/publication holds below are historical. Installed Windows app files were not replaced.
+
 ## 0.11.0 release and deployment authorised (2026-10-18)
 
 Mark requested a full build, GitHub publication and server deployment of all current updates. This lifts the earlier local-only holds for configurable Templates, the simplified authoring dialog, transparency preview/PNG export and current-design project previews. Windows Setup/Portable/Companion and the immutable Linux server image are in scope. Apply the [retention and deployment headroom policy](SERVER-RETENTION.md), preserve workspace/media, sessions/jobs/configuration and signed-in worker state, and qualify the published downloads and server before recording completion. Earlier release statuses below are historical.
