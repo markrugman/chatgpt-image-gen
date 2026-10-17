@@ -29,6 +29,15 @@ An original asset or upload placed over a page's generated image without regener
 **Locked Overlay**:
 An overlay protected against placement changes and removal until unlocked. It remains selectable and copyable; copies are independent unlocked placements.
 
+**Region Instruction**:
+A marked area and an instruction targeting a page's background image or a particular Overlay, represented as a saved chat pill; the area identifies the intended subject rather than a strict boundary for changes. All pending instructions target the same item; editing an Overlay creates a separate Asset and replaces only that placement.
+
+**Edit Batch**:
+A collection of Region Instructions for one item, submitted through the chat composer with optional general instructions and reference attachments against a captured Design State.
+
+**Edit Candidate**:
+An unapplied image returned for a target in an Edit Batch, available for comparison and rejection/retry before changing the design.
+
 **Overlay Clipboard**:
 A copied placement retaining its exact source image version, size and rotation for reuse across pages and designs in the same workspace. Pasting it creates an independent overlay without transferring source-library ownership.
 
@@ -39,7 +48,7 @@ An image imported from the user's clipboard into the open design's organisation 
 Reusable artwork created, extracted, or explicitly saved as an asset, available as a generation reference or unchanged overlay. Assets belong to an organisation or a shared library.
 
 **Upload**:
-An imported image kept in the Uploads library, available as a generation reference or unchanged overlay. Editing keeps it an upload; Save as asset creates a separate reusable asset.
+An imported image kept in the Uploads library, available as a generation reference or unchanged overlay. Editing in its library workspace keeps it an upload; Save as asset or an applied Region Instruction on its placement creates a separate Asset.
 
 **Shared Library**:
 Assets, uploads or templates available across organisations, separately identified from items owned by a particular organisation.

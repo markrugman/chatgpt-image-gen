@@ -1,5 +1,45 @@
 # Next version design interview
 
+## Canvas region editing — 0.10.1 (2026-10-17)
+
+Implemented, tested and deployed privately at `releases/v0101-private` on 2026-10-17. No GitHub push or public release. Validation and preservation evidence is recorded in [VALIDATION.md](VALIDATION.md).
+
+Mark corrected the 0.10.0 interaction and authorised implementation/testing and a private server update without a GitHub push. Use the existing context menu's Edit action from right-click/long-press, draw and type directly on the canvas, show region instructions as pills in the existing chat composer, and submit with optional general instructions/references through its existing Generate / Edit action. All pending regions must target the same item, enforced in UI and backend. Remove the modal, Annotate button and multi-target workflow. [REGION-EDITING.md](REGION-EDITING.md) is the current canonical design; [VALIDATION.md](VALIDATION.md) records qualification and deployment. Earlier sections describe superseded interactions and prior task outcomes.
+
+## Stable canvas on overlay selection - local only (2026-10-17)
+
+Overlay placement controls float above the bottom status bar, keeping the canvas viewport, fitted size and position unchanged when selecting/deselecting overlays. The top toolbar reserves space for its selection caption so narrow layouts do not gain another row on selection. Manual zoom and Fit on actual window resizing remain supported. Build, 49 frontend tests and the compiled Edge/WebKit selection layout regression pass; no deployment or release by this task. See [VALIDATION.md](VALIDATION.md).
+
+## Annotated editing — 0.10.0 private server build (2026-10-17)
+
+Mark confirmed the complete [annotated editing design](REGION-EDITING.md) and authorised implementation/testing and the local server build/upload, explicitly without pushing to GitHub. Now deployed privately at `releases/v0100-private`. Includes saved numbered region notes targeting a full original background or placed layer, semantic location guidance, full returned images, independent replacement Assets, review/retry, combined application, one-step undo and page protection during generation/review. The deployed source also includes the local canvas touch/actions, drawer-placement and stable-selection layout work. Public GitHub remains 0.9.6. Server deployment and preservation evidence is canonical in [VALIDATION.md](VALIDATION.md); older task-local hold statements below describe their original task outcomes.
+
+## Drawer-to-canvas placement - local only, deployment hold (2026-10-17)
+
+Mark confirmed the complete interview and explicitly authorised local implementation/build/testing, with no deployment or release yet. Implemented locally.
+
+- Dragging an Asset or Upload from its editor drawer places it as an Overlay on the open design.
+- Accept drops on the design and surrounding empty canvas workspace. Drops over drawers, chat or toolbars cancel placement.
+- Centre the image on the drop point, then shift it inward until the whole image is inside the design with a small edge inset. Drops beyond an edge use that edge; diagonal outside drops use the corresponding corner, preserving the other coordinate where possible.
+- Start at 25% of design width, shrinking proportionally if the image would exceed 80% of design height. Preserve source aspect ratio for all images; correct the existing Place action to use this same sizing behavior. Each successful drop adds a selected, topmost Overlay as one undo step.
+- The edge inset is 1% of the design's shorter side, measured in design space so it remains proportional at different zoom levels.
+- This first version supports mouse/trackpad dragging. Touch users retain the existing Place action; drawer-to-canvas touch dragging is deferred because compact layouts show the drawer and canvas separately.
+
+Placement captures the source image version when dragging starts. Invalid destinations and cancelled drags create no design state. Annotated-edit review and other busy canvas states reject drops. Shared-library items use the same placement behavior without changing ownership.
+
+Verification: frontend build and 49 frontend tests pass. Compiled-UI Edge/WebKit checks cover real drags from both drawers, every edge/corner in portrait/landscape designs, zoom/scroll, cancellation over toolbar/drawer/chat, topmost selection, one history step, undo/redo, reload, proportional tall-image sizing through drag and Place, and compact touch Place. Drawer/menu keyboard regressions pass at 320/393/768/1440px in both themes and engines. These browser fixtures use an isolated in-memory API; native runtime and physical devices were not qualified here. See [VALIDATION.md](VALIDATION.md). No deployment or release by this task; hold remains in effect.
+
+## Touch canvas actions - local only, deployment hold (2026-10-17)
+
+Mark authorised local implementation/testing and explicitly asked to wait for other changes before release. This hold applies to the new touch changes; deployed 0.9.6 remains unchanged.
+
+- Touch-capable devices show a labelled Actions button in the canvas toolbar. Actual touch input also enables it on hybrid devices. It opens the selected overlay's existing menu, or Undo/Redo/Paste for empty selection. Button Paste targets the selected overlay's centre, or the page centre with nothing selected.
+- Holding an overlay or empty canvas for 500 ms opens the matching menu at the finger position. Finger jitter up to 10 screen pixels does not move/save an overlay. Moving farther cancels the hold and begins normal dragging. Resize handles keep their existing gesture.
+- Release, cancellation, scrolling, resizing, losing focus and a second finger cancel pending holds. A cancelled in-progress drag restores its starting placement without saving. Opening a menu suppresses the gesture's trailing click, so release cannot immediately deselect/dismiss it.
+- Touch menu rows are at least 44 pixels tall; Layer expands inline on tap, including tablets. Menus stay within the viewport and scroll on shorter screens. Outside tap dismisses the menu; mouse right-click and keyboard commands continue to work on hybrid devices.
+
+Verification: production frontend build, 44 frontend tests and the expanded compiled-UI/disposable-server Edge/WebKit canvas suite pass. Details and limitations are in [VALIDATION.md](VALIDATION.md). No version bump, source push, publication or deployment; wait for Mark's other changes.
+
 ## 0.9.6 deployed and published (2026-10-17)
 
 Mark confirmed the complete canvas design and explicitly requested implementation, testing and, once checks pass, deployment to the server and GitHub. This authorisation supersedes the earlier holds for the pending organisation highlight, Uploads drag/drop, template destination defaults and completed project composition-preview fix. All these changes are now deployed and public in [0.9.6](https://github.com/markrugman/chatgpt-image-gen/releases/tag/v0.9.6) from `372e2c7128e9c691fe4be60081a1f5aa14e65b68`. Workspace/media, sessions/jobs and signed-in worker are preserved with verified stopped-volume/off-host backups. All final builds, tests, package/runtime and anonymous download/image checks pass. [VALIDATION.md](VALIDATION.md) records the evidence.

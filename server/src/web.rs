@@ -289,6 +289,7 @@ async fn dispatch(
             "start_login",
             "cancel_login",
             "submit_prompt",
+            "generate_annotations",
             "describe_asset",
             "reconnect",
         ]
@@ -297,6 +298,7 @@ async fn dispatch(
         return Err("Server generation is disabled. Enable IMAGEGEN_WORKER_ENABLED on the Docker host to use ChatGPT in the browser.".into());
     }
     match command.as_str() {
+        "generate_annotations" => value(crate::annotations::generate_annotations(app, s(), argument(&args, "target")?, args.get("retryKey").and_then(|v| v.as_str()).map(String::from), args.get("request").filter(|v| !v.is_null()).map(|v| serde_json::from_value(v.clone()).map_err(|_| "Invalid edit instructions")).transpose()?).await?),
         "get_workspace" => value(commands::get_workspace(s()).await?),
         "image_data" => value(commands::image_data(s(), argument(&args, "imageId")?).await?),
         "get_jobs" => value(commands::get_jobs(s()).await?),

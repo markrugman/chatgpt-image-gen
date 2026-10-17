@@ -28,6 +28,21 @@ fn empty() -> Value {
     .unwrap()
 }
 #[test]
+fn annotation_review_locks_native_sync_layout_and_allows_discard() {
+    let mut current = empty();
+    let composition = json!({"imageId":"base","revisionId":null,"framing":null,"overlays":[]});
+    current["documents"] = json!([{"id":"design","deletedAt":null,"pages":[{"id":"page","history":[composition.clone()],"historyIndex":0,"editBatch":{"id":"batch","source":composition,"items":[{"key":"background","candidate":"edited","error":null}]}}]}]);
+    let mut layout = current.clone(); layout["documents"][0]["pages"][0]["history"][0]["framing"] = json!("crop");
+    assert!(merge(&current,&current,&layout).unwrap_err().contains("locked"));
+    let mut older = layout.clone(); older["documents"][0]["pages"][0].as_object_mut().unwrap().remove("editBatch");
+    assert!(merge(&current,&current,&older).is_err());
+    let mut discard = current.clone(); discard["documents"][0]["pages"][0]["editBatch"] = Value::Null;
+    assert_eq!(merge(&current,&current,&discard).unwrap(),discard);
+    let mut applied = discard; applied["documents"][0]["pages"][0]["history"].as_array_mut().unwrap().push(json!({"imageId":"edited","revisionId":"revision","framing":null,"overlays":[]}));
+    applied["documents"][0]["pages"][0]["historyIndex"] = json!(1);
+    assert_eq!(merge(&current,&current,&applied).unwrap(),applied);
+}
+#[test]
 fn independent_changes_merge_and_same_record_conflicts() {
     let base = empty();
     let mut first = base.clone();

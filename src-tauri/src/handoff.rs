@@ -123,6 +123,7 @@ async fn handle(
                 state.clone(),
                 app.clone(),
                 jobs::Submit {
+                    annotation: None,
                     template: None, reference_purposes: vec![], template_request: None, expected_instructions: None,
                     target: target.clone(),
                     prompt: prompt.clone(),

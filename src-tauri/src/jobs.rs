@@ -20,6 +20,8 @@ pub struct Job {
 #[derive(Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Submit {
+    #[serde(skip)]
+    pub annotation: Option<(String, String)>,
     pub target: Target,
     #[serde(default)]
     pub template: Option<Template>,
@@ -59,8 +61,11 @@ pub async fn submit(
     if !["discuss", "generate"].contains(&request.mode.as_str()) {
         return Err("Choose Discuss or Generate".into());
     }
-    let workspace = state.store.read()?;
-    workspace.page(&request.target)?;
+    let workspace = state.store.refresh()?;
+    if workspace.page(&request.target)?.edit_batch.is_some() {
+        return Err("Apply or discard the annotated edit before starting another request".into());
+    }
+    if request.mode == "generate" && !workspace.page(&request.target)?.region_notes.is_empty() { return Err("Submit the pending region edits or remove them before starting a normal generation".into()); }
     for reference in &request.references {
         workspace.reference_image(reference)?;
     }
@@ -142,7 +147,7 @@ async fn status(state: &AppState, app: &AppHandle, job_id: &str, message: &str) 
     }
     let _ = app.emit("jobs-changed", ());
 }
-async fn run(
+pub(crate) async fn run(
     state: Arc<AppState>,
     app: &AppHandle,
     job_id: &str,
@@ -232,7 +237,11 @@ async fn run(
         }
         input.push(json!({"type":"localImage","path":state.store.image_path(image_id)?}));
     }
-    let dimensions = if request.target.kind == "document" {
+    let dimensions = if request.annotation.is_some() {
+        let source_id = workspace.reference_image(request.references.first().ok_or("Annotation source missing")?)?;
+        let source = workspace.images.iter().find(|i| i.id == source_id).ok_or("Annotation source missing")?;
+        format!(" Preserve the source image's {} × {} pixel framing and {}:{} aspect ratio.", source.width, source.height, source.width, source.height)
+    } else if request.target.kind == "document" {
         workspace
             .documents
             .iter()
@@ -260,7 +269,7 @@ async fn run(
     let assembled = request.template_request.as_ref().map(|s| s.instructions.clone())
         .unwrap_or_else(|| format!("{prefix}{}{dimensions}{background}",request.prompt));
     input.push(json!({"type":"text","text":assembled}));
-    state.store.change(|w| {
+    if request.annotation.is_none() { state.store.change(|w| {
         let p = w.page_mut(&request.target)?;
         p.thread_id = Some(thread_id.clone());
         p.branch_turn_id = None;
@@ -274,7 +283,7 @@ async fn run(
             references: request.references.clone(),
         }); }
         Ok(())
-    })?;
+    })?; }
     let _ = app.emit("workspace-changed", ());
     let generation_base = state.store.read()?;
     let mut events = codex.events.subscribe();
@@ -384,7 +393,7 @@ async fn run(
             break;
         }
     }
-    if turn_status == "interrupted" {
+    if turn_status == "interrupted" || state.jobs.lock().await.get(job_id).is_some_and(|j| j.cancel_requested) {
         return Ok(true);
     }
     if turn_status != "completed" {
@@ -404,6 +413,14 @@ async fn run(
         let path = item["savedPath"]
             .as_str()
             .ok_or("Codex did not return a saved image")?;
+        if let Some((_, key)) = &request.annotation {
+            let source_id = workspace.page(&request.target)?.edit_batch.as_ref().and_then(|b| b.items.iter().find(|i| &i.key == key)).ok_or("Annotation source missing")?.source_image_id.clone();
+            let source = image::open(state.store.image_path(&source_id)?).map_err(|e| e.to_string())?;
+            let result = image::open(path).map_err(|e| e.to_string())?;
+            if source.to_rgba8().pixels().any(|p| p[3] < 255) && !result.to_rgba8().pixels().any(|p| p[3] < 255) {
+                return Err("The result lost the source transparency. Retry this target with its transparent background preserved.".into());
+            }
+        }
         Some(state.store.import(Path::new(path))?)
     } else {
         None
@@ -411,6 +428,16 @@ async fn run(
     state.store.change_from(Some(&generation_base), |w| {
         if let Some(image) = imported.as_ref() {
             w.images.push(image.clone());
+        }
+        if let Some((batch_id, key)) = &request.annotation {
+            let p = w.page_mut(&request.target)?;
+            let batch = p.edit_batch.as_ref().filter(|b| &b.id == batch_id).ok_or("Edit batch changed; result was not applied")?;
+            if !crate::annotations::same_source(p, batch) { return Err("Source changed; result was not applied".into()); }
+            let item = p.edit_batch.as_mut().unwrap().items.iter_mut().find(|i| &i.key == key).ok_or("Target missing")?;
+            item.candidate = imported.as_ref().map(|i| i.id.clone());
+            item.error = None;
+            item.thread_id = Some(thread_id.clone()); item.turn_id = Some(turn_id.clone());
+            return Ok(());
         }
         let p = w.page_mut(&request.target)?;
         if !answer.is_empty() {
@@ -428,6 +455,8 @@ async fn run(
             let current = p.composition().clone();
             let revision_id = id();
             let rev = Revision {
+                region_notes: vec![],
+                composition: None,
                 id: revision_id.clone(),
                 image_id: image.id.clone(),
                 prompt: request.prompt.clone(),

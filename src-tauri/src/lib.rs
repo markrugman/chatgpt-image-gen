@@ -1,4 +1,5 @@
 mod analysis;
+mod annotations;
 mod backup;
 mod codex;
 mod commands;
@@ -71,6 +72,7 @@ pub fn run() {
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
+            annotations::generate_annotations,
             analysis::describe_asset,
             print::convert_print_image,
             print::print_profile,

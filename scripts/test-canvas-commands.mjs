@@ -71,6 +71,7 @@ try {
         for (const image of images) dt.items.add(new File([Uint8Array.from(atob(image.data), c => c.charCodeAt(0))], image.name, { type: image.type }));
         const event = new ClipboardEvent('paste', { clipboardData: dt, bubbles: true, cancelable: true }); el.dispatchEvent(event); return event.defaultPrevented;
       }, { token, images });
+      await expect(page.getByRole('button', { name: 'Actions', exact: true })).toBeHidden();
       let before = await state();
       await right('one'); await expect(page.locator('[data-overlay-id="one"]')).toHaveClass(/selected/);
       assert.equal((await state()).p.historyIndex, before.p.historyIndex, 'Right click must not move or save');
@@ -118,7 +119,7 @@ try {
       // Clipboard denial must not silently paste the old captured overlay.
       await page.evaluate(() => Object.defineProperty(navigator, 'clipboard', { configurable: true, value: { read: async () => { throw Error('Denied'); } } }));
       await page.locator('.design-canvas').click({ button: 'right', position: { x: 2, y: 2 } });
-      await expect(menu.getByRole('menuitem')).toHaveCount(3); await menu.getByRole('menuitem', { name: 'Paste', exact: true }).click();
+      await expect(menu.getByRole('menuitem')).toHaveCount(4); await menu.getByRole('menuitem', { name: 'Paste', exact: true }).click();
       await expect(page.locator('.toast')).toContainText('Press Ctrl+V'); await expect(surface).toBeFocused(); assert.equal((await state(doc2)).overlays.length, 1);
       await page.evaluate(() => { delete navigator.clipboard; });
       await page.locator('.canvas-overlay').first().click();
@@ -160,6 +161,115 @@ try {
       assert(await menu.evaluate(el => el.getBoundingClientRect().bottom <= innerHeight), 'Expanded phone submenu stays inside the viewport');
       assert.deepEqual(errors, []);
       console.log(`PASS ${engineName}: real layer/lock/history persistence, duplicate/nudge/undo, clipboard across orgs, image batch failures/bytes/undo, denied-read fallback, typing and responsive menu`);
+      // Touch-capable contexts exercise real taps in both engines. Edge additionally uses
+      // browser-dispatched touch streams; WebKit holds/moves use synthetic pointer events
+      // (Playwright exposes taps, but no held-touch API for WebKit).
+      const touchContext = await browser.newContext({ viewport: { width: 393, height: 950 }, hasTouch: true, storageState: await context.storageState() });
+      const touchPage = await touchContext.newPage();
+      touchPage.on('pageerror', e => errors.push(e.message));
+      await act({ op: 'overlays', target, overlays: [one, { ...one, id: 'two', x: 55 }] });
+      await touchPage.goto(origin + `/#view=projects&org=${org}&design=${doc}`);
+      const touchMenu = touchPage.getByRole('menu', { name: 'Canvas actions', exact: true });
+      const actions = touchPage.getByRole('button', { name: 'Actions', exact: true });
+      const overlay = touchPage.locator('[data-overlay-id="one"]');
+      await expect(overlay).toBeVisible(); await expect(actions).toBeVisible();
+      const cdp = engineName === 'Edge' ? await touchContext.newCDPSession(touchPage) : null;
+      const coordinates = async locator => { const r = await locator.boundingBox(); assert(r); return { x: r.x + r.width / 2, y: r.y + r.height / 2 }; };
+      const send = async (type, points, primary = true) => {
+        if (cdp) {
+          await cdp.send('Input.dispatchTouchEvent', { type, touchPoints: points.map(p => ({ ...p, id: p.id ?? 1 })) });
+        } else {
+          await touchPage.evaluate(({ type, points, primary }) => {
+            const kind = { touchStart: 'pointerdown', touchMove: 'pointermove', touchEnd: 'pointerup', touchCancel: 'pointercancel' }[type];
+            const point = points[0] || window.testTouchPoint;
+            const el = type === 'touchStart' ? document.elementFromPoint(point.x, point.y) : window.testTouchTarget;
+            if (type === 'touchStart') { window.testTouchTarget = el; window.testTouchPoint = point; el.closest('[data-overlay-id]')?.setAttribute('data-synthetic-touch', ''); }
+            // Synthetic pointer IDs have no browser pointer capture. Real Edge streams
+            // exercise the actual capture path, including release and drag persistence.
+            const owner = el.closest('[data-overlay-id]'); if (owner) owner.setPointerCapture = () => {};
+            el.dispatchEvent(new PointerEvent(kind, { pointerType: 'touch', pointerId: point.id ?? 1, isPrimary: primary, button: 0, buttons: kind === 'pointerup' ? 0 : 1, clientX: point.x, clientY: point.y, bubbles: true, cancelable: true }));
+          }, { type, points, primary });
+        }
+      };
+      let point = await coordinates(overlay), touchBefore = await state();
+      await send('touchStart', [point]); await touchPage.waitForTimeout(200);
+      await send('touchMove', [{ x: point.x + 3, y: point.y + 2 }]);
+      await expect(touchMenu).toBeVisible();
+      await send('touchEnd', []);
+      await expect(overlay).toHaveClass(/selected/);
+      assert.equal((await state()).p.historyIndex, touchBefore.p.historyIndex, 'Holding and finger jitter must not save a movement');
+      assert.equal((await state()).overlays[0].x, touchBefore.overlays[0].x);
+      // Layer expands inline on touch, including on wider tablets.
+      await touchMenu.getByRole('menuitem', { name: 'Layer', exact: true }).tap();
+      await expect(touchMenu.getByRole('menu', { name: 'Layer', exact: true })).toBeVisible();
+      assert(await touchMenu.evaluate(el => { const r = el.getBoundingClientRect(); return r.left >= 0 && r.right <= innerWidth && r.bottom <= innerHeight; }));
+      await touchMenu.getByRole('menuitem', { name: 'Move to top', exact: true }).tap();
+      await expect.poll(async () => (await state()).overlays.map(o => o.id).join(',')).toBe('two,one');
+      await expect(touchMenu).toHaveCount(0);
+      await actions.tap(); await touchMenu.getByRole('menuitem', { name: 'Lock', exact: true }).tap();
+      await expect(overlay).toHaveClass(/locked/); await expect(touchMenu).toHaveCount(0);
+      point = await coordinates(overlay); await send('touchStart', [point]); await expect(touchMenu).toBeVisible(); await send('touchEnd', []);
+      for (const name of ['Cut', 'Delete', 'Layer']) await expect(touchMenu.getByRole('menuitem', { name, exact: true })).toBeDisabled();
+      await touchMenu.getByRole('menuitem', { name: 'Unlock', exact: true }).tap();
+      await expect(overlay).not.toHaveClass(/locked/); await expect(touchMenu).toHaveCount(0);
+      // A brief tap releases the timer; movement starts a drag instead of a menu.
+      await overlay.tap(); await touchPage.waitForTimeout(600); await expect(touchMenu).toHaveCount(0);
+      point = await coordinates(overlay); touchBefore = await state();
+      await send('touchStart', [point]); await send('touchMove', [{ x: point.x + 30, y: point.y + 15 }]);
+      await touchPage.waitForTimeout(600); await expect(touchMenu).toHaveCount(0); await send('touchEnd', []);
+      await expect.poll(async () => (await state()).p.historyIndex).toBe(touchBefore.p.historyIndex + 1);
+      assert((await state()).overlays.find(o => o.id === 'one').x > touchBefore.overlays.find(o => o.id === 'one').x);
+      point = await coordinates(overlay); touchBefore = await state();
+      await send('touchStart', [point]); await send('touchCancel', []); await touchPage.waitForTimeout(600); await expect(touchMenu).toHaveCount(0);
+      assert.equal((await state()).p.historyIndex, touchBefore.p.historyIndex);
+      // A second finger cancels pending hold and drag, including when it lands outside canvas.
+      await send('touchStart', [point]);
+      if (cdp) await send('touchStart', [point, { x: 5, y: 5, id: 2 }]);
+      else await touchPage.locator('body').dispatchEvent('pointerdown', { pointerType: 'touch', pointerId: 2, isPrimary: false, bubbles: true });
+      await touchPage.waitForTimeout(600); await expect(touchMenu).toHaveCount(0); await send('touchEnd', []);
+      assert.equal((await state()).p.historyIndex, touchBefore.p.historyIndex);
+      // Cancelling an already-moving gesture restores its starting placement without
+      // leaving an unsaved visual position or creating a history entry.
+      point = await coordinates(overlay); touchBefore = await state();
+      const initialLeft = await overlay.evaluate(el => el.style.left);
+      await send('touchStart', [point]); await send('touchMove', [{ x: point.x + 20, y: point.y + 12 }]);
+      await expect.poll(() => overlay.evaluate(el => el.style.left)).not.toBe(initialLeft);
+      await send('touchCancel', []);
+      await expect.poll(() => overlay.evaluate(el => el.style.left)).toBe(initialLeft);
+      assert.equal((await state()).p.historyIndex, touchBefore.p.historyIndex);
+      // Scrolling/resizing while holding must not open a stale menu later.
+      point = await coordinates(overlay); await send('touchStart', [point]);
+      await touchPage.evaluate(() => window.dispatchEvent(new Event('scroll')));
+      await touchPage.waitForTimeout(600); await expect(touchMenu).toHaveCount(0); await send('touchEnd', []);
+      const empty = touchPage.locator('.design-canvas'); const rect = await empty.boundingBox();
+      const blank = { x: rect.x + rect.width - 3, y: rect.y + rect.height - 3 };
+      await send('touchStart', [blank]); await expect(touchMenu).toBeVisible(); await send('touchEnd', []);
+      await expect(touchMenu.getByRole('menuitem')).toHaveCount(4);
+      await actions.tap(); // Outside tap dismisses the previous menu and opens the button menu.
+      await expect(touchMenu.getByRole('menuitem')).toHaveCount(4);
+      await touchPage.getByRole('button', { name: 'Zoom in', exact: true }).tap(); await expect(touchMenu).toHaveCount(0);
+      for (const [width, height] of [[393, 950], [393, 600], [1024, 768]]) for (const theme of ['light', 'dark']) {
+        await touchPage.setViewportSize({ width, height });
+        await touchPage.evaluate(theme => { document.documentElement.dataset.theme = theme; }, theme);
+        await overlay.tap(); await actions.tap(); await expect(touchMenu).toBeVisible();
+        await expect(touchMenu.getByRole('menuitem', { name: 'Duplicate', exact: true })).toBeEnabled();
+        await touchMenu.getByRole('menuitem', { name: 'Layer', exact: true }).tap();
+        assert(await touchMenu.evaluate(el => { const r = el.getBoundingClientRect(); return r.left >= 0 && r.right <= innerWidth && r.bottom <= innerHeight && getComputedStyle(el.querySelector('.canvas-layer-menu > [role="menu"]')).position === 'static'; }));
+        assert(await touchMenu.getByRole('menuitem', { name: 'Undo', exact: true }).evaluate(el => el.getBoundingClientRect().height >= 44));
+        await touchMenu.getByRole('menuitem', { name: 'Lock', exact: true }).scrollIntoViewIfNeeded();
+        await expect(touchMenu.getByRole('menuitem', { name: 'Lock', exact: true })).toBeInViewport();
+        await expect(touchMenu).toBeVisible();
+
+        await touchPage.screenshot({ path: `work/canvas-touch-${engineName}-${width}-${height}-${theme}.png` });
+        await touchPage.keyboard.press('Escape'); await touchPage.keyboard.press('Escape');
+      }
+      // On a hybrid device, mouse right-click remains available after touch.
+      await overlay.click({ button: 'right' }); await expect(touchMenu).toBeVisible();
+      await expect(touchMenu.getByRole('menuitem', { name: 'Duplicate', exact: true })).toBeEnabled();
+      await touchContext.close();
+      assert.deepEqual(errors, []);
+      console.log(`PASS ${engineName}: touch Actions, long press/jitter/no-save, lock, inline Layer, tap/drag/cancel/multitouch, empty canvas, outside dismissal, phone/tablet themes and hybrid mouse`);
+
     } finally { await browser.close(); }
   }
 } finally {

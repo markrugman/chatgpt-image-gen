@@ -22,6 +22,8 @@ use subtle::ConstantTimeEq;
 mod local_store;
 #[path = "../../src-tauri/src/model.rs"]
 pub mod model;
+#[path = "../../src-tauri/src/annotations.rs"]
+pub mod annotations;
 #[path = "../../src-tauri/src/templates.rs"]
 pub mod templates;
 
@@ -188,6 +190,37 @@ pub fn validate(workspace: &Value) -> Result<(), String> {
 // Compare each changed entity against the caller's original view. Independent edits can merge;
 // an outdated edit to the same document/asset is rejected atomically.
 pub fn merge(current: &Value, base: &Value, next: &Value) -> Result<Value, String> {
+    // Native clients also write through sync. Do not let a stale/older client bypass
+    // an annotation review lock by submitting an ordinary layout or history change.
+    for document in current["documents"].as_array().into_iter().flatten() {
+        for page in document["pages"].as_array().into_iter().flatten().filter(|p| p["editBatch"].is_object()) {
+            let after_doc = next["documents"].as_array().and_then(|docs| docs.iter().find(|d| d["id"] == document["id"]));
+            let after = after_doc.and_then(|d| d["pages"].as_array()).and_then(|pages| pages.iter().find(|p| p["id"] == page["id"]));
+            let after = after.ok_or("Apply or discard annotated edits before removing this page")?;
+            if after_doc.unwrap()["deletedAt"] != document["deletedAt"] { return Err("Apply or discard annotated edits before deleting this design".into()); }
+            if after["history"] == page["history"] && after["historyIndex"] == page["historyIndex"] { continue; }
+            if after["editBatch"].is_object() { return Err("This page is locked while annotated edits are being generated or reviewed".into()); }
+            let batch = &page["editBatch"];
+            let index = after["historyIndex"].as_u64().ok_or("Invalid edit history")? as usize;
+            let result = &after["history"][index];
+            let mut expected = batch["source"].clone();
+            for item in batch["items"].as_array().ok_or("Invalid edit batch")? {
+                let image = item["candidate"].as_str().filter(|_| item["error"].is_null()).ok_or("Finish all annotated targets before applying")?;
+                if item["key"] == "background" { expected["imageId"] = json!(image); }
+                else {
+                    let overlay = expected["overlays"].as_array_mut().and_then(|items| items.iter_mut().find(|o| o["id"] == item["key"])).ok_or("Annotated layer missing")?;
+                    let replacement = result["overlays"].as_array().and_then(|items| items.iter().find(|o| o["id"] == item["key"])).ok_or("Replacement layer missing")?;
+                    let version = &replacement["assetVersionId"];
+                    if !next["assets"].as_array().into_iter().flatten().any(|a| a["versions"].as_array().into_iter().flatten().any(|v| &v["id"] == version && v["imageId"] == image)) { return Err("Invalid annotated layer replacement".into()); }
+                    overlay["assetVersionId"] = version.clone();
+                }
+            }
+            expected["revisionId"] = result["revisionId"].clone();
+            if &expected != result || result["revisionId"].is_null() || index != page["historyIndex"].as_u64().unwrap_or(0) as usize + 1 {
+                return Err("Only the complete annotated edit can change this page during review".into());
+            }
+        }
+    }
     let mut result = current.clone();
     for key in [
         "organisations",

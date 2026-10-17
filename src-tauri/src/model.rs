@@ -78,6 +78,10 @@ pub struct Document {
 #[derive(Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Page {
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub region_notes: Vec<RegionNote>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub edit_batch: Option<EditBatch>,
     pub id: String,
     pub name: String,
     pub messages: Vec<Message>,
@@ -90,6 +94,8 @@ pub struct Page {
 impl Page {
     pub fn new(name: &str) -> Self {
         Self {
+            region_notes: vec![],
+            edit_batch: None,
             id: id(),
             name: name.into(),
             messages: vec![],
@@ -116,6 +122,46 @@ impl Page {
 }
 #[derive(Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
+pub struct RegionNote {
+    pub id: String,
+    pub target_key: String,
+    pub source_image_id: String,
+    pub x: f64,
+    pub y: f64,
+    pub width: f64,
+    pub height: f64,
+    pub text: String,
+    pub enabled: bool,
+}
+#[derive(Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct EditBatch {
+    #[serde(default)]
+    pub instructions: String,
+    #[serde(default)]
+    pub references: Vec<String>,
+    #[serde(default)]
+    pub reference_purposes: Vec<ReferencePurpose>,
+    pub id: String,
+    pub source: Composition,
+    pub history_index: usize,
+    pub items: Vec<EditItem>,
+    pub created_at: u64,
+}
+#[derive(Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct EditItem {
+    pub key: String,
+    pub name: String,
+    pub source_image_id: String,
+    pub notes: Vec<RegionNote>,
+    pub candidate: Option<String>,
+    pub error: Option<String>,
+    pub thread_id: Option<String>,
+    pub turn_id: Option<String>,
+}
+#[derive(Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct Message {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub template_request: Option<TemplateRequest>,
@@ -131,6 +177,10 @@ pub struct Message {
 #[derive(Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Revision {
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub region_notes: Vec<RegionNote>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub composition: Option<Composition>,
     pub id: String,
     pub image_id: String,
     pub prompt: String,
@@ -350,14 +400,14 @@ impl Workspace {
             .find(|r| r.id == revision_id)
             .ok_or("Revision not found")?
             .clone();
-        page.push(Composition {
+        page.push(rev.composition.unwrap_or(Composition {
             image_id: Some(rev.image_id),
             overlays: rev.overlays,
             revision_id: Some(rev.id),
             framing: None,
-        });
-        page.thread_id = Some(rev.thread_id);
-        page.branch_turn_id = Some(rev.turn_id);
+        }));
+        page.thread_id = if rev.thread_id.is_empty() { None } else { Some(rev.thread_id) };
+        page.branch_turn_id = if rev.turn_id.is_empty() { None } else { Some(rev.turn_id) };
         page.messages = rev.messages;
         self.sync_asset_version(target);
         Ok(())
@@ -425,6 +475,8 @@ mod tests {
         let (mut w, t) = sample();
         for n in 1..=3 {
             w.page_mut(&t).unwrap().revisions.push(Revision {
+                region_notes: vec![],
+                composition: None,
                 id: format!("r{n}"),
                 image_id: format!("i{n}"),
                 prompt: "".into(),

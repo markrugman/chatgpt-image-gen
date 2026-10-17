@@ -1,5 +1,22 @@
 # Release history
 
+## New in 0.10.1 — private canvas editing revision (2026-10-17)
+
+- Right-click or long-press an item and choose Edit, then draw regions directly on the canvas with a small inline instruction input.
+- Saved instructions appear as removable/editable pills in the existing chat composer. Submit with optional general instructions and reference attachments through the existing Generate / Edit button.
+- Pending region edits target exactly one background or placed image. Other items' Edit actions are disabled; server checks reject mixed targets and target changes until the existing pills are cleared.
+- Compare Original/Edited on the canvas using an inline chat review card, then retry, discard or apply. The separate editing modal, Annotate button and multi-target queue are removed.
+- Preserve original sources, independent replacement Assets, source transparency, saved drafts and undo. Exact region metadata is retained in the revision while chat messages show the user's instructions rather than provider instructions.
+- Private server update only; no GitHub push or public release.
+
+## New in 0.10.0 — private server version (2026-10-17)
+
+- Annotate backgrounds and individual placed images with saved numbered rectangles and instructions, then generate all enabled edits when ready.
+- Send full original target images and semantic location guidance; compare complete results and retry before applying them together as one undoable change.
+- Layer edits create new organisation-owned Assets and replace only the selected placements. Original Assets/Uploads, their other uses and untargeted layers are preserved.
+- Persist failed-batch candidates and drafts; require source review after image changes; protect locked layers and pages under generation/review. Preserve transparent sources and flag changed output aspect ratios.
+- Private build/deployment only; no GitHub push or public release. Includes the current local canvas touch/actions, drawer-placement and canvas-selection layout work; see VALIDATION.md for scope and qualification.
+
 ## New in 0.9.4
 
 - Back/Forward, reload and direct links restore template folders/details, library scopes, workspace search and search categories, projects, designs/pages, assets and uploads. Invalid/deleted destinations recover to their parent without history loops.
@@ -134,4 +151,3 @@ The canvas defaults to **Fit to window**, following the available width and heig
 Starting sizes include A2, A3, A4, A5, A6 and social formats. Custom dimensions accept millimetres, pixels, or fractional inches. Creating a custom-sized design saves its dimensions under **Custom sizes**, shared across organisations. Identical entries are avoided; removing a saved size preserves existing documents. Inch-based PNG/JPEG and PDF exports use the requested physical dimensions and DPI.
 
 Choose **Extract asset** on a document with artwork. Optionally drag a box around an object, name the asset, and describe what to isolate. The app opens an asset workspace and starts transparent-background generation using a frozen source composition and, when selected, a close-up. The original document stays intact. The new asset can be refined, referenced, or placed like any other asset; AI extraction may change fine details.
-

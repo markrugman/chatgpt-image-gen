@@ -79,6 +79,8 @@ export interface Message {
   references: string[];
 }
 export interface Revision {
+  regionNotes?: RegionNote[];
+  composition?: Composition | null;
   id: string;
   imageId: string;
   prompt: string;
@@ -90,6 +92,8 @@ export interface Revision {
   parentRevisionId: string | null;
 }
 export interface Page {
+  regionNotes?: RegionNote[];
+  editBatch?: EditBatch | null;
   id: string;
   name: string;
   messages: Message[];
@@ -98,6 +102,18 @@ export interface Page {
   historyIndex: number;
   threadId: string | null;
   branchTurnId: string | null;
+}
+export interface RegionNote {
+  id: string; targetKey: string; sourceImageId: string;
+  x: number; y: number; width: number; height: number; text: string; enabled: boolean;
+}
+export interface EditItem {
+  key: string; name: string; sourceImageId: string; notes: RegionNote[];
+  candidate: string | null; error: string | null; threadId: string | null; turnId: string | null;
+}
+export interface EditBatch {
+  instructions?: string; references?: string[]; referencePurposes?: ReferencePurpose[];
+  id: string; source: Composition; historyIndex: number; items: EditItem[]; createdAt: number;
 }
 export interface DesignDocument {
   id: string;

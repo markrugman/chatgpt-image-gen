@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { ImageView } from "./ui";
+import { libraryImageDrag, libraryImageDragType } from "./overlayOperations";
 import {
   libraryKind,
   versionImage,
@@ -90,7 +91,7 @@ function LibraryImage({
   onReference: (id: string, purpose?: ReferencePurpose["purpose"]) => void;
   onPlace?: (asset: Asset) => void;
 }) {
-  return <LibraryImageTile name={asset.name} imageId={versionImage(w, asset.currentVersionId!)} actions={[
+  return <LibraryImageTile name={asset.name} imageId={versionImage(w, asset.currentVersionId!)} dragVersionId={onPlace ? asset.currentVersionId : undefined} actions={[
     { label: "Add as…", items: (["Style", "Subject", "Logo", "Other"] as const).map(purpose => ({ label: purpose, onSelect: () => onReference(asset.currentVersionId!, purpose) })) },
     ...(onPlace ? [{ label: "Place", onSelect: () => onPlace(asset) }] : []),
   ]} />;
@@ -98,10 +99,12 @@ function LibraryImage({
 
 type LibraryAction = { label: string; onSelect: () => void } | { label: string; items: { label: string; onSelect: () => void }[] };
 
-export function LibraryImageTile({ name, imageId, actions }: {
+export function LibraryImageTile({ name, imageId, actions, dragVersionId }: {
   name: string; imageId?: string | null;
   actions: LibraryAction[];
+  dragVersionId?: string | null;
 }) {
+  const pointerType = useRef("mouse"), dragged = useRef(false);
   const [open, setOpen] = useState(false);
   const [submenu, setSubmenu] = useState<Extract<LibraryAction, { items: unknown }> | null>(null);
   const root = useRef<HTMLDivElement>(null),
@@ -169,7 +172,19 @@ export function LibraryImageTile({ name, imageId, actions }: {
         aria-label={`Use ${name}`}
         aria-haspopup="menu"
         aria-expanded={open}
-        onClick={() => { setSubmenu(null); setOpen(!open); }}
+        draggable={!!dragVersionId}
+        onPointerDown={e => { pointerType.current = e.pointerType; dragged.current = false; }}
+        onDragStart={e => {
+          if (!dragVersionId || pointerType.current === "touch") { e.preventDefault(); return; }
+          e.dataTransfer.setData(libraryImageDragType, dragVersionId);
+          e.dataTransfer.setData("text/plain", name);
+          e.dataTransfer.effectAllowed = "copy";
+          libraryImageDrag.versionId = dragVersionId;
+          dragged.current = true;
+          setOpen(false); setSubmenu(null);
+        }}
+        onDragEnd={() => { libraryImageDrag.versionId = null; setTimeout(() => { dragged.current = false; }, 0); }}
+        onClick={e => { if (dragged.current && e.detail !== 0) { dragged.current = false; return; } setSubmenu(null); setOpen(!open); }}
       >
         <span className="mini-asset-preview checker">
           <ImageView id={imageId} alt={name} />

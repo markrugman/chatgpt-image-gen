@@ -2,6 +2,17 @@ import type { Overlay } from "./types";
 
 export type OverlayClipboard = { token: string; overlay: Overlay; width: number; height: number };
 export const overlayId = () => Array.from(crypto.getRandomValues(new Uint8Array(16)), b => b.toString(16).padStart(2, "0")).join("");
+export const libraryImageDragType = "application/x-imagegen-library-version";
+// Some WebKit hosts omit custom drag formats; retain the version for this app's active drag.
+export const libraryImageDrag = { versionId: null as string | null };
+export function libraryPlacement(sourceWidth: number, sourceHeight: number, pageRatio: number, point?: { x: number; y: number }) {
+  let width = 25, height = width * pageRatio * sourceHeight / sourceWidth;
+  if (height > 80) { width *= 80 / height; height = 80; }
+  const insetX = Math.min(1, 1 / pageRatio), insetY = Math.min(1, pageRatio);
+  return { width, height,
+    x: point ? Math.max(insetX, Math.min(100 - insetX - width, point.x - width / 2)) : 8,
+    y: point ? Math.max(insetY, Math.min(100 - insetY - height, point.y - height / 2)) : 8 };
+}
 export function fitPlacement(o: Overlay): Overlay {
   return { ...o, x: Math.max(0, Math.min(Math.max(0, 100 - o.width), o.x)), y: Math.max(0, Math.min(Math.max(0, 100 - o.height), o.y)) };
 }

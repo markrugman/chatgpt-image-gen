@@ -131,6 +131,12 @@ pub async fn mutate(
     action: Value,
 ) -> Result<Value, String> {
     let operation = text(&action, "op")?;
+    if ["annotation_apply", "annotation_discard", "annotation_notes"].contains(&operation.as_str()) {
+        let t = target(&action)?;
+        if state.jobs.lock().await.values().any(|j| j.target == t && ["starting","running","cancelling"].contains(&j.status.as_str())) {
+            return Err("Stop the active request before changing its annotations".into());
+        }
+    }
     if ["history", "revision", "delete", "restore", "transfer", "classify", "save_as_asset"].contains(&operation.as_str()) {
         let workspace = state.store.read()?;
         let busy = state.jobs.lock().await.values().any(|j| {
@@ -149,7 +155,34 @@ pub async fn mutate(
         .map_err(|_| "Invalid original workspace")?;
     let result = state
         .store
-        .change_from(base.as_ref(), |w| match operation.as_str() {
+        .change_from(base.as_ref(), |w| {
+            if action.get("target").is_some() && !["annotation_apply","annotation_discard"].contains(&operation.as_str()) && w.page(&target(&action)?)?.edit_batch.is_some() {
+                return Err("Apply or discard the annotated edit before changing this page".into());
+            }
+            if ["delete","transfer","classify","restore","save_as_asset"].contains(&operation.as_str()) {
+                let affected = action["id"].as_str().unwrap_or("");
+                if w.documents.iter().any(|d| d.pages.iter().any(|p| p.edit_batch.is_some()) && (d.id == affected || d.project_id == affected || crate::organisations::owns(w, affected, &d.id))) {
+                    return Err("Apply or discard annotated edits before moving or removing their design".into());
+                }
+            }
+            match operation.as_str() {
+            "annotation_notes" => {
+                let t = target(&action)?;
+                let notes: Vec<RegionNote> = serde_json::from_value(action["notes"].clone()).map_err(|_| "Invalid annotations")?;
+                crate::annotations::validate_notes(w, &t, &notes)?;
+                if let (Some(old), Some(next)) = (w.page(&t)?.region_notes.first(), notes.first()) {
+                    if old.target_key != next.target_key { return Err("Remove the current item's region edits before choosing another item".into()); }
+                }
+                w.page_mut(&t)?.region_notes = notes;
+                Ok(Value::Null)
+            }
+            "annotation_apply" => { crate::annotations::apply(w, &target(&action)?, &text(&action,"batchId")?)?; Ok(Value::Null) }
+            "annotation_discard" => {
+                let p = w.page_mut(&target(&action)?)?;
+                if p.edit_batch.as_ref().is_none_or(|b| Some(b.id.as_str()) != action["batchId"].as_str()) { return Err("Edit batch changed; refresh before discarding".into()); }
+                p.edit_batch = None;
+                Ok(Value::Null)
+            }
             "template_save" | "template_duplicate" | "template_transfer" | "template_folder" | "template_folder_delete" => crate::templates::change(w, &action),
             "reorder_organisations" => crate::organisations::reorder(w, &action),
             "transfer" | "classify" | "save_as_asset" => crate::libraries::change(w, &action),
@@ -381,8 +414,8 @@ pub async fn mutate(
                         .find(|r| Some(&r.id) == p.composition().revision_id.as_ref())
                         .cloned()
                     {
-                        p.thread_id = Some(r.thread_id);
-                        p.branch_turn_id = Some(r.turn_id);
+                        p.thread_id = if r.thread_id.is_empty() { None } else { Some(r.thread_id) };
+                        p.branch_turn_id = if r.turn_id.is_empty() { None } else { Some(r.turn_id) };
                         p.messages = r.messages;
                     } else {
                         p.thread_id = None;
@@ -440,7 +473,7 @@ pub async fn mutate(
                 Ok(Value::Null)
             }
             _ => Err("Unknown workspace action".into()),
-        })?;
+        } })?;
     changed(&app);
     Ok(result)
 }

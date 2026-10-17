@@ -1811,6 +1811,7 @@ label small {
 }
 .toolbar-caption {
   display: flex;
+  min-width: 132px;
   align-items: center;
   gap: 6px;
   color: var(--theme-muted, #baa7c8);
@@ -1996,6 +1997,12 @@ label small {
   z-index: 5;
 }
 .overlay-inspector {
+  /* Selection controls must not change the viewport used by Fit to Window. */
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 31px;
+  z-index: 6;
   display: flex;
   align-items: center;
   gap: 10px;
@@ -3281,6 +3288,16 @@ label small {
 .canvas-overlay.locked { cursor: default; }
 .overlay-lock { position: absolute; top: -8px; right: -8px; padding: 3px; border-radius: 4px; background: var(--accent); color: white; display: flex; }
 .canvas-scroll:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+.canvas-touch-actions { display: none; align-items: center; gap: 5px; min-height: 44px; padding: 8px; font-size: 12px; color: var(--ink); border-radius: 6px; }
+.canvas-touch-actions.touch-used { display: flex; }
+.canvas-touch-actions:hover, .canvas-touch-actions:focus-visible { background: var(--theme-soft, #f0eafa); }
+.canvas-context-menu.touch-menu { overflow: auto; }
+.canvas-context-menu.touch-menu button { min-height: 44px; font-size: 14px; }
+.canvas-context-menu.touch-menu .canvas-layer-menu > [role="menu"] { position: static; width: 100%; box-shadow: none; }
+@media (any-pointer: coarse) {
+  .canvas-touch-actions { display: flex; }
+  .design-canvas { -webkit-touch-callout: none; user-select: none; }
+}
 @media (max-width: 600px) {
   .canvas-context-menu { overflow: auto; }
   .canvas-layer-menu > [role="menu"] { position: static; width: 100%; box-shadow: none; }
@@ -3441,3 +3458,27 @@ label small {
 .template-record { margin-top: 8px; }
 .composer:has(.selected-template), .composer:has(.reference-chips) { flex-shrink: 0; max-height: 75%; overflow-y: auto; }
 @media(max-width: 600px) { .template-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; } .template-example { height: 110px; } }
+.region-canvas-tools { position: absolute; inset: 0; z-index: 25; pointer-events: none; }
+.region-draw-surface { position: absolute; inset: 0; pointer-events: auto; touch-action: none; cursor: crosshair; }
+.region-focus-outline { position: absolute; border: 2px solid var(--accent); pointer-events: none; }
+.region-canvas-box { position: absolute; border: 2px solid #e82e9a; background: #e82e9a12; pointer-events: none; }
+.region-canvas-box.pending { border-color: #08a883; background: #08a88315; }
+.region-canvas-box b { position: absolute; top: 2px; left: 2px; min-width: 20px; padding: 2px 4px; border-radius: 12px; color: white; background: #b91572; text-align: center; font: 600 12px/16px Inter, sans-serif; }
+.region-focus-label { position: absolute; top: 6px; left: 6px; right: 6px; display: flex; align-items: center; justify-content: space-between; gap: 8px; pointer-events: auto; background: var(--surface); color: var(--ink); padding: 5px 8px; border-radius: 8px; box-shadow: 0 2px 8px #0002; font-size: 12px; }
+.region-focus-label button { padding: 5px 8px; font-weight: 600; color: var(--accent); }
+.region-inline-instruction { position: absolute; display: flex; flex-wrap: wrap; align-items: center; gap: 4px; width: min(300px, calc(100% - 16px)); padding: 6px; border-radius: 12px; background: var(--surface); color: var(--ink); border: 1px solid var(--border); box-shadow: 0 3px 16px #0003; pointer-events: auto; }
+.region-inline-instruction input { min-width: 0; width: 0; flex: 1; padding: 8px; font-size: 14px; }
+.region-inline-instruction button { flex-shrink: 0; padding: 8px 6px; color: var(--accent); }
+.region-inline-instruction small { flex-basis: 100%; color: var(--ink); overflow-wrap: anywhere; }
+.region-edit-pills > span { max-width: 100%; border: 1px solid var(--border); }
+.region-edit-pills b { flex-shrink: 0; padding: 2px 5px; border-radius: 10px; background: #b91572; color: white; }
+.region-edit-pills .region-pill-text { width: auto; min-width: 0; max-width: 100%; height: auto; font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: inherit; display: block; flex: 1; text-align: left; }
+.region-edit-pills > span.stale { border-color: #d98a28; }
+.region-draft-warning { padding: 8px 12px; font-size: 12px; color: var(--ink); }
+.region-review-card { padding: 14px; margin: 12px 0; border: 1px solid var(--border); border-radius: 10px; background: var(--surface); }
+.region-review-card p { font-size: 12px; line-height: 1.5; overflow-wrap: anywhere; }
+.region-review-card .button-row, .region-compare-toggle { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+.region-review-card button { padding: 8px 10px; border: 1px solid var(--border); border-radius: 7px; font-size: 12px; }
+.region-compare-toggle button[aria-pressed=true] { color: var(--accent); background: var(--soft); }
+.region-result-preview { position: absolute; inset: 0; z-index: 20; width: 100%; height: 100%; pointer-events: none; }
+@media(max-width:600px) { .region-focus-label { font-size: 11px; } .region-inline-instruction input { font-size: 16px; } .region-review-card button, .region-inline-instruction button, .region-focus-label button { min-height: 44px; min-width: 44px; } }

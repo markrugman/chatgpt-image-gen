@@ -1,4 +1,4 @@
-import { useEffect, useId, useRef, useState } from "react";
+import { useCallback, useEffect, useId, useRef, useState } from "react";
 import { UserMenu } from "./UserMenu";
 import {
   ArrowDownToLine,
@@ -46,18 +46,23 @@ import {
   type Page,
   type Target,
   type Workspace,
+  type RegionNote,
 } from "./types";
 import { ImageView, Modal, useCompactLayout, type Act } from "./ui";
 import { LibraryImages } from "./LibraryImages";
 import { UploadDrawer, type UploadControls } from "./Uploads";
 import { useCanvasCommands } from "./CanvasCommands";
 import type { OverlayClipboard } from "./overlayOperations";
+import { libraryImageDrag, libraryPlacement } from "./overlayOperations";
 import { AssetJsonDialog } from "./AssetJsonDialog";
 import { ExtractAssetDialog } from "./ExtractAssetDialog";
 import { renderPage } from "./export";
 import { Templates, TemplateForm, type TemplateSource } from "./Templates";
 import type { Template, TemplateRequest, ReferencePurpose, Message } from "./types";
 import { ExportDialog } from "./ExportDialog";
+import { RegionCanvas } from "./RegionCanvas";
+import { RegionReview } from "./RegionReview";
+import { annotationSource, regionFrame, regionNotesFingerprint } from "./annotationEditing";
 
 function UserMessageText({ text }: { text: string }) {
   const [expanded, setExpanded] = useState(false), [long, setLong] = useState(false);
@@ -132,7 +137,7 @@ export function Editor({
   const project = w.projects.find((p) => p.id === doc?.projectId);
   const [panel, setPanel] = useState("pages"),
     [mode, setMode] = useState(
-      () => page.messages[page.messages.length - 1]?.mode || "generate",
+      () => page.regionNotes?.length || page.editBatch ? "generate" : page.messages[page.messages.length - 1]?.mode || "generate",
     ),
     [prompt, setPrompt] = useState(
       () => localStorage.getItem(`draft:${page.id}`) || "",
@@ -162,6 +167,7 @@ export function Editor({
     return () => clearInterval(timer);
   }, [template?.id, onRefresh]);
   const selectTemplate = (t: Template, attachStyle = false) => {
+    if (page.regionNotes?.length || page.editBatch) { notify("Remove or finish the pending region edits before using a template"); return; }
     setTemplate(structuredClone(t)); setMode("generate"); setShowTemplatePicker(false); setHistoricalSettings("");
     setPrompt(p => p.replace(/\/templates\s*$/, ""));
     if (attachStyle && t.exampleImageId) {
@@ -192,6 +198,26 @@ export function Editor({
     return { imageId, recipe: snapshot ? `${snapshot.template.recipe}\n\n${snapshot.additionalInstructions}`.trim() : last?.text || fallback, messages };
   };
   const [uploadsPending, setUploadsPending] = useState(0);
+  const [editingKey, setEditingKey] = useState<string | null>(null), [editingNote, setEditingNote] = useState<RegionNote | null>(null);
+  const annotating = editingKey !== null;
+  const [regionNotes, setRegionNotes] = useState<RegionNote[]>(page.regionNotes || []), [regionSaving, setRegionSaving] = useState(false);
+  const savedRegionNotes = useRef(regionNotesFingerprint(page.regionNotes || [])), savingRegionNotes = useRef(false);
+  const [regionPreview, setRegionPreview] = useState<string | null>(null);
+  const annotationLocked = !!page.editBatch;
+  useEffect(() => {
+    if (!savingRegionNotes.current) { setRegionNotes(page.regionNotes || []); savedRegionNotes.current = regionNotesFingerprint(page.regionNotes || []); }
+  }, [JSON.stringify(page.regionNotes || [])]);
+  const saveRegionNotes = async (next: RegionNote[]) => {
+    if (savingRegionNotes.current || annotationLocked) throw Error("Wait for the current edit to finish saving");
+    savingRegionNotes.current = true; setRegionSaving(true);
+    try {
+      const base = await api<Workspace>("get_workspace");
+      const stored = base.documents.find(d => d.id === target.id)?.pages.find(p => p.id === target.pageId);
+      if (regionNotesFingerprint(stored?.regionNotes || []) !== savedRegionNotes.current) { await onRefresh(); throw Error("Region edits changed elsewhere. Refresh before changing them."); }
+      await api("mutate", { action: { op: "annotation_notes", target, notes: next, _base: base } });
+      savedRegionNotes.current = regionNotesFingerprint(next); setRegionNotes(next); await onRefresh();
+    } finally { savingRegionNotes.current = false; setRegionSaving(false); }
+  };
   const [overlays, setOverlays] = useState<Overlay[]>(comp.overlays),
     [showExport, setShowExport] = useState(false);
   const overlaySaves = useRef(Promise.resolve()), pendingSaves = useRef(0);
@@ -278,6 +304,7 @@ export function Editor({
     end.current?.scrollIntoView({ behavior: "smooth" });
   }, [page.messages.length, busyJob?.status]);
   const persistOverlays = (next: Overlay[]) => {
+    if (annotationLocked) return Promise.reject(Error("Apply or discard the annotated edit before changing layers"));
     pendingSaves.current++;
     const work = overlaySaves.current.catch(() => {}).then(async () => {
       const base = await api<Workspace>("get_workspace");
@@ -298,7 +325,7 @@ export function Editor({
   };
   const saveOverlays = (next: Overlay[]) => run(() => persistOverlays(next));
   const updateOverlay = (patch: Partial<Overlay>) => {
-    if (currentOverlay?.locked) return;
+    if (currentOverlay?.locked || annotationLocked) return;
     const next = overlays.map((o) =>
       o.id === selected ? { ...o, ...patch } : o,
     );
@@ -336,21 +363,16 @@ export function Editor({
       await onRefresh();
       addReference(`image:${imageId}`);
     });
-  const placeAsset = (asset: Asset) => {
-    const version = asset.currentVersionId;
+  const placeVersion = (version: string | null | undefined, point?: { x: number; y: number }) => {
+    if (annotationLocked) { notify("Apply or discard the annotated edit before placing images"); return; }
     if (!version) return;
     const img = w.images.find((i) => i.id === versionImage(w, version));
     if (!img) return;
-    const width = 25,
-      height = Math.min(80, (width * ratio * img.height) / img.width);
     const overlay: Overlay = {
       // getRandomValues is also available on a private server using LAN HTTP.
       id: Array.from(crypto.getRandomValues(new Uint8Array(16)), byte => byte.toString(16).padStart(2, "0")).join(""),
       assetVersionId: version,
-      x: 8,
-      y: 8,
-      width,
-      height,
+      ...libraryPlacement(img.width, img.height, ratio, point),
       rotation: 0,
     };
     const next = [...overlays, overlay];
@@ -359,11 +381,17 @@ export function Editor({
     saveOverlays(next);
     setPicker(null);
   };
+  const placeAsset = (asset: Asset) => placeVersion(asset.currentVersionId);
   async function submit() {
-    if ((!prompt.trim() && !template) || busyJob || uploadsPending || canvasCommands.busy || (template && (mode !== "generate" || !requestPreview || previewError || historicalSettings))) return;
+    if ((!prompt.trim() && !template && !regionNotes.length) || busyJob || annotationLocked || regionSaving || uploadsPending || canvasCommands.busy || (template && (mode !== "generate" || !requestPreview || previewError || historicalSettings))) return;
     const value = prompt;
     try {
-      await api("submit_prompt", {
+      await overlaySaves.current;
+      if (regionNotes.length) {
+        if (mode !== "generate") throw Error("Choose Generate / Edit to submit these region edits");
+        await api("generate_annotations", { target, request: { instructions: value, references, referencePurposes: references.map(reference => referencePurposes[reference] || { reference, purpose: "Other", explanation: "" }) } });
+        setEditingKey(null); setEditingNote(null);
+      } else await api("submit_prompt", {
         request: { target, prompt: value, mode, references, transparent, template, expectedInstructions: template ? requestPreview?.instructions : undefined,
           referencePurposes: references.map(reference => referencePurposes[reference] || { reference, purpose: "Other", explanation: "" }) },
       });
@@ -396,10 +424,28 @@ export function Editor({
   }, []);
   const pageWidth = ratio > 1.2 ? 660 : ratio < 0.8 ? 395 : 510;
   const pixelWidth = doc?.unit === "px" ? doc.width : image?.width || (doc ? doc.width * 300 / (doc.unit === "in" ? 1 : 25.4) : 1024);
+  const cancelCanvasDrag = useCallback(() => {
+    const pending = drag.current;
+    drag.current = null;
+    if (pending?.moved) setOverlays(current => current.map(o => o.id === pending.id
+      ? { ...o, x: pending.left, y: pending.top, width: pending.width, height: pending.height } : o));
+  }, []);
+  const regionName = (key: string) => key === "background" ? "Background" : w.assets.find(a => a.versions.some(v => v.id === overlays.find(o => o.id === key)?.assetVersionId))?.name || "Image layer";
+  const canEditRegion = (key: string) => !!doc && !busyJob && !annotationLocked && !regionSaving && !!annotationSource(w,{...comp,overlays},key)
+    && !overlays.find(o => o.id === key)?.locked && (!regionNotes.length || regionNotes.every(n => n.targetKey === key));
+  const beginRegionEdit = async (key: string, note: RegionNote | null = null) => {
+    if (!canEditRegion(key)) { notify("Finish or remove the current item's edits before editing another unlocked item"); return; }
+    await overlaySaves.current;
+    setSelected(key === "background" ? null : key); setEditingKey(key); setEditingNote(note); setMode("generate"); setTemplate(null);
+    if (compact) setMobilePanel("canvas");
+  };
+  const currentRegionFrame = editingKey && regionFrame(w,{...comp,overlays},editingKey,ratio);
   const canvasCommands = useCanvasCommands({ w, overlays, setOverlays, selected, setSelected, canvas, focus: viewportRef, clipboard: overlayClipboard,
+    cancelDrag: cancelCanvasDrag,
     width: pixelWidth, height: pixelWidth / ratio, organisationId: orgId || null, save: persistOverlays, refresh: onRefresh,
     history: async direction => { await overlaySaves.current.catch(() => {}); const base = await api<Workspace>("get_workspace"); await api("mutate", { action: { op: "history", target, direction, _base: base } }); await onRefresh(); },
-    canUndo: page.historyIndex > 0, canRedo: page.historyIndex < page.history.length - 1, generationBusy: !!busyJob, notify });
+    canUndo: page.historyIndex > 0, canRedo: page.historyIndex < page.history.length - 1, generationBusy: !!busyJob || annotationLocked || annotating, notify,
+    onEdit: doc ? key => beginRegionEdit(key) : undefined, canEdit: canEditRegion });
   const displayWidth = autoFit
     ? Math.max(1, Math.min(viewport.width, viewport.height * ratio))
     : (pageWidth * zoom) / 100;
@@ -635,7 +681,7 @@ export function Editor({
                 <div key={r.id}><button
                   className={`history-tile ${r.id === comp.revisionId ? "active" : ""}`}
                   key={r.id}
-                  disabled={!!busyJob}
+                  disabled={!!busyJob || annotationLocked}
                   onClick={() =>
                     run(() => act({ op: "revision", target, revisionId: r.id }))
                   }
@@ -662,7 +708,7 @@ export function Editor({
               <button
                 className="icon-button"
                 title="Undo layout or image change"
-                disabled={page.historyIndex === 0 || !!busyJob || canvasCommands.busy}
+                disabled={page.historyIndex === 0 || !!busyJob || annotationLocked || canvasCommands.busy}
                 onClick={() =>
                   canvasCommands.undo()
                 }
@@ -673,7 +719,7 @@ export function Editor({
                 className="icon-button"
                 title="Redo"
                 disabled={
-                  page.historyIndex >= page.history.length - 1 || !!busyJob || canvasCommands.busy
+                  page.historyIndex >= page.history.length - 1 || !!busyJob || annotationLocked || canvasCommands.busy
                 }
                 onClick={() =>
                   canvasCommands.redo()
@@ -696,9 +742,19 @@ export function Editor({
               )}
             </div>
             <div className="button-row">
+              <button
+                className={`canvas-touch-actions${canvasCommands.touchUsed ? " touch-used" : ""}`}
+                aria-label="Actions"
+                aria-haspopup="menu"
+                aria-expanded={canvasCommands.menuOpen}
+                onClick={e => canvasCommands.openActions(e.currentTarget)}
+              >
+                <MoreHorizontal size={17} /> Actions
+              </button>
               {image && (
                 <button
                   className="text-button"
+                  disabled={annotationLocked || !!busyJob}
                   onClick={() =>
                     run(() =>
                       act({
@@ -758,7 +814,29 @@ export function Editor({
             tabIndex={0}
             aria-label="Design canvas"
             {...canvasCommands.handlers}
-            onPointerDownCapture={e => { if ((e.target as HTMLElement).closest('.design-canvas')) viewportRef.current?.focus({ preventScroll: true }); }}
+            onDragOver={e => {
+              if (!libraryImageDrag.versionId) return;
+              e.preventDefault();
+              e.dataTransfer.dropEffect = doc && !annotationLocked && !annotating && !busyJob && !canvasCommands.busy ? "copy" : "none";
+            }}
+            onDrop={e => {
+              const version = libraryImageDrag.versionId;
+              if (!version) return;
+              libraryImageDrag.versionId = null;
+              e.preventDefault(); e.stopPropagation();
+              if (!doc || annotationLocked || annotating || busyJob || canvasCommands.busy) return;
+              const rect = canvas.current?.getBoundingClientRect();
+              if (!rect?.width || !rect.height) return;
+              placeVersion(version, {
+                x: (e.clientX - rect.left) / rect.width * 100,
+                y: (e.clientY - rect.top) / rect.height * 100,
+              });
+              viewportRef.current?.focus({ preventScroll: true });
+            }}
+            onPointerDownCapture={e => {
+              if ((e.target as HTMLElement).closest('.design-canvas') && !(e.target as HTMLElement).closest('.region-inline-instruction, .region-focus-label')) viewportRef.current?.focus({ preventScroll: true });
+              canvasCommands.handlers.onPointerDownCapture(e);
+            }}
             onClick={(e) => {
               if (e.target === e.currentTarget) setSelected(null);
             }}
@@ -793,6 +871,7 @@ export function Editor({
                     className="canvas-image"
                     style={{
                       objectFit: comp.framing === "crop" ? "cover" : "contain",
+                      opacity: editingKey && editingKey !== "background" ? .25 : 1,
                     }}
                   />
                 ) : (
@@ -818,11 +897,12 @@ export function Editor({
                       width: `${o.width}%`,
                       height: `${o.height}%`,
                       transform: `rotate(${o.rotation}deg)`,
+                      opacity: editingKey && editingKey !== o.id ? .25 : 1,
                     }}
                     onPointerDown={(e) => {
                       e.stopPropagation();
                       setSelected(o.id);
-                      if (e.button !== 0 || o.locked || canvasCommands.busy || busyJob) return;
+                      if (e.button !== 0 || o.locked || canvasCommands.busy || busyJob || annotationLocked || annotating) return;
                       e.currentTarget.setPointerCapture(e.pointerId);
                       drag.current = {
                         id: o.id,
@@ -890,6 +970,10 @@ export function Editor({
                     )}
                   </div>
                 ))}
+                {regionPreview && annotationLocked && <img className="region-result-preview" src={regionPreview} alt="Region edit comparison" draggable={false} />}
+                {editingKey && currentRegionFrame && !annotationLocked && <RegionCanvas key={editingKey} frame={currentRegionFrame} targetKey={editingKey} sourceImageId={annotationSource(w,comp,editingKey)!} targetName={regionName(editingKey)} notes={regionNotes} editingNote={editingNote} saving={regionSaving}
+                  onSave={async note => { await saveRegionNotes(regionNotes.some(n=>n.id===note.id) ? regionNotes.map(n=>n.id===note.id ? note : n) : [...regionNotes,note]); setEditingNote(null); }}
+                  onDone={() => { setEditingKey(null); setEditingNote(null); if (compact && regionNotes.length) setMobilePanel("chat"); }} />}
                 {canvasCommands.busy && <div className="generation-indicator" role="status"><LoaderCircle size={17} className="spin" />Pasting images…</div>}
                 {busyJob && mode === "generate" && (
                   <div className="generation-indicator">
@@ -906,7 +990,7 @@ export function Editor({
               </div>
             </div>
           </div>
-          {currentOverlay && (
+          {currentOverlay && !annotating && (
             <div className="overlay-inspector">
               <span>
                 <Layers size={15} />
@@ -917,7 +1001,7 @@ export function Editor({
                 <input
                   type="range"
                   min="3"
-                  disabled={currentOverlay.locked || canvasCommands.busy}
+                  disabled={currentOverlay.locked || canvasCommands.busy || annotationLocked || !!busyJob}
                   max="100"
                   value={currentOverlay.width}
                   onChange={(e) => {
@@ -943,7 +1027,7 @@ export function Editor({
                 <input
                   type="number"
                   aria-label="Overlay rotation"
-                  disabled={currentOverlay.locked || canvasCommands.busy}
+                  disabled={currentOverlay.locked || canvasCommands.busy || annotationLocked || !!busyJob}
                   value={currentOverlay.rotation}
                   min="-180"
                   max="180"
@@ -956,7 +1040,7 @@ export function Editor({
               <button
                 className="icon-button"
                 title="Bring forward"
-                disabled={currentOverlay.locked || canvasCommands.busy}
+                disabled={currentOverlay.locked || canvasCommands.busy || annotationLocked || !!busyJob}
                 onClick={() => {
                   const index = overlays.findIndex((o) => o.id === selected),
                     next = [...overlays];
@@ -975,7 +1059,7 @@ export function Editor({
               <button
                 className="icon-button"
                 title="Remove overlay"
-                disabled={currentOverlay.locked || canvasCommands.busy}
+                disabled={currentOverlay.locked || canvasCommands.busy || annotationLocked || !!busyJob}
                 onClick={() => {
                   const next = overlays.filter((o) => o.id !== selected);
                   setOverlays(next);
@@ -1123,7 +1207,7 @@ export function Editor({
                 <span>{busyJob.message}</span>
               </div>
             )}
-            {failedJob && !busyJob && (
+            {failedJob && !busyJob && !annotationLocked && (
               <div className="job-error">
                 <strong>That request didn’t finish.</strong>
                 <p>{failedJob.message}</p>
@@ -1143,6 +1227,8 @@ export function Editor({
               </div>
             )}
             <div ref={end} />
+            {page.editBatch && <RegionReview w={w} batch={page.editBatch} target={target} ratio={ratio} job={busyJob} onRefresh={onRefresh} onPreview={setRegionPreview} notify={notify}
+              onDiscard={()=>{setPrompt(page.editBatch?.instructions || "");setReferences(page.editBatch?.references || []);setReferencePurposes(Object.fromEntries((page.editBatch?.referencePurposes || []).map(p=>[p.reference,p])));}} />}
           </div>
           <div className="composer">
             <div className="mode-switch">
@@ -1155,6 +1241,7 @@ export function Editor({
               </button>
               <button
                 className={mode === "discuss" ? "active" : ""}
+                disabled={!!regionNotes.length || annotationLocked}
                 onClick={() => setMode("discuss")}
               >
                 <MessageCircle size={14} />
@@ -1162,6 +1249,12 @@ export function Editor({
               </button>
             </div>
             <div className="prompt-box">
+              {!!regionNotes.length && <div className="reference-chips region-edit-pills" aria-label="Region edit instructions">{regionNotes.map((note,index) => <span key={note.id} className={annotationSource(w,comp,note.targetKey) !== note.sourceImageId ? "stale" : ""} title={`${regionName(note.targetKey)}: ${note.text}`}>
+                <b>{index+1}</b><button className="region-pill-text" aria-label={`Edit instruction ${index+1}`} disabled={annotationLocked || regionSaving || !!busyJob} onClick={()=>void run(()=>beginRegionEdit(note.targetKey,note))}>{note.text}</button>
+                <button aria-label={`Remove instruction ${index+1}`} disabled={annotationLocked || regionSaving || !!busyJob} onClick={()=>void run(async()=>{ await saveRegionNotes(regionNotes.filter(n=>n.id!==note.id)); if(regionNotes.length===1) {setEditingKey(null);setEditingNote(null);} })}><X size={12}/></button>
+              </span>)}</div>}
+              {regionNotes.some(n=>annotationSource(w,comp,n.targetKey)!==n.sourceImageId) && <p className="region-draft-warning">Source image changed. Open each highlighted instruction to review its area and update it.</p>}
+              {regionNotes.some(n=>n.targetKey!==regionNotes[0]?.targetKey) && <p className="region-draft-warning">These older notes target several items. <button onClick={()=>void run(()=>saveRegionNotes([]))} disabled={annotationLocked || regionSaving}>Remove all region edits</button> to choose one item.</p>}
               {template && <div className="selected-template">
                 <ImageView id={template.exampleImageId} alt="Selected template example" /><strong>{template.name}</strong>
                 <button className="text-button" onClick={() => setTemplate(null)}>Remove template</button>
@@ -1200,6 +1293,7 @@ export function Editor({
               <textarea
                 ref={textarea}
                 aria-label="Design prompt"
+                disabled={annotationLocked}
                 value={prompt}
                 onPaste={(event) => {
                   const files = Array.from(event.clipboardData.files).filter(file => file.type.startsWith("image/"));
@@ -1271,7 +1365,7 @@ export function Editor({
                     aria-label={
                       mode === "discuss" ? "Send discussion" : "Generate image"
                     }
-                    disabled={(!prompt.trim() && !template) || uploadsPending > 0 || canvasCommands.busy || (!!template && (mode !== "generate" || !requestPreview || !!previewError || !!historicalSettings))}
+                    disabled={annotationLocked || regionSaving || regionNotes.some(n=>n.targetKey!==regionNotes[0]?.targetKey || annotationSource(w,comp,n.targetKey)!==n.sourceImageId) || (!prompt.trim() && !template && !regionNotes.length) || uploadsPending > 0 || canvasCommands.busy || (!!template && (mode !== "generate" || !requestPreview || !!previewError || !!historicalSettings))}
                     onClick={submit}
                   >
                     <ArrowUp size={18} />

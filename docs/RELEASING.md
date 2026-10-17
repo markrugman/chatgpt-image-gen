@@ -1,5 +1,9 @@
 # Building and releasing Image Gen
 
+Source publication authorised on 2026-10-17: Mark requested committing and pushing the tested 0.10.1 changes to GitHub. The earlier no-push statements below describe the deployment's original scope. Public downloadable release remains 0.9.6; no release workflow is requested.
+
+Private server 0.10.1 is deployed (2026-10-17), explicitly authorised without a GitHub push. It replaces the annotation modal/button with context-menu Edit, inline canvas regions, chat pills and server-enforced single-item requests. Production is `releases/v0101-private`, image `imagegen-local:0.10.1-2fc2376213a1`, with verified stopped-volume/off-host backups and full workspace/media/session/worker preservation. Public GitHub remains 0.9.6; the installed Windows app and launcher were not upgraded by this task. [VALIDATION.md](VALIDATION.md) records source provenance, tests and limitations. This supersedes the older private-production paths below, not the public release status.
+
 Current release: [0.9.6](https://github.com/markrugman/chatgpt-image-gen/releases/tag/v0.9.6) (2026-10-17), application source `372e2c7128e9c691fe4be60081a1f5aa14e65b68`, all-success [workflow](https://github.com/markrugman/chatgpt-image-gen/actions/runs/39024421425). Private production is `releases/v096-release`, with all workspace/media and signed-in worker preserved. Windows downloads, portable MCP/runtime, all anonymous downloads/checksums and the immutable Linux image are verified. `Run Image Gen.cmd` prefers `outputs/Image Gen 0.9.6 Portable/`. See VALIDATION.md for backups and evidence. This supersedes the previous release/deployment-hold statuses below.
 
 

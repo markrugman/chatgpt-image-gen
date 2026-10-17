@@ -5,13 +5,18 @@ import { api, copyText, importImageFile } from "./api";
 import { versionImage, type Overlay, type Workspace } from "./types";
 import { copyPlacement, fitPlacement, overlayId, reorderOverlay, type OverlayClipboard } from "./overlayOperations";
 
-export function useCanvasCommands({ w, overlays, setOverlays, selected, setSelected, canvas, focus, clipboard, width, height, organisationId, save, refresh, history, canUndo, canRedo, generationBusy, notify }: {
+export function useCanvasCommands({ w, overlays, setOverlays, selected, setSelected, canvas, focus, clipboard, width, height, organisationId, save, refresh, history, canUndo, canRedo, generationBusy, notify, cancelDrag, onEdit, canEdit }: {
   w: Workspace; overlays: Overlay[]; setOverlays: (next: Overlay[]) => void; selected: string | null; setSelected: (id: string | null) => void;
   canvas: RefObject<HTMLDivElement | null>; focus: RefObject<HTMLDivElement | null>; clipboard: RefObject<OverlayClipboard | null>;
   width: number; height: number; organisationId: string | null; save: (next: Overlay[]) => Promise<void>; refresh: () => Promise<void>;
   history: (direction: "undo" | "redo") => Promise<void>; canUndo: boolean; canRedo: boolean; generationBusy: boolean; notify: (text: string) => void;
+  cancelDrag: () => void;
+  onEdit?: (key: string) => void | Promise<void>; canEdit?: (key: string) => boolean;
 }) {
-  const [menu, setMenu] = useState<{ x: number; y: number; point: { x: number; y: number }; id: string | null } | null>(null);
+  const [menu, setMenu] = useState<{ x: number; y: number; point: { x: number; y: number }; id: string | null; touch: boolean } | null>(null);
+  const [touchUsed, setTouchUsed] = useState(false);
+  const hold = useRef<{ pointerId: number; x: number; y: number; timer: ReturnType<typeof setTimeout>; opened: boolean } | null>(null);
+  const touches = useRef(new Set<number>()), suppressClick = useRef(false);
   const [submenu, setSubmenu] = useState(false), [busy, setBusy] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null), current = useRef(overlays), nudge = useRef(false), importing = useRef(false);
   current.current = overlays;
@@ -31,6 +36,41 @@ export function useCanvasCommands({ w, overlays, setOverlays, selected, setSelec
     void save(current.current).catch(fail);
   };
   const close = () => { setMenu(null); setSubmenu(false); focus.current?.focus({ preventScroll: true }); };
+  function cancelHold() {
+    if (hold.current) clearTimeout(hold.current.timer);
+    hold.current = null;
+  }
+  function openMenu(x: number, y: number, id: string | null, touch = false, point?: { x: number; y: number }) {
+    finishNudge(); setSelected(id); setSubmenu(false);
+    const rect = canvas.current?.getBoundingClientRect();
+    setMenu({ x, y, id, touch, point: point ?? { x: rect ? 100 * (x - rect.left) / rect.width : 0, y: rect ? 100 * (y - rect.top) / rect.height : 0 } });
+  }
+  useEffect(() => {
+    const end = (e: PointerEvent) => {
+      touches.current.delete(e.pointerId);
+      if (hold.current?.pointerId === e.pointerId) cancelHold();
+    };
+    const interrupt = (e: PointerEvent) => {
+      if (e.pointerType === "touch" && !e.isPrimary) { cancelHold(); cancelDrag(); }
+    };
+    const blur = () => { cancelHold(); touches.current.clear(); cancelDrag(); };
+    const viewChanged = () => { if (!hold.current?.opened) cancelHold(); };
+    window.addEventListener("pointerdown", interrupt, true);
+    window.addEventListener("pointerup", end);
+    window.addEventListener("pointercancel", end);
+    window.addEventListener("blur", blur);
+    window.addEventListener("scroll", viewChanged, true);
+    window.addEventListener("resize", viewChanged);
+    return () => {
+      cancelHold();
+      window.removeEventListener("pointerdown", interrupt, true);
+      window.removeEventListener("pointerup", end);
+      window.removeEventListener("pointercancel", end);
+      window.removeEventListener("blur", blur);
+      window.removeEventListener("scroll", viewChanged, true);
+      window.removeEventListener("resize", viewChanged);
+    };
+  }, [cancelDrag]);
   useEffect(() => {
     if (!menu) return;
     menuRef.current?.querySelector<HTMLButtonElement>('button:not(:disabled)')?.focus();
@@ -123,7 +163,8 @@ export function useCanvasCommands({ w, overlays, setOverlays, selected, setSelec
   async function action(id: string) {
     finishNudge();
     try {
-      if (id === "paste") await menuPaste();
+      if (id === "edit" && canEdit?.(menu?.id || "background")) await onEdit?.(menu?.id || "background");
+      else if (id === "paste") await menuPaste();
       else if (id === "undo" || id === "redo") { setSelected(null); await history(id); }
       else if (id === "copy" || id === "cut") await copy(id === "cut");
       else if (object && !blocked) {
@@ -161,9 +202,9 @@ export function useCanvasCommands({ w, overlays, setOverlays, selected, setSelec
   }
   const index = overlays.findIndex(o => o.id === selected);
   const mod = /Mac/i.test(navigator.platform) ? "⌘" : "Ctrl+";
-  const menuTop = menu ? Math.max(8, Math.min(menu.y, window.innerHeight - (menu.id ? 380 : 140))) : 8;
+  const menuTop = menu ? Math.max(8, Math.min(menu.y, window.innerHeight - (menu.id ? (menu.touch ? 510 : 380) : 160))) : 8;
   const item = (id: string, label: string, shortcut = "", disabled = false) => <button role="menuitem" aria-label={label} key={id} disabled={disabled} onClick={() => void action(id)}>{label}<span>{shortcut}</span></button>;
-  const ui = menu && createPortal(<div ref={menuRef} className="canvas-context-menu" role="menu" aria-label="Canvas actions" style={{ left: Math.max(8, Math.min(menu.x, window.innerWidth - 238)), top: menuTop, maxHeight: window.innerHeight - menuTop - 8 }}
+  const ui = menu && createPortal(<div ref={menuRef} className={`canvas-context-menu${menu.touch ? " touch-menu" : ""}`} role="menu" aria-label="Canvas actions" style={{ left: Math.max(8, Math.min(menu.x, window.innerWidth - 238)), top: menuTop, maxHeight: window.innerHeight - menuTop - 8 }}
     onCopy={e => { onCopy(e); close(); }} onCut={e => { onCopy(e, true); close(); }} onPaste={e => { onPaste(e); close(); }}
     onKeyDown={e => {
       if (((e.ctrlKey || e.metaKey) && ["z", "y", "d", "c", "x", "v"].includes(e.key.toLowerCase())) || ["Delete", "Backspace"].includes(e.key)) { e.stopPropagation(); onKeyDown(e); }
@@ -177,6 +218,7 @@ export function useCanvasCommands({ w, overlays, setOverlays, selected, setSelec
         buttons[e.key === "Home" ? 0 : e.key === "End" ? buttons.length - 1 : (at + (e.key === "ArrowUp" ? -1 : 1) + buttons.length) % buttons.length]?.focus();
       } else if (e.key === "Tab") close();
     }}>
+    {onEdit && item("edit", "Edit", "", !canEdit?.(menu.id || "background"))}
     {item("undo", "Undo", mod + "Z", blocked || !canUndo)}
     {item("redo", "Redo", mod + "Shift+Z", blocked || !canRedo)}
     {menu.id && <>
@@ -186,8 +228,8 @@ export function useCanvasCommands({ w, overlays, setOverlays, selected, setSelec
     {menu.id && <>
       {item("duplicate", "Duplicate", mod + "D", blocked || !object)}
       {item("delete", "Delete", "Del", !editable)}<hr />
-      <div className="canvas-layer-menu" onMouseEnter={() => { if (editable) setSubmenu(true); }} onMouseLeave={() => setSubmenu(false)}>
-        <button role="menuitem" aria-haspopup="menu" aria-expanded={submenu} disabled={!editable} onClick={() => setSubmenu(true)}>Layer<ChevronRight size={15} /></button>
+      <div className="canvas-layer-menu" onMouseEnter={() => { if (editable && !menu.touch) setSubmenu(true); }} onMouseLeave={() => { if (!menu.touch) setSubmenu(false); }}>
+        <button role="menuitem" aria-haspopup="menu" aria-expanded={submenu} disabled={!editable} onClick={() => setSubmenu(menu.touch ? !submenu : true)}>Layer<ChevronRight size={15} /></button>
         {submenu && <div role="menu" aria-label="Layer" className={menu.x > window.innerWidth - 460 ? "opens-left" : ""}>
           {item("top", "Move to top", "", index === overlays.length - 1)}{item("up", "Move up", "", index === overlays.length - 1)}
           {item("down", "Move down", "", index <= 0)}{item("bottom", "Move to bottom", "", index <= 0)}
@@ -196,17 +238,51 @@ export function useCanvasCommands({ w, overlays, setOverlays, selected, setSelec
       {item("lock", object?.locked ? "Unlock" : "Lock", "", blocked || !object)}
     </>}
   </div>, document.body);
-  return { busy, ui, isNudging: () => nudge.current, undo: () => action("undo"), redo: () => action("redo"), handlers: {
+  return { busy, ui, touchUsed, menuOpen: !!menu, openActions: (button: HTMLButtonElement) => {
+    const rect = button.getBoundingClientRect();
+    const point = object ? { x: object.x + object.width / 2, y: object.y + object.height / 2 } : { x: 50, y: 50 };
+    openMenu(rect.left, rect.bottom, object?.id ?? null, true, point);
+  }, isNudging: () => nudge.current, undo: () => action("undo"), redo: () => action("redo"), handlers: {
+    onPointerDownCapture: (e: React.PointerEvent) => {
+      const target = e.target as HTMLElement;
+      if (target.closest('[data-region-surface], .region-inline-instruction, .region-focus-label')) { cancelHold(); suppressClick.current = false; return; }
+      if (e.pointerType !== "touch") { suppressClick.current = false; return; }
+      setTouchUsed(true); touches.current.add(e.pointerId); cancelHold();
+      if (!e.isPrimary || touches.current.size > 1) { cancelDrag(); e.stopPropagation(); return; }
+      suppressClick.current = false;
+      if (!target.closest('.design-canvas') || target.closest('.resize-handle')) return;
+      const { pointerId, clientX: x, clientY: y } = e;
+      const id = target.closest<HTMLElement>('[data-overlay-id]')?.dataset.overlayId || null;
+      hold.current = { pointerId, x, y, opened: false, timer: setTimeout(() => {
+        if (!hold.current) return;
+        hold.current.opened = true; suppressClick.current = true; cancelDrag();
+        openMenu(x, y, id, true);
+      }, 500) };
+    },
+    onPointerMoveCapture: (e: React.PointerEvent) => {
+      if (e.pointerType !== "touch") return;
+      if (touches.current.size > 1) { e.stopPropagation(); return; }
+      const pending = hold.current;
+      if (!pending || pending.pointerId !== e.pointerId) return;
+      if (pending.opened || Math.hypot(e.clientX - pending.x, e.clientY - pending.y) <= 10) e.stopPropagation();
+      else cancelHold();
+    },
+    onPointerUpCapture: (e: React.PointerEvent) => {
+      if (hold.current?.opened) { e.preventDefault(); e.stopPropagation(); touches.current.delete(e.pointerId); cancelHold(); }
+    },
+    onPointerCancelCapture: () => { cancelHold(); cancelDrag(); },
+    onPointerLeave: () => { if (!hold.current?.opened) cancelHold(); },
+    onClickCapture: (e: React.MouseEvent) => { if (suppressClick.current) { e.preventDefault(); e.stopPropagation(); } },
     onKeyDown,
     onKeyUp: (e: KeyboardEvent) => { if (e.key.startsWith("Arrow")) finishNudge(); },
     onBlur: () => finishNudge(),
     onCopy: (e: ClipboardEvent) => onCopy(e), onCut: (e: ClipboardEvent) => onCopy(e, true), onPaste,
     onContextMenu: (e: React.MouseEvent) => {
-      e.preventDefault(); finishNudge();
-      const id = (e.target as HTMLElement).closest<HTMLElement>('[data-overlay-id]')?.dataset.overlayId || null;
-      setSelected(id); setSubmenu(false);
-      const rect = canvas.current?.getBoundingClientRect();
-      setMenu({ x: e.clientX, y: e.clientY, id, point: { x: rect ? 100 * (e.clientX - rect.left) / rect.width : 0, y: rect ? 100 * (e.clientY - rect.top) / rect.height : 0 } });
+      e.preventDefault();
+      if (hold.current || suppressClick.current) return;
+      const regionTarget = (e.target as HTMLElement).closest<HTMLElement>('[data-edit-target]')?.dataset.editTarget;
+      const id = regionTarget ? (regionTarget === "background" ? null : regionTarget) : (e.target as HTMLElement).closest<HTMLElement>('[data-overlay-id]')?.dataset.overlayId || null;
+      openMenu(e.clientX, e.clientY, id);
     },
   } };
 }

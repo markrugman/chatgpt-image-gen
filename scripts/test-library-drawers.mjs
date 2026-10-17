@@ -45,7 +45,7 @@ try {
           assert(await drawer.evaluate(el => el.scrollWidth <= el.clientWidth), `${name} ${width} ${tab} drawer overflow`);
           await expect(grid).not.toContainText('Hidden');
           for (const index of [0, 1, 2]) {
-            const trigger = grid.locator('.library-image-trigger').nth(index);
+            const trigger = grid.locator('.library-image .library-image-trigger').nth(index);
             await trigger.click();
             const menu = drawer.getByRole('menu');
             await expect(menu).toBeVisible();
@@ -59,7 +59,7 @@ try {
             await expect(trigger).toBeFocused();
           }
           if (tab !== 'Templates') {
-            await grid.locator('.library-image-trigger').first().click();
+            await grid.locator('.library-image .library-image-trigger').first().click();
             await page.getByRole('menuitem', { name: 'Add as…', exact: true }).click();
             await expect(drawer.getByRole('menuitem')).toHaveText(['Back', 'Style', 'Subject', 'Logo', 'Other']);
             await page.keyboard.press('Escape');

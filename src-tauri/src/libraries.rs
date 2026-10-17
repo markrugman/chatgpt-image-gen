@@ -313,6 +313,8 @@ mod tests {
             rotation: 0.,
         });
         page.revisions.push(Revision {
+            region_notes: vec![],
+            composition: None,
             id: "revision".into(),
             image_id: "original".into(),
             prompt: "keep logo".into(),
