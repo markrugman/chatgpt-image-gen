@@ -1,5 +1,7 @@
 # Next version design interview
 
+0.10.1 is [published](https://github.com/markrugman/chatgpt-image-gen/releases/tag/v0.10.1) with Windows downloads and the public server image (2026-10-17), explicitly authorised by Mark. Application source `6dd9b0ae0a18da26b3819d973de48eba2f8c1c7a`; [validation](VALIDATION.md). The private server remains on its qualified 0.10.1 deployment.
+
 ## Canvas region editing — 0.10.1 (2026-10-17)
 
 Implemented, tested and deployed privately at `releases/v0101-private` on 2026-10-17. No GitHub push or public release. Validation and preservation evidence is recorded in [VALIDATION.md](VALIDATION.md).

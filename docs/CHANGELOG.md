@@ -1,13 +1,13 @@
 # Release history
 
-## New in 0.10.1 — private canvas editing revision (2026-10-17)
+## New in 0.10.1 — inline canvas editing (2026-10-17)
 
 - Right-click or long-press an item and choose Edit, then draw regions directly on the canvas with a small inline instruction input.
 - Saved instructions appear as removable/editable pills in the existing chat composer. Submit with optional general instructions and reference attachments through the existing Generate / Edit button.
 - Pending region edits target exactly one background or placed image. Other items' Edit actions are disabled; server checks reject mixed targets and target changes until the existing pills are cleared.
 - Compare Original/Edited on the canvas using an inline chat review card, then retry, discard or apply. The separate editing modal, Annotate button and multi-target queue are removed.
 - Preserve original sources, independent replacement Assets, source transparency, saved drafts and undo. Exact region metadata is retained in the revision while chat messages show the user's instructions rather than provider instructions.
-- Private server update only; no GitHub push or public release.
+- Windows installer/portable/companion downloads and the immutable Linux server image are published on GitHub. Existing private server deployment is retained.
 
 ## New in 0.10.0 — private server version (2026-10-17)
 

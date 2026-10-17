@@ -1,5 +1,14 @@
 # Validation
 
+## 0.10.1 published release (2026-10-17)
+
+- Mark explicitly authorised creating and publishing the release, Windows downloads and server image. [Image Gen 0.10.1](https://github.com/markrugman/chatgpt-image-gen/releases/tag/v0.10.1) is public and latest from application source `6dd9b0ae0a18da26b3819d973de48eba2f8c1c7a`; [workflow](https://github.com/markrugman/chatgpt-image-gen/actions/runs/39035536656) completed successfully. This supersedes earlier source-only/private-publication holds below.
+- CI checks version consistency and distribution rules; Windows frontend/native tests, production build, NSIS installer and bundled runtime pass; Linux server tests, Docker build, runtime/version and authentication smoke checks pass. All seven release assets are present: Windows Setup, Portable ZIP, Companion ZIP, install.sh, compose.release.yaml, server-image.txt and SHA256SUMS.
+- Authenticated draft downloads and all seven anonymous public downloads pass SHA-256 verification. ZIP CRC/privacy/path checks pass. Actual GitHub-built Windows portable MCP reports 0.10.1 with expected tools; its bundled Codex runtime starts and companion installation succeeds in an isolated CODEX_HOME. Qualification files/downloads are under ignored `work/gh0101/` and `outputs/GitHub-0.10.1/`. Existing Windows installation was not overwritten; this does not claim a fresh-machine installer acceptance run or Authenticode signing.
+- Protected publication used the existing required-reviewer environment after draft/package qualification; protections were retained. Anonymous pull succeeds for immutable image `ghcr.io/markrugman/chatgpt-image-gen@sha256:560328f05b6e9d5a37396ce29e421b56015d7971e14894f5d4bdbbed091d1397`. Source label matches the workflow commit. Disposable Linux image checks pass startup, authentication, import/lock/history, single-item annotation target lock/clear/release, templates/reference purposes, organisation lifecycle and restart preservation.
+- Application-source inline editing, Edge/WebKit mobile/desktop checks and real ChatGPT background/transparent-layer proof are recorded in the private deployment section below. Physical mobile hardware remains unqualified. Publication does not redeploy the private server or change its workspace/worker/configuration; it retains the qualified 0.10.1 private image and backups.
+
+
 ## 0.10.1 source publication (2026-10-17)
 
 Mark subsequently authorised committing and pushing the tested 0.10.1 source to GitHub. This lifts the earlier source-publication hold for the deployed work below. Version consistency, all 52 frontend tests and whitespace checks pass again before commit. Package/release publication and another server deployment are outside this request; public downloadable release remains 0.9.6.
