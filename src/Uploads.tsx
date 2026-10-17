@@ -100,22 +100,22 @@ export function useUploads(w: Workspace, selectedOrganisation: string, refresh: 
   </> };
 }
 
-export function useUploadDrop(onFiles?: (files: File[]) => void) {
+export function useUploadDrop(onFiles?: (files: File[], event: DragEvent) => void) {
   const depth = useRef(0);
   const [dragging, setDragging] = useState(false);
   const enabled = !!onFiles;
   useEffect(() => { if (!enabled) { depth.current = 0; setDragging(false); } }, [enabled]);
-  const isFiles = (e: DragEvent) => !!onFiles && Array.from(e.dataTransfer.types).includes("Files");
+  const isFiles = (e: DragEvent) => !!onFiles && (Array.from(e.dataTransfer.types).includes("Files") || Array.from(e.dataTransfer.items).some(item => item.kind === "file"));
   return { dragging, dropProps: {
     onDragEnter: (e: DragEvent) => { if (isFiles(e)) { e.preventDefault(); depth.current++; setDragging(true); } },
     onDragOver: (e: DragEvent) => { if (isFiles(e)) { e.preventDefault(); e.dataTransfer.dropEffect = "copy"; } },
     onDragLeave: (e: DragEvent) => { if (isFiles(e) && --depth.current <= 0) { depth.current = 0; setDragging(false); } },
     onDrop: (e: DragEvent) => {
       if (!isFiles(e)) return;
-      e.preventDefault();
+      e.preventDefault(); e.stopPropagation();
       depth.current = 0;
       setDragging(false);
-      onFiles?.(Array.from(e.dataTransfer.files));
+      onFiles?.(Array.from(e.dataTransfer.files), e);
     },
   } };
 }

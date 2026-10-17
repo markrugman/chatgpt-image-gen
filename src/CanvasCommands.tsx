@@ -1,9 +1,10 @@
 import { useEffect, useRef, useState, type RefObject, type ClipboardEvent, type KeyboardEvent } from "react";
 import { createPortal } from "react-dom";
 import { ChevronRight } from "lucide-react";
-import { api, copyText, importImageFile } from "./api";
+import { api, copyText, imageSource, importImageFile } from "./api";
+import { loadImage } from "./export";
 import { versionImage, type Overlay, type Workspace } from "./types";
-import { copyPlacement, fitPlacement, overlayId, reorderOverlay, type OverlayClipboard } from "./overlayOperations";
+import { copyPlacement, fitPlacement, libraryPlacement, overlayId, reorderOverlay, type OverlayClipboard } from "./overlayOperations";
 
 export function useCanvasCommands({ w, overlays, setOverlays, selected, setSelected, canvas, focus, clipboard, width, height, organisationId, save, refresh, history, canUndo, canRedo, generationBusy, notify, cancelDrag, onEdit, canEdit }: {
   w: Workspace; overlays: Overlay[]; setOverlays: (next: Overlay[]) => void; selected: string | null; setSelected: (id: string | null) => void;
@@ -104,7 +105,20 @@ export function useCanvasCommands({ w, overlays, setOverlays, selected, setSelec
     clipboard.current = copy;
     if (cut) { setSelected(null); await commit(current.current.filter(o => o.id !== copy.overlay.id)); }
   }
-  async function paste(files: File[], token: string, point?: { x: number; y: number }) {
+  async function placeVersion(version: string | null | undefined, point?: { x: number; y: number }) {
+    if (!version || importing.current || generationBusy) return;
+    const imageId = versionImage(w, version);
+    if (!imageId) return;
+    finishNudge(); importing.current = true; setBusy(true);
+    try {
+      // Browser decoding includes phone-camera EXIF orientation, including older Uploads.
+      const image = await loadImage(await imageSource(imageId));
+      const placed = { id: overlayId(), assetVersionId: version, ...libraryPlacement(image.naturalWidth, image.naturalHeight, width / height, point), rotation: 0 };
+      setSelected(placed.id);
+      await commit([...current.current, placed]);
+    } finally { importing.current = false; setBusy(false); }
+  }
+  async function paste(files: File[], token: string, point?: { x: number; y: number }, drop = false) {
     if (importing.current || generationBusy) return;
     finishNudge();
     const copy = clipboard.current;
@@ -121,14 +135,18 @@ export function useCanvasCommands({ w, overlays, setOverlays, selected, setSelec
     try {
       for (const file of files) {
         try {
-          if (!["image/png", "image/jpeg", "image/webp"].includes(file.type)) throw Error("Paste a PNG, JPEG or WebP image.");
+          if (!["image/png", "image/jpeg", "image/webp"].includes(file.type) && !(!file.type && /\.(png|jpe?g|webp)$/i.test(file.name))) throw Error("Choose a PNG, JPEG or WebP image.");
           const id = await importImageFile(file, organisationId);
           const next = await api<Workspace>("get_workspace"), asset = next.assets.find(a => a.id === id);
-          const version = asset?.currentVersionId, image = next.images.find(i => i.id === (version && versionImage(next, version)));
-          if (!version || !image) throw Error("Image saved to Uploads but could not be placed.");
-          const pixelWidth = Math.min(width * .25, height * image.width / image.height);
-          const ow = 100 * pixelWidth / width, oh = 100 * pixelWidth * image.height / image.width / height;
-          placed.push(fitPlacement({ id: overlayId(), assetVersionId: version, x: (point?.x ?? (100 - ow) / 2) + placed.length * 1000 / width, y: (point?.y ?? (100 - oh) / 2) + placed.length * 1000 / height, width: ow, height: oh, rotation: 0 }));
+          const version = asset?.currentVersionId, imageId = version && versionImage(next, version);
+          if (!version || !imageId) throw Error("Image saved to Uploads but could not be placed.");
+          const image = await loadImage(await imageSource(imageId));
+          const pixelWidth = Math.min(width * .25, height * image.naturalWidth / image.naturalHeight);
+          const ow = 100 * pixelWidth / width, oh = 100 * pixelWidth * image.naturalHeight / image.naturalWidth / height;
+          const offset = placed.length * 1000 / width;
+          const placement = drop ? libraryPlacement(image.naturalWidth, image.naturalHeight, width / height, { x: point!.x + offset, y: point!.y + offset })
+            : { x: (point?.x ?? (100 - ow) / 2) + offset, y: (point?.y ?? (100 - oh) / 2) + placed.length * 1000 / height, width: ow, height: oh };
+          placed.push(fitPlacement({ id: overlayId(), assetVersionId: version, ...placement, rotation: 0 }));
         } catch (error) { failures.push(`${file.name}: ${error instanceof Error ? error.message : String(error)}`); }
       }
       if (placed.length) {
@@ -136,7 +154,7 @@ export function useCanvasCommands({ w, overlays, setOverlays, selected, setSelec
         await commit([...current.current, ...placed]);
       }
       await refresh();
-      notify(`${placed.length} image${placed.length === 1 ? "" : "s"} pasted${failures.length ? `. ${failures.join("; ")}` : ""}`);
+      notify(`${placed.length} image${placed.length === 1 ? "" : "s"} ${drop ? "placed" : "pasted"}${failures.length ? `. ${failures.join("; ")}` : ""}`);
     } finally { importing.current = false; setBusy(false); }
   }
   function onPaste(e: ClipboardEvent) {
@@ -238,7 +256,7 @@ export function useCanvasCommands({ w, overlays, setOverlays, selected, setSelec
       {item("lock", object?.locked ? "Unlock" : "Lock", "", blocked || !object)}
     </>}
   </div>, document.body);
-  return { busy, ui, touchUsed, menuOpen: !!menu, openActions: (button: HTMLButtonElement) => {
+  return { busy, ui, touchUsed, placeVersion, dropFiles: (files: File[], point: { x: number; y: number }) => paste(files, "", point, true), menuOpen: !!menu, openActions: (button: HTMLButtonElement) => {
     const rect = button.getBoundingClientRect();
     const point = object ? { x: object.x + object.width / 2, y: object.y + object.height / 2 } : { x: 50, y: 50 };
     openMenu(rect.left, rect.bottom, object?.id ?? null, true, point);

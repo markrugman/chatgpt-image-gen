@@ -4,6 +4,7 @@ import assert from 'node:assert/strict';
 
 // Compiled UI with an isolated in-memory API; never connects to the real workspace.
 const image = 'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="400" height="200"><rect width="400" height="200" fill="#bda1f5"/></svg>');
+const tallImage = 'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="100" height="2000"><rect width="100" height="2000" fill="#bda1f5"/></svg>');
 const blank = () => ({ id: 'page', name: 'Page 1', messages: [], revisions: [], history: [{ imageId: null, revisionId: null, overlays: [] }], historyIndex: 0 });
 const fixture = (width, height) => ({
   formatVersion: 3, organisations: [{ id: 'org', name: 'Studio', color: '#8864d7' }],
@@ -37,7 +38,7 @@ try {
             } else if (action.op === 'history') p.historyIndex += action.direction === 'undo' ? -1 : 1;
             else throw Error('Unexpected mutation: ' + action.op);
           }
-          return r.fulfill({ json: command === 'get_workspace' ? w : command === 'image_data' ? image : command === 'get_jobs' ? [] : command === 'server_status' ? { connected: true, online: true, name: 'Fixture', pending: 0 } : command === 'connection' ? { account: null, capabilities: {} } : {} });
+          return r.fulfill({ json: command === 'get_workspace' ? w : command === 'image_data' ? (r.request().postDataJSON().imageId === 'tall-image' ? tallImage : image) : command === 'get_jobs' ? [] : command === 'server_status' ? { connected: true, online: true, name: 'Fixture', pending: 0 } : command === 'connection' ? { account: null, capabilities: {} } : {} });
         });
         await page.goto(origin + '/#view=projects&org=org&design=doc&page=page');
         await page.evaluate(theme => { localStorage.setItem('imagegen-theme', theme); document.documentElement.dataset.theme = theme; }, theme);

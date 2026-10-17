@@ -1,5 +1,15 @@
 # Next version design interview
 
+## 0.10.2 release and server update authorised (2026-10-17)
+
+Mark requested building and publishing the external-file canvas-drop, original-proportion and Uploads drop-feedback fixes as 0.10.2, including Windows downloads and the server image, then updating the existing local server. Separate library/folder-ordering work remains held and is excluded from this release. Qualification and preservation evidence will be recorded in VALIDATION.md.
+
+## External file drops and original proportions — local fix (2026-10-17)
+
+Mark requested direct external-file canvas drops, correct aspect ratio when placing Uploads, and full Uploads-library drag/drop. Files dropped in the canvas workspace become Uploads owned by the design's organisation and topmost placements centred at the drop point, using the existing inset/size limits. A multi-file drop keeps individual successes, reports failures and saves successful placements as one undo step; Undo retains the Uploads. Existing sources and existing placements are preserved.
+
+Placement now measures the decoded image, including phone-camera EXIF rotation, rather than trusting encoded width/height metadata. This fixes older Uploads as well as new imports without rewriting their image bytes. The same sizing applies to Place, drawer drags, external drops and pasted files. Full Uploads-library drops remain library-only and now have explicit visible guidance and shared file-item detection. Browser and isolated native qualification are recorded in [VALIDATION.md](VALIDATION.md). Local source/build changes only; no new public release, push, server update or installed-app replacement requested.
+
 0.10.1 is [published](https://github.com/markrugman/chatgpt-image-gen/releases/tag/v0.10.1) with Windows downloads and the public server image (2026-10-17), explicitly authorised by Mark. Application source `6dd9b0ae0a18da26b3819d973de48eba2f8c1c7a`; [validation](VALIDATION.md). The private server remains on its qualified 0.10.1 deployment.
 
 ## Canvas region editing — 0.10.1 (2026-10-17)

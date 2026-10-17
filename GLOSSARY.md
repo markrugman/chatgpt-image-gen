@@ -44,6 +44,9 @@ A copied placement retaining its exact source image version, size and rotation f
 **Canvas Image Paste**:
 An image imported from the user's clipboard into the open design's organisation as an Upload and placed unchanged as an overlay. Undoing its placement leaves the Upload available in its library.
 
+**Canvas Image Drop**:
+An image file dragged from outside Image Gen into the open design's organisation as an Upload and placed at the drop point as an unchanged Overlay. Undoing its placement leaves the Upload available in its library.
+
 **Asset**:
 Reusable artwork created, extracted, or explicitly saved as an asset, available as a generation reference or unchanged overlay. Assets belong to an organisation or a shared library.
 

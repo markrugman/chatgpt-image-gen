@@ -18,6 +18,8 @@ Right-click or long-press a background or placed image and choose **Edit** to dr
 
 Right-click a placed image on the design canvas for Cut, Copy, Paste, Duplicate, Delete, layer ordering and Lock/Unlock. Canvas shortcuts include Ctrl+C/X/V/D, Delete, Ctrl+Z/Shift+Z and arrow-key nudging (Shift moves ten pixels); use Command on macOS. Pasting an external image onto the canvas saves it in the design organisation's Uploads and places it unchanged. Pasting into the chat instead attaches a generation reference. Uploads also supports multiple-file uploads and drag-and-drop in its library and design drawer.
 
+Drop PNG, JPEG or WebP files directly onto a design canvas to save them in Uploads and place them unchanged at the drop point. Phone-photo orientation is respected so portraits keep their proportions. Files can also be dropped into the full Uploads library or its editor drawer.
+
 Download the Windows app, companion and server setup files from [GitHub Releases](https://github.com/markrugman/chatgpt-image-gen/releases). The server image is distributed through GitHub Container Registry. Downloads do not require a GitHub account.
 
 ## 1. Native app — Windows x64
@@ -39,10 +41,10 @@ From 0.8.3, desktop generation uses only Image Gen's bundled runtime and its own
 
 The server provides the browser editor and shared workspace. Install [Docker Engine](https://docs.docker.com/engine/install/) and the [Compose plugin](https://docs.docker.com/compose/install/linux/) first. Run installation as a user allowed to use Docker. The script requires Bash, curl, sha256sum and iproute2; it does not install Docker or change the host firewall.
 
-Choose a published version. For version [0.10.1](https://github.com/markrugman/chatgpt-image-gen/releases/tag/v0.10.1):
+Choose a published version. For version [0.10.2](https://github.com/markrugman/chatgpt-image-gen/releases/tag/v0.10.2):
 
 ```sh
-VERSION=0.10.1
+VERSION=0.10.2
 REPOSITORY=markrugman/chatgpt-image-gen
 curl -fL "https://github.com/$REPOSITORY/releases/download/v$VERSION/install.sh" -o install.sh && \
 curl -fL "https://github.com/$REPOSITORY/releases/download/v$VERSION/SHA256SUMS" -o SHA256SUMS

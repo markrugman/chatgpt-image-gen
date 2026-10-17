@@ -50,10 +50,10 @@ import {
 } from "./types";
 import { ImageView, Modal, useCompactLayout, type Act } from "./ui";
 import { LibraryImages } from "./LibraryImages";
-import { UploadDrawer, type UploadControls } from "./Uploads";
+import { UploadDrawer, useUploadDrop, type UploadControls } from "./Uploads";
 import { useCanvasCommands } from "./CanvasCommands";
 import type { OverlayClipboard } from "./overlayOperations";
-import { libraryImageDrag, libraryPlacement } from "./overlayOperations";
+import { libraryImageDrag } from "./overlayOperations";
 import { AssetJsonDialog } from "./AssetJsonDialog";
 import { ExtractAssetDialog } from "./ExtractAssetDialog";
 import { renderPage } from "./export";
@@ -364,22 +364,7 @@ export function Editor({
       addReference(`image:${imageId}`);
     });
   const placeVersion = (version: string | null | undefined, point?: { x: number; y: number }) => {
-    if (annotationLocked) { notify("Apply or discard the annotated edit before placing images"); return; }
-    if (!version) return;
-    const img = w.images.find((i) => i.id === versionImage(w, version));
-    if (!img) return;
-    const overlay: Overlay = {
-      // getRandomValues is also available on a private server using LAN HTTP.
-      id: Array.from(crypto.getRandomValues(new Uint8Array(16)), byte => byte.toString(16).padStart(2, "0")).join(""),
-      assetVersionId: version,
-      ...libraryPlacement(img.width, img.height, ratio, point),
-      rotation: 0,
-    };
-    const next = [...overlays, overlay];
-    setOverlays(next);
-    setSelected(overlay.id);
-    saveOverlays(next);
-    setPicker(null);
+    void canvasCommands.placeVersion(version, point).then(() => setPicker(null)).catch(error => notify(String(error)));
   };
   const placeAsset = (asset: Asset) => placeVersion(asset.currentVersionId);
   async function submit() {
@@ -446,6 +431,12 @@ export function Editor({
     history: async direction => { await overlaySaves.current.catch(() => {}); const base = await api<Workspace>("get_workspace"); await api("mutate", { action: { op: "history", target, direction, _base: base } }); await onRefresh(); },
     canUndo: page.historyIndex > 0, canRedo: page.historyIndex < page.history.length - 1, generationBusy: !!busyJob || annotationLocked || annotating, notify,
     onEdit: doc ? key => beginRegionEdit(key) : undefined, canEdit: canEditRegion });
+  const canvasUploadDrop = useUploadDrop(doc ? (files, e) => {
+    if (annotationLocked || annotating || busyJob || canvasCommands.busy) return;
+    const rect = canvas.current?.getBoundingClientRect();
+    if (!rect?.width || !rect.height) return;
+    void canvasCommands.dropFiles(files, { x: (e.clientX - rect.left) / rect.width * 100, y: (e.clientY - rect.top) / rect.height * 100 }).catch(error => notify(String(error)));
+  } : undefined);
   const displayWidth = autoFit
     ? Math.max(1, Math.min(viewport.width, viewport.height * ratio))
     : (pageWidth * zoom) / 100;
@@ -810,18 +801,24 @@ export function Editor({
           </div>
           <div
             ref={viewportRef}
-            className="canvas-scroll"
+            className={`canvas-scroll ${canvasUploadDrop.dragging ? "upload-drop-zone upload-dragging" : ""}`}
             tabIndex={0}
             aria-label="Design canvas"
             {...canvasCommands.handlers}
+            onDragEnter={canvasUploadDrop.dropProps.onDragEnter}
+            onDragLeave={canvasUploadDrop.dropProps.onDragLeave}
             onDragOver={e => {
-              if (!libraryImageDrag.versionId) return;
+              if (!libraryImageDrag.versionId) {
+                canvasUploadDrop.dropProps.onDragOver(e);
+                if (annotationLocked || annotating || busyJob || canvasCommands.busy) e.dataTransfer.dropEffect = "none";
+                return;
+              }
               e.preventDefault();
               e.dataTransfer.dropEffect = doc && !annotationLocked && !annotating && !busyJob && !canvasCommands.busy ? "copy" : "none";
             }}
             onDrop={e => {
               const version = libraryImageDrag.versionId;
-              if (!version) return;
+              if (!version) { canvasUploadDrop.dropProps.onDrop(e); return; }
               libraryImageDrag.versionId = null;
               e.preventDefault(); e.stopPropagation();
               if (!doc || annotationLocked || annotating || busyJob || canvasCommands.busy) return;
@@ -841,6 +838,7 @@ export function Editor({
               if (e.target === e.currentTarget) setSelected(null);
             }}
           >
+            {canvasUploadDrop.dragging && <div className="upload-drop-hint">{annotationLocked || annotating || busyJob || canvasCommands.busy ? "Finish the current edit before placing images" : "Drop images to save to Uploads and place on the canvas"}</div>}
             <div className="canvas-wrapper" style={{ width: displayWidth }}>
               <div className="canvas-page-label">
                 {asset ? asset.name : page.name}

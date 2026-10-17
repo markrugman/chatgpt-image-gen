@@ -1,11 +1,11 @@
 import { api, imageSource } from "./api";
 import { Composition, DesignDocument, Workspace, versionImage } from "./types";
-function loadImage(source: string): Promise<HTMLImageElement> {
+export function loadImage(source: string): Promise<HTMLImageElement> {
   return new Promise((resolve, reject) => {
     const image = new Image();
     image.onload = () => resolve(image);
     image.onerror = () =>
-      reject(new Error("An image could not be loaded for export"));
+      reject(new Error("An image could not be loaded"));
     image.src = source;
   });
 }

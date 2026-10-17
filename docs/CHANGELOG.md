@@ -1,5 +1,13 @@
 # Release history
 
+## New in 0.10.2 — file drops and portrait proportions (2026-10-17)
+
+- Drop image files directly onto the canvas to save them as Uploads and place them at the drop point.
+- Preserve displayed proportions for Place, library drags, external drops and pasted files, including phone photos with EXIF rotation and existing Uploads.
+- Full Uploads-library drops have clearer guidance and recognise file items as well as the standard Files drag type.
+- Keep successful files after individual batch failures and apply their placements as one undo step. Original image bytes and Uploads remain available after Undo.
+- Windows installer, portable app, companion and immutable Linux server image are being prepared for publication. Separate library/folder-ordering changes are excluded.
+
 ## New in 0.10.1 — inline canvas editing (2026-10-17)
 
 - Right-click or long-press an item and choose Edit, then draw regions directly on the canvas with a small inline instruction input.

@@ -588,7 +588,7 @@ export default function App() {
                   <PageHeading
                     eyebrow={route === "uploads" ? "YOUR IMPORTED IMAGES" : "YOUR REUSABLE INGREDIENTS"}
                     title={route === "uploads" ? "Uploads" : "Asset library"}
-                    subtitle={route === "uploads" ? "Your original images, ready to reference or place." : "Keep your logos exact. Give your next idea a head start."}
+                    subtitle={route === "uploads" ? "Drop image files here or choose Upload image. Your originals stay ready to reference or place." : "Keep your logos exact. Give your next idea a head start."}
                     action={
                       <div className="button-row">
                         <button

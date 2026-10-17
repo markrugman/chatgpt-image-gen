@@ -1,5 +1,10 @@
 # Building and releasing Image Gen
 
+## 0.10.2 release and server update authorised (2026-10-17)
+
+Mark requested building and publishing the external-file canvas-drop, original-proportion and Uploads drop-feedback fixes as 0.10.2, including Windows downloads and the server image, then updating the existing local server. Separate library/folder-ordering work remains held and is excluded from this release. Qualification and preservation evidence will be recorded in VALIDATION.md.
+
+
 Current published release: [0.10.1](https://github.com/markrugman/chatgpt-image-gen/releases/tag/v0.10.1) (2026-10-17), source `6dd9b0ae0a18da26b3819d973de48eba2f8c1c7a`, all-success [workflow](https://github.com/markrugman/chatgpt-image-gen/actions/runs/39035536656). Windows downloads and the immutable GHCR server image are public; package/runtime, checksums and anonymous downloads/image checks pass. Private production remains the separately qualified `releases/v0101-private` deployment. [VALIDATION.md](VALIDATION.md) records evidence and limitations. This supersedes earlier no-publication/current-release statements below.
 
 Source publication authorised on 2026-10-17: Mark requested committing and pushing the tested 0.10.1 changes to GitHub. The earlier no-push statements below describe the deployment's original scope. Public downloadable release remains 0.9.6; no release workflow is requested.
