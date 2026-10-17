@@ -1,3 +1,4 @@
+import { useLibraryMove } from "./useLibraryMove";
 import type { ServerStatus } from "./ServerSettings";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { listen, isBrowser } from "./api";
@@ -29,6 +30,7 @@ import { api, clearImageCache, importImageFile } from "./api";
 import {
   emptyWorkspace,
   activeOrganisations,
+  activeJob,
   trashedOrganisationForItem,
   libraryKind,
   type Connection,
@@ -54,7 +56,7 @@ import { UserMenu } from "./UserMenu";
 import { useNavigation } from "./navigation";
 import { useUploads, useUploadDrop } from "./Uploads";
 import type { OverlayClipboard } from "./overlayOperations";
-import { folderDates, newestFirst } from "./folderOrdering";
+import { folderDates, libraryDates, newestFirst } from "./folderOrdering";
 
 export default function App() {
   const compact = useCompactLayout();
@@ -222,13 +224,19 @@ export default function App() {
       !a.deletedAt &&
       (route === "uploads" ? libraryKind(a) === "upload" : libraryKind(a) === "asset") &&
       (libraryScope === "shared" ? !a.organisationId : orgId === "all" || a.organisationId === orgId),
-  ).sort((a, b) => {
-    const aDates = a.versions.map(v => v.createdAt),
-      bDates = b.versions.map(v => v.createdAt);
-    // Version dates supply modification/creation dates for existing library items.
-    return Math.max(0, ...bDates) - Math.max(0, ...aDates) ||
-      (bDates.length ? Math.min(...bDates) : 0) - (aDates.length ? Math.min(...aDates) : 0);
-  });
+  ).sort((a, b) => newestFirst(libraryDates(a), libraryDates(b)));
+  const movableDesign = (id: string) => {
+    const design = w.documents.find(d => d.id === id && !d.deletedAt);
+    return design && !design.pages.some(p => p.editBatch) && !jobs.some(j => j.target.id === id && activeJob(j)) ? design : undefined;
+  };
+  const designMoves = useLibraryMove("design", (source, target) => {
+    const design = movableDesign(source), destination = visibleProjects.find(p => p.id === target);
+    return !!design && !!destination && design.projectId !== target;
+  }, async (id, projectId) => {
+    const destination = visibleProjects.find(p => p.id === projectId)!;
+    await act({ op: "transfer", kind: "document", id, mode: "move", organisationId: destination.organisationId, projectId });
+    notify(`Design moved to ${destination.name}`);
+  }, notify);
   const navigate = (to: string) => {
     setRoute(to);
     setLibraryScope("owned");
@@ -766,6 +774,7 @@ export default function App() {
                           <ProjectCard
                             key={p.id}
                             project={p}
+                            dropProps={designMoves.target(p.id)}
                             w={w}
                             onOpen={() => {
                               setProjectId(p.id);
@@ -809,11 +818,12 @@ export default function App() {
                   />
                   <div className="document-grid">
                     {[...docs]
-                      .sort((a, b) => b.updatedAt - a.updatedAt)
+                      .sort(newestFirst)
                       .map((d) => (
                         <DocumentCard
                           key={d.id}
                           doc={d}
+                          dragProps={designMoves.source(d.id, !movableDesign(d.id))}
                           w={w}
                           jobs={jobs}
                           onOpen={() => openDocument(d.id)}

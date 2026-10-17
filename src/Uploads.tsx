@@ -131,7 +131,7 @@ export function UploadDrawer({ w, orgId, uploads, onReference, onPlace }: {
   return <div className={`editor-library upload-drop-zone ${dragging ? "upload-dragging" : ""}`} {...dropProps}>
     <div className="panel-heading">YOUR UPLOADS</div>
     {dragging && <div className="upload-drop-hint">Drop images to upload</div>}
-    <LibraryImages key={destination?.batch || 0} w={w} orgId={destination?.id || orgId} kind="upload" onReference={onReference} onPlace={onPlace}
+    <LibraryImages key={destination?.batch || 0} w={w} orgId={destination?.id || orgId} kind="upload" onReference={onReference} onPlace={onPlace} clickToPlace
       uploadCard={<button className="mini-asset library-image-trigger upload-card" disabled={uploads.busy} onClick={() => uploads.chooseFiles(reveal)} aria-label="Upload images">
         <span className="mini-asset-preview"><Upload size={30} /></span><strong>Upload images</strong>
       </button>} />

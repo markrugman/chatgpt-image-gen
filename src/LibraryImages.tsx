@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
+import { libraryDates, newestFirst } from "./folderOrdering";
 import { ImageView } from "./ui";
 import { libraryImageDrag, libraryImageDragType } from "./overlayOperations";
 import {
@@ -19,6 +20,7 @@ export function LibraryImages({
   onReference,
   onPlace,
   uploadCard,
+  clickToPlace = false,
 }: {
   w: Workspace;
   orgId?: string | null;
@@ -27,6 +29,7 @@ export function LibraryImages({
   onReference: (id: string, purpose?: ReferencePurpose["purpose"]) => void;
   onPlace?: (asset: Asset) => void;
   uploadCard?: React.ReactNode;
+  clickToPlace?: boolean;
 }) {
   const [scope, setScope] = useState("owned");
   const items = w.assets.filter(
@@ -42,7 +45,7 @@ export function LibraryImages({
       `${a.name} ${a.tags.join(" ")}`
         .toLowerCase()
         .includes(search.toLowerCase()),
-  );
+  ).sort((a, b) => newestFirst(libraryDates(a), libraryDates(b)));
   return (
     <>
       {orgId && (
@@ -69,6 +72,7 @@ export function LibraryImages({
           w={w}
           onReference={onReference}
           onPlace={onPlace}
+          clickToPlace={clickToPlace}
         />
       ))}</div>
       {!items.length && (
@@ -85,13 +89,15 @@ function LibraryImage({
   w,
   onReference,
   onPlace,
+  clickToPlace,
 }: {
   asset: Asset;
   w: Workspace;
   onReference: (id: string, purpose?: ReferencePurpose["purpose"]) => void;
   onPlace?: (asset: Asset) => void;
+  clickToPlace: boolean;
 }) {
-  return <LibraryImageTile name={asset.name} imageId={versionImage(w, asset.currentVersionId!)} dragVersionId={onPlace ? asset.currentVersionId : undefined} actions={[
+  return <LibraryImageTile name={asset.name} imageId={versionImage(w, asset.currentVersionId!)} dragVersionId={onPlace ? asset.currentVersionId : undefined} onActivate={clickToPlace && onPlace ? () => onPlace(asset) : undefined} actions={[
     { label: "Add as…", items: (["Style", "Subject", "Logo", "Other"] as const).map(purpose => ({ label: purpose, onSelect: () => onReference(asset.currentVersionId!, purpose) })) },
     ...(onPlace ? [{ label: "Place", onSelect: () => onPlace(asset) }] : []),
   ]} />;
@@ -99,10 +105,11 @@ function LibraryImage({
 
 type LibraryAction = { label: string; onSelect: () => void } | { label: string; items: { label: string; onSelect: () => void }[] };
 
-export function LibraryImageTile({ name, imageId, actions, dragVersionId }: {
+export function LibraryImageTile({ name, imageId, actions, dragVersionId, onActivate }: {
   name: string; imageId?: string | null;
   actions: LibraryAction[];
   dragVersionId?: string | null;
+  onActivate?: () => void;
 }) {
   const pointerType = useRef("mouse"), dragged = useRef(false);
   const [open, setOpen] = useState(false);
@@ -172,7 +179,17 @@ export function LibraryImageTile({ name, imageId, actions, dragVersionId }: {
         aria-label={`Use ${name}`}
         aria-haspopup="menu"
         aria-expanded={open}
+        title={onActivate ? "Click to place; right-click for options" : undefined}
         draggable={!!dragVersionId}
+        onContextMenu={e => {
+          if (!onActivate) return;
+          e.preventDefault(); setSubmenu(null); setOpen(true);
+        }}
+        onKeyDown={e => {
+          if (onActivate && (e.key === "ContextMenu" || (e.shiftKey && e.key === "F10"))) {
+            e.preventDefault(); setSubmenu(null); setOpen(true);
+          }
+        }}
         onPointerDown={e => { pointerType.current = e.pointerType; dragged.current = false; }}
         onDragStart={e => {
           if (!dragVersionId || pointerType.current === "touch") { e.preventDefault(); return; }
@@ -184,7 +201,12 @@ export function LibraryImageTile({ name, imageId, actions, dragVersionId }: {
           setOpen(false); setSubmenu(null);
         }}
         onDragEnd={() => { libraryImageDrag.versionId = null; setTimeout(() => { dragged.current = false; }, 0); }}
-        onClick={e => { if (dragged.current && e.detail !== 0) { dragged.current = false; return; } setSubmenu(null); setOpen(!open); }}
+        onClick={e => {
+          if (dragged.current && e.detail !== 0) { dragged.current = false; return; }
+          setSubmenu(null);
+          if (onActivate && (pointerType.current !== "touch" || e.detail === 0)) { setOpen(false); onActivate(); }
+          else setOpen(!open);
+        }}
       >
         <span className="mini-asset-preview checker">
           <ImageView id={imageId} alt={name} />

@@ -1,3 +1,5 @@
+import type { HTMLAttributes } from "react";
+import { modificationDate } from "./folderOrdering";
 import {
   ChevronRight,
   FileImage,
@@ -47,11 +49,13 @@ function CompositionPreview({ comp, doc, w, alt = "" }: {
 }
 
 export function ProjectCard({
+  dropProps,
   project,
   w,
   onOpen,
   onEdit,
 }: {
+  dropProps?: HTMLAttributes<HTMLElement>;
   project: Project;
   w: Workspace;
   onOpen: () => void;
@@ -66,17 +70,17 @@ export function ProjectCard({
     const images = page.revisions.map(r => ({
       id: r.imageId, doc: d,
       comp: r.imageId === current.imageId ? current : { imageId: r.imageId, revisionId: r.id, overlays: r.overlays },
-      createdAt: r.imageId === current.imageId && current.overlays.length ? d.updatedAt : r.createdAt,
+      createdAt: r.imageId === current.imageId && current.overlays.length ? modificationDate(d) : r.createdAt,
     }));
     if ((current.imageId || current.overlays.length) && !images.some(image => image.id === current.imageId)) {
-      images.push({ id: current.imageId || page.id, doc: d, comp: current, createdAt: d.updatedAt });
+      images.push({ id: current.imageId || page.id, doc: d, comp: current, createdAt: modificationDate(d) });
     }
     return images;
   })).sort((a, b) => b.createdAt - a.createdAt)
     .filter((image, index, images) => images.findIndex(other => other.id === image.id) === index)
     .slice(0, 3);
   return (
-    <article className="project-card">
+    <article {...dropProps} data-project-id={project.id} className={`project-card ${dropProps?.className || ""}`}>
       <button
         className="project-preview"
         onClick={onOpen}
@@ -121,12 +125,14 @@ export function ProjectCard({
   );
 }
 export function DocumentCard({
+  dragProps,
   doc,
   w,
   jobs,
   onOpen,
   onEdit,
 }: {
+  dragProps?: HTMLAttributes<HTMLElement>;
   doc: DesignDocument;
   w: Workspace;
   jobs: Job[];
@@ -137,9 +143,10 @@ export function DocumentCard({
     comp = currentComposition(doc.pages[0]),
     busy = jobs.some((j) => j.target.id === doc.id && activeJob(j));
   return (
-    <article className="document-card">
+    <article {...dragProps} data-document-id={doc.id} className={`document-card ${dragProps?.className || ""}`}>
       <button
         className="document-preview checker"
+        draggable={!!dragProps?.draggable}
         onClick={onOpen}
         aria-label={`Open ${doc.name}`}
       >
@@ -155,7 +162,7 @@ export function DocumentCard({
         )}
       </button>
       <div className="card-caption">
-        <button className="card-name" onClick={onOpen}>
+        <button className="card-name" draggable={!!dragProps?.draggable} onClick={onOpen}>
           <strong>{doc.name}</strong>
           <small>
             {project?.name}

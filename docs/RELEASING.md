@@ -1,5 +1,9 @@
 # Building and releasing Image Gen
 
+## 0.10.3 release and deployment authorised (2026-10-17)
+
+Mark explicitly requested building, deploying and releasing all current updates. This lifts the earlier publication/deployment holds for canvas corner/Shift resizing and rotation, drawer left-click Place/right-click options, clipboard permission recovery, precise edit recency across libraries, same-organisation Copy/Move and typed library drag moves. Windows packages, immutable server image and the existing local server upgrade are in scope. Qualification/preservation evidence will be added here after verification.
+
 Current release and local server: [0.10.2](https://github.com/markrugman/chatgpt-image-gen/releases/tag/v0.10.2) (2026-10-17), source `68a83da67a85eea0a56a22eee8b28edbdd39dd59`, all-success [workflow](https://github.com/markrugman/chatgpt-image-gen/actions/runs/39044328340). All pending drop/proportion and library/folder-order updates are published with Windows Setup/Portable/Companion and immutable GHCR image. Private production is `releases/v0102-release` using the public image, with verified stopped-volume/off-host backups and unchanged workspace/media, sessions/jobs, configuration and signed-in worker. [VALIDATION.md](VALIDATION.md) records evidence/limitations. Earlier holds and current-version statements below are historical.
 
 ## 0.10.2 release and server update authorised (2026-10-17)

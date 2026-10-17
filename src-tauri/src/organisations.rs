@@ -161,6 +161,7 @@ mod tests {
             ("other", Some("b"), None, "asset"),
         ] {
             w.assets.push(Asset {
+                modified_at: 0,
                 id: id.into(),
                 name: id.into(),
                 organisation_id: owner.map(String::from),

@@ -14,6 +14,7 @@ const port = await new Promise(resolve => { const s = net.createServer(); s.list
 const backend = `http://127.0.0.1:${port}`;
 const png = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAgAAAAICAYAAADED76LAAAAEklEQVR4nGOIqjjxHx9mGBkKAHcjpkGplMQ6AAAAAElFTkSuQmCC', 'base64');
 const headers = { 'X-Imagegen-Request': '1' };
+const permissionPrompt = process.env.IMAGEGEN_TEST_PERMISSION_PROMPT === '1';
 let service, vite;
 try {
   let diagnostics = '';
@@ -38,9 +39,9 @@ try {
   if (!process.env.IMAGEGEN_TEST_BUILT) await vite.listen();
   const origin = `http://127.0.0.1:${vite.httpServer.address().port}`;
   for (const [engineName, engine, options] of [['Edge', chromium, { channel: 'msedge' }], ['WebKit', webkit, {}]]) {
-    const browser = await engine.launch({ ...options, headless: true });
+    const browser = await engine.launch({ ...options, headless: !permissionPrompt });
     try {
-      const context = await browser.newContext({ viewport: { width: 1440, height: 1000 }, ...(engineName === 'Edge' ? { permissions: ['clipboard-read', 'clipboard-write'] } : {}) });
+      const context = await browser.newContext({ viewport: { width: 1440, height: 1000 }, ...(engineName === 'Edge' && !permissionPrompt ? { permissions: ['clipboard-read', 'clipboard-write'] } : {}) });
       assert((await context.request.post(origin + '/web/login', { headers, data: { accessKey: fs.readFileSync(path.join(root, 'server-access-key'), 'utf8').trim(), remember: true } })).ok());
       if ((await (await context.request.get(origin + '/web/session')).json()).setupNeeded) assert((await context.request.post(origin + '/web/owner', { headers, data: { keyOnly: true } })).ok());
       const post = async (command, data = {}) => { const r = await context.request.post(origin + '/api/' + command, { headers, data }); assert(r.ok(), `${command}: ${await r.text()}`); return r.json(); };
@@ -63,7 +64,7 @@ try {
       const surface = page.locator('.canvas-scroll');
       const menu = page.getByRole('menu', { name: 'Canvas actions', exact: true });
       const state = async (id = doc) => { const w = await post('get_workspace'); const p = w.documents.find(d => d.id === id).pages[0]; return { w, p, overlays: p.history[p.historyIndex].overlays }; };
-      const right = async id => { await page.locator(`[data-overlay-id="${id}"]`).click({ button: 'right', position: { x: 1, y: 1 } }); await expect(menu).toBeVisible(); };
+      const right = async id => { await surface.press('Escape'); await page.locator(`[data-overlay-id="${id}"]`).click({ button: 'right', position: { x: 1, y: 20 } }); await expect(menu).toBeVisible(); };
       const command = async (label, id = 'one') => { await right(id); await menu.getByRole('menuitem', { name: label, exact: true }).click(); await expect(menu).toHaveCount(0); };
       const copy = async cut => surface.evaluate((el, cut) => { const dt = new DataTransfer(); el.dispatchEvent(new ClipboardEvent(cut ? 'cut' : 'copy', { clipboardData: dt, bubbles: true, cancelable: true })); return dt.getData('text/plain'); }, cut);
       const paste = async (token, images = []) => surface.evaluate((el, { token, images }) => {
@@ -71,6 +72,21 @@ try {
         for (const image of images) dt.items.add(new File([Uint8Array.from(atob(image.data), c => c.charCodeAt(0))], image.name, { type: image.type }));
         const event = new ClipboardEvent('paste', { clipboardData: dt, bubbles: true, cancelable: true }); el.dispatchEvent(event); return event.defaultPrevented;
       }, { token, images });
+      // Optional headed acceptance with a fresh browser profile: approve the real
+      // browser prompt, then this assertion verifies the original click completes.
+      if (permissionPrompt) {
+        await command('Copy');
+        await right('one');
+        await menu.getByRole('menuitem', { name: 'Paste', exact: true }).click();
+        console.log('READY: fresh local Edge clipboard permission prompt; click Allow.');
+        await expect.poll(async () => (await state()).overlays.length, { timeout: 120000 }).toBe(3);
+        await expect(menu).toHaveCount(0);
+        await expect(page.locator('.toast').filter({ hasText: 'Press Ctrl+V' })).toHaveCount(0);
+        assert.equal((await state()).p.historyIndex, 2, 'First Paste must save exactly one new history state');
+        assert.deepEqual(errors, []);
+        console.log('PASS Edge: real first-time clipboard permission Allow completes original Paste without a second click');
+        break;
+      }
       await expect(page.getByRole('button', { name: 'Actions', exact: true })).toBeHidden();
       let before = await state();
       await right('one'); await expect(page.locator('[data-overlay-id="one"]')).toHaveClass(/selected/);
@@ -90,14 +106,14 @@ try {
       let next = await state(); assert(!next.overlays[2].locked); assert.equal(next.overlays[2].x, 11);
       await command('Unlock'); await expect.poll(async () => !!(await state()).overlays.find(o => o.id === 'one').locked).toBe(false);
       // A held arrow gesture must add one history state, independent of zoom.
-      await page.locator('[data-overlay-id="one"]').click({ position: { x: 1, y: 1 } }); await surface.focus();
+      await page.locator('[data-overlay-id="one"]').click({ position: { x: 1, y: 20 } }); await surface.focus();
       before = await state();
       await page.keyboard.down('ArrowRight'); await page.keyboard.down('ArrowRight'); await page.keyboard.down('ArrowRight'); await page.keyboard.up('ArrowRight');
       await expect.poll(async () => (await state()).p.historyIndex).toBe(before.p.historyIndex + 1);
       assert(Math.abs((await state()).overlays.find(o => o.id === 'one').x - before.overlays.find(o => o.id === 'one').x - .3) < 1e-8);
       await surface.press('Control+z'); await expect.poll(async () => (await state()).p.historyIndex).toBe(before.p.historyIndex);
       await surface.press('Control+Shift+z'); await expect.poll(async () => (await state()).p.historyIndex).toBe(before.p.historyIndex + 1);
-      await page.locator('[data-overlay-id="one"]').click({ position: { x: 1, y: 1 } });
+      await page.locator('[data-overlay-id="one"]').click({ position: { x: 1, y: 20 } });
       console.log(`PASS ${engineName}: layer ordering, lock/reload/duplicate and held-key nudge/undo/redo`);
       const token = await copy(false); assert(token.startsWith('imagegen-overlay:'));
       before = await state(); assert.equal(await paste('unrelated text'), false); assert.equal((await state()).overlays.length, before.overlays.length);
@@ -116,12 +132,52 @@ try {
       assert.equal(imported.length, 2); assert(imported.every(a => a.organisationId === other && a.libraryKind === 'upload'));
       for (const item of imported) { const version = item.versions.find(v => v.id === item.currentVersionId); const data = await post('image_data', { imageId: version.imageId }); assert(Buffer.from(data.split(',')[1], 'base64').equals(png)); }
       await surface.press('Control+z'); await expect.poll(async () => (await state(doc2)).overlays.length).toBe(1); assert.equal((await state(doc2)).w.assets.length, next.w.assets.length);
-      // Clipboard denial must not silently paste the old captured overlay.
-      await page.evaluate(() => Object.defineProperty(navigator, 'clipboard', { configurable: true, value: { read: async () => { throw Error('Denied'); } } }));
+      // First read can reject as the permission prompt closes. One menu click must
+      // recover after permission is granted and focus returns, saving exactly once.
+      await page.evaluate(token => {
+        window.clipboardReads = 0;
+        window.clipboardFocusAt = Infinity;
+        Object.defineProperty(document, 'hasFocus', { configurable: true, value: () => Date.now() >= window.clipboardFocusAt });
+        Object.defineProperty(navigator, 'permissions', { configurable: true, value: { query: async () => ({ state: 'granted' }) } });
+        Object.defineProperty(navigator, 'clipboard', { configurable: true, value: { read: async () => {
+          window.clipboardReads++;
+          if (window.clipboardReads === 1) { window.clipboardFocusAt = Date.now() + 100; throw new DOMException('Document is not focused.', 'NotAllowedError'); }
+          assertFocused();
+          return [{ types: ['text/plain'], getType: async () => new Blob([token], { type: 'text/plain' }) }];
+        } } });
+        function assertFocused() { if (!document.hasFocus()) throw new DOMException('Document is not focused.', 'NotAllowedError'); }
+      }, token);
+      const beforePermission = await state(doc2);
       await page.locator('.design-canvas').click({ button: 'right', position: { x: 2, y: 2 } });
-      await expect(menu.getByRole('menuitem')).toHaveCount(4); await menu.getByRole('menuitem', { name: 'Paste', exact: true }).click();
-      await expect(page.locator('.toast')).toContainText('Press Ctrl+V'); await expect(surface).toBeFocused(); assert.equal((await state(doc2)).overlays.length, 1);
-      await page.evaluate(() => { delete navigator.clipboard; });
+      await menu.getByRole('menuitem', { name: 'Paste', exact: true }).click();
+      await expect.poll(async () => (await state(doc2)).overlays.length).toBe(2);
+      assert.equal((await state(doc2)).p.historyIndex, beforePermission.p.historyIndex + 1);
+      assert.equal(await page.evaluate(() => window.clipboardReads), 2);
+      await expect(page.locator('.toast').filter({ hasText: 'Press Ctrl+V' })).toHaveCount(0);
+      await expect(surface).toBeFocused();
+      await page.evaluate(() => { delete document.hasFocus; delete navigator.permissions; delete navigator.clipboard; });
+      await surface.press('Control+z'); await expect.poll(async () => (await state(doc2)).overlays.length).toBe(1);
+      console.log(`PASS ${engineName}: first menu Paste recovers permission/focus transition with exactly one saved placement`);
+      // Clipboard denial must not silently paste the old captured overlay.
+      for (const permission of ['denied', 'unsupported', 'granted']) {
+        await page.evaluate(permission => {
+          window.clipboardReads = 0;
+          Object.defineProperty(navigator, 'permissions', { configurable: true, value: { query: async () => {
+            if (permission === 'unsupported') throw new TypeError('Unknown permission');
+            return { state: permission };
+          } } });
+          Object.defineProperty(navigator, 'clipboard', { configurable: true, value: { read: async () => {
+            window.clipboardReads++; throw new DOMException('Denied', 'NotAllowedError');
+          } } });
+        }, permission);
+        await page.locator('.design-canvas').click({ button: 'right', position: { x: 2, y: 2 } });
+        await expect(menu.getByRole('menuitem')).toHaveCount(4); await menu.getByRole('menuitem', { name: 'Paste', exact: true }).click();
+        await expect(menu).toHaveCount(0);
+        await expect(page.locator('.toast')).toContainText('Clipboard access isn’t available. Press Ctrl+V');
+        await expect(surface).toBeFocused(); assert.equal((await state(doc2)).overlays.length, 1);
+        assert.equal(await page.evaluate(() => window.clipboardReads), permission === 'granted' ? 2 : 1, 'Retry once only when permission is granted');
+        await page.evaluate(() => { delete navigator.clipboard; delete navigator.permissions; });
+      }
       await page.locator('.canvas-overlay').first().click();
       const cutToken = await copy(true);
       await expect.poll(async () => (await state(doc2)).overlays.length).toBe(0);

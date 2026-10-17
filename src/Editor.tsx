@@ -54,6 +54,8 @@ import { UploadDrawer, useUploadDrop, type UploadControls } from "./Uploads";
 import { useCanvasCommands } from "./CanvasCommands";
 import type { OverlayClipboard } from "./overlayOperations";
 import { libraryImageDrag } from "./overlayOperations";
+import { newestFirst } from "./folderOrdering";
+import { resizeOverlay, rotateOverlay, type OverlayCorner } from "./overlayTransform";
 import { AssetJsonDialog } from "./AssetJsonDialog";
 import { ExtractAssetDialog } from "./ExtractAssetDialog";
 import { renderPage } from "./export";
@@ -259,7 +261,11 @@ export function Editor({
     left: number;
     top: number;
     moved: boolean;
-    resize: boolean;
+    corner?: OverlayCorner;
+    rotate: boolean;
+    start: Overlay;
+    latest: Overlay;
+    pointerId: number;
     width: number;
     height: number;
   } | null>(null);
@@ -413,7 +419,7 @@ export function Editor({
     const pending = drag.current;
     drag.current = null;
     if (pending?.moved) setOverlays(current => current.map(o => o.id === pending.id
-      ? { ...o, x: pending.left, y: pending.top, width: pending.width, height: pending.height } : o));
+      ? { ...pending.start } : o));
   }, []);
   const regionName = (key: string) => key === "background" ? "Background" : w.assets.find(a => a.versions.some(v => v.id === overlays.find(o => o.id === key)?.assetVersionId))?.name || "Image layer";
   const canEditRegion = (key: string) => !!doc && !busyJob && !annotationLocked && !regionSaving && !!annotationSource(w,{...comp,overlays},key)
@@ -658,7 +664,7 @@ export function Editor({
           {panel === "assets" && (
             <div className="editor-library">
               <div className="panel-heading">YOUR ASSETS</div>
-              <LibraryImages w={w} orgId={orgId} kind="asset" onReference={addReference} onPlace={doc ? placeAsset : undefined} />
+              <LibraryImages w={w} orgId={orgId} kind="asset" onReference={addReference} onPlace={doc ? placeAsset : undefined} clickToPlace />
             </div>
           )}
           {panel === "templates" && <div className="editor-library"><div className="panel-heading">YOUR TEMPLATES</div><Templates key={orgId} w={w} orgId={orgId} act={act} onRefresh={onRefresh} onSelect={selectTemplate} /></div>}
@@ -909,9 +915,11 @@ export function Editor({
                         left: o.x,
                         top: o.y,
                         moved: false,
-                        resize: (e.target as HTMLElement).classList.contains(
-                          "resize-handle",
-                        ),
+                        corner: (e.target as HTMLElement).closest<HTMLElement>("[data-resize-corner]")?.dataset.resizeCorner as OverlayCorner | undefined,
+                        rotate: !!(e.target as HTMLElement).closest(".rotation-handle"),
+                        start: { ...o },
+                        latest: { ...o },
+                        pointerId: e.pointerId,
                         width: o.width,
                         height: o.height,
                       };
@@ -919,40 +927,32 @@ export function Editor({
                     onPointerMove={(e) => {
                       const d = drag.current,
                         rect = canvas.current?.getBoundingClientRect();
-                      if (!d || d.id !== o.id || !rect) return;
+                      if (!d || d.id !== o.id || d.pointerId !== e.pointerId || !rect) return;
                       const dx = ((e.clientX - d.x) / rect.width) * 100,
                         dy = ((e.clientY - d.y) / rect.height) * 100;
-                      if (Math.abs(dx) + Math.abs(dy) < 0.1) return;
+                      if (!d.moved && Math.abs(dx) + Math.abs(dy) < 0.1) return;
                       d.moved = true;
-                      setOverlays((current) =>
-                        current.map((item) =>
-                          item.id !== d.id
-                            ? item
-                            : d.resize
-                              ? {
-                                  ...item,
-                                  width: Math.max(2, d.width + dx),
-                                  height: Math.max(
-                                    2,
-                                    ((d.width + dx) / d.width) * d.height,
-                                  ),
-                                }
-                              : {
-                                  ...item,
-                                  x: Math.max(
-                                    -item.width + 2,
-                                    Math.min(98, d.left + dx),
-                                  ),
-                                  y: Math.max(
-                                    -item.height + 2,
-                                    Math.min(98, d.top + dy),
-                                  ),
-                                },
-                        ),
-                      );
+                      // Pointer-up can arrive before React renders the last movement.
+                      d.latest = d.corner
+                        ? resizeOverlay(d.start, d.corner, e.clientX - d.x, e.clientY - d.y, rect.width, rect.height, e.shiftKey)
+                        : d.rotate
+                          ? rotateOverlay(d.start, { x: d.x, y: d.y }, { x: e.clientX, y: e.clientY }, {
+                              x: rect.left + (d.left + d.width / 2) * rect.width / 100,
+                              y: rect.top + (d.top + d.height / 2) * rect.height / 100,
+                            })
+                          : { ...d.start,
+                              x: Math.max(-d.width + 2, Math.min(98, d.left + dx)),
+                              y: Math.max(-d.height + 2, Math.min(98, d.top + dy)),
+                            };
+                      const next = d.latest;
+                      setOverlays(current => current.map(item => item.id === d.id ? next : item));
                     }}
-                    onPointerUp={() => {
-                      if (drag.current?.moved) saveOverlays(overlays);
+                    onLostPointerCapture={cancelCanvasDrag}
+                    onPointerCancel={cancelCanvasDrag}
+                    onPointerUp={(e) => {
+                      if (drag.current?.pointerId !== e.pointerId) return;
+                      const d = drag.current;
+                      if (d.moved) saveOverlays(overlays.map(item => item.id === d.id ? d.latest : item));
                       drag.current = null;
                     }}
                   >
@@ -960,10 +960,11 @@ export function Editor({
                     {o.locked && <span className="overlay-lock"><Lock size={12} /></span>}
                     {selected === o.id && !o.locked && (
                       <>
-                        <span className="overlay-corner top-left" />
-                        <span className="overlay-corner top-right" />
-                        <span className="overlay-corner bottom-left" />
-                        <span className="overlay-corner bottom-right resize-handle" />
+                        {(["top-left", "top-right", "bottom-left", "bottom-right"] as const).map(corner => (
+                          <span key={corner} className={`overlay-corner ${corner} resize-handle`} data-resize-corner={corner} title={`Resize from ${corner.replace("-", " ")}; hold Shift to resize from centre`} />
+                        ))}
+                        <span className="rotation-stem" />
+                        <span className="rotation-handle resize-handle" title="Drag to rotate overlay"><RotateCw size={12} /></span>
                       </>
                     )}
                   </div>
@@ -1460,6 +1461,7 @@ function AssetPicker({
             (!orgId || p.organisationId === orgId),
         ),
     )
+    .sort(newestFirst)
     .flatMap((d) =>
       d.pages
         .filter(

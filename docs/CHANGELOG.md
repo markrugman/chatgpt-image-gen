@@ -1,5 +1,15 @@
 # Release history
 
+## New in 0.10.3 — canvas controls and library organisation (2026-10-17)
+
+- Resize overlays from all four corners; hold Shift to resize from the centre. Rotate directly with the circular canvas handle.
+- Left-click Assets/Uploads drawer images to Place; right-click opens options. Touch keeps tap-to-menu.
+- Recover the first clipboard Paste after allowing browser permission, without a second click.
+- Record precise modification times for edits and use newest-first ordering throughout libraries, folders, drawers and pickers.
+- Copy or move designs between projects within the same organisation, defaulting to the current organisation and excluding the current location. Templates follow the same folder-selection flow.
+- Drag designs onto Projects and templates onto Template Folders. Reject cross-type and invalid drops; preserve source history and library references.
+- Windows packages and the immutable server image are being qualified for release and the existing server update.
+
 ## New in 0.10.2 — file drops and portrait proportions (2026-10-17)
 
 - Drop image files directly onto the canvas to save them as Uploads and place them at the drop point.

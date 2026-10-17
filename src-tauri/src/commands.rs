@@ -258,6 +258,7 @@ pub async fn mutate(
             "asset" => {
                 crate::organisations::require_active(w, optional(&action, "organisationId").as_deref())?;
                 let a = Asset {
+                    modified_at: 0,
                     library_kind: "asset".into(),
                     description_json: optional(&action, "descriptionJson")
                         .map(|s| crate::analysis::validate_description(&s))
@@ -579,6 +580,7 @@ pub(crate) fn save_imported_asset(
         let mut page = Page::new("Asset");
         page.history[0].image_id = Some(image.id.clone());
         let asset = Asset {
+            modified_at: 0,
             library_kind: if source_references.is_empty() { "upload" } else { "asset" }.into(),
             description_json: None,
             source_references,

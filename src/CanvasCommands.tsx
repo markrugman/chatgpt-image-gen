@@ -169,13 +169,26 @@ export function useCanvasCommands({ w, overlays, setOverlays, selected, setSelec
     const files: File[] = [];
     let token = "";
     try {
-      const items = await navigator.clipboard.read();
+      let items: ClipboardItems;
+      try { items = await navigator.clipboard.read(); }
+      catch (error) {
+        if (!(error instanceof DOMException) || error.name !== "NotAllowedError") throw error;
+        const permission = await navigator.permissions.query({ name: "clipboard-read" as PermissionName });
+        if (permission.state !== "granted") throw error;
+        // Allowing the browser prompt can reject the pending read before focus
+        // returns. Retry once, only with granted permission, after it settles.
+        for (let attempt = 0; attempt < 20; attempt++) {
+          await new Promise(resolve => setTimeout(resolve, 50));
+          if (document.hasFocus()) break;
+        }
+        items = await navigator.clipboard.read();
+      }
       for (const item of items) {
         const type = item.types.find(t => t.startsWith("image/"));
         if (type) files.push(new File([await item.getType(type)], `Clipboard-${files.length + 1}.${type.split("/")[1]}`, { type }));
         else if (item.types.includes("text/plain")) token = await (await item.getType("text/plain")).text();
       }
-    } catch { notify("Press Ctrl+V (⌘V on Mac) to paste"); return; }
+    } catch { notify("Clipboard access isn’t available. Press Ctrl+V (⌘V on Mac) to paste."); return; }
     await paste(files, token, menu?.point);
   }
   async function action(id: string) {

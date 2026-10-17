@@ -1,3 +1,4 @@
+import { useLibraryMove } from "./useLibraryMove";
 import { useEffect, useState } from "react";
 import { ArrowLeft, FileImage, Folder, FolderPlus, MoreHorizontal, Plus, Trash2 } from "lucide-react";
 import { api } from "./api";
@@ -85,9 +86,10 @@ export function TemplateForm({ w, act, orgId, initialFolderId, template, source,
   </Modal>;
 }
 
-function FolderSelect({ w, owner, value, onChange }: { w: Workspace; owner: string; value: string; onChange: (id: string) => void }) {
-  return <label>Folder<select value={value} onChange={e => onChange(e.target.value)}>
-    <option value={generalFolder}>General</option>{(w.templateFolders || []).filter(f => (f.organisationId || "") === owner).sort((a,b) => a.name.localeCompare(b.name)).map(f => <option key={f.id} value={f.id}>{f.name}</option>)}
+function FolderSelect({ w, owner, value, onChange, excludeFolderId }: { w: Workspace; owner: string; value: string; onChange: (id: string) => void; excludeFolderId?: string }) {
+  return <label>Folder<select aria-label="Folder" required value={value} onChange={e => onChange(e.target.value)}>
+    {!value && <option value="" disabled>Choose another folder</option>}
+    {excludeFolderId !== generalFolder && <option value={generalFolder}>General</option>}{(w.templateFolders || []).filter(f => (f.organisationId || "") === owner && f.id !== excludeFolderId).sort((a,b) => a.name.localeCompare(b.name)).map(f => <option key={f.id} value={f.id}>{f.name}</option>)}
   </select></label>;
 }
 
@@ -129,12 +131,25 @@ export function Templates({ w, orgId, act, onRefresh, onSelect, fullPage = false
   const selectedFolder = folders.find(f => f.id === folder);
   const libraryItems = (w.templates || []).filter(t => !t.deletedAt && (allLibraries || t.organisationId === owner));
   const items = libraryItems.filter(t => (folder === "all" || t.folderId === folder)
-    && matchesSearch(`${t.name} ${t.recipe}`, t.tags, query)).sort((a,b) => a.name.localeCompare(b.name));
+    && matchesSearch(`${t.name} ${t.recipe}`, t.tags, query)).sort(newestFirst);
   const displayFolders = [{ id: generalFolder, name: "General", organisationId: owner, createdAt: 0, updatedAt: 0 }, ...folders]
     .sort((a,b) => newestFirst(
       folderDates(a, libraryItems.filter(t => t.folderId === a.id)),
       folderDates(b, libraryItems.filter(t => t.folderId === b.id)),
     )).filter(f => fullPage || matchesSearch(f.name, [], query));
+  const firstTransferFolder = (ownerId: string, template: Template) => [generalFolder, ...(w.templateFolders || []).filter(f => (f.organisationId || "") === ownerId).map(f => f.id)]
+    .find(id => ownerId !== (template.organisationId || "") || id !== template.folderId) || "";
+  const folderOwner = (folderId: string, template: Template) => folderId === generalFolder && allLibraries
+    ? template.organisationId : displayFolders.find(f => f.id === folderId)?.organisationId ?? null;
+  const templateMoves = useLibraryMove("template", (id, folderId) => {
+    const template = libraryItems.find(t => t.id === id);
+    return fullPage && !busy && !!template && displayFolders.some(f => f.id === folderId)
+      && (template.folderId !== folderId || template.organisationId !== folderOwner(folderId, template));
+  }, async (id, folderId) => {
+    const template = libraryItems.find(t => t.id === id)!;
+    setError("");
+    await act({ op: "template_transfer", id, copy: false, organisationId: folderOwner(folderId, template), folderId });
+  }, setError);
   const actions = <div className="button-row template-library-actions">
     <button className="button secondary" onClick={() => { setError(""); setFolderDialog({ name: "" }); }}><FolderPlus size={16} />Create folder</button>
     <button className="button primary" onClick={() => setEditing("new")}><Plus size={16} />New template</button>
@@ -147,6 +162,7 @@ export function Templates({ w, orgId, act, onRefresh, onSelect, fullPage = false
       {(orgId || fullPage) && <button className={scope === "owned" ? "active" : ""} onClick={() => { setScope("owned"); setFolder("all"); }}>{fullPage ? orgId ? w.organisations.find(o => o.id === orgId)?.name || "Organisation" : "All organisations" : "Organisation"}</button>}
       <button className={scope === "shared" || (!orgId && !fullPage) ? "active" : ""} onClick={() => { setScope("shared"); setFolder("all"); }}>Shared</button>
     </div>
+    {fullPage && error && !editing && !transfer && !folderDialog && <p className="form-error" role="alert">{error}</p>}
     <div className="template-toolbar">
       <input aria-label="Search templates" placeholder={!fullPage && folder === "all" ? "Search folders…" : "Search names, tags and recipes…"} value={query} onChange={e => setQuery(e.target.value)} />
       {fullPage && <select aria-label="Filter templates by folder" value={folder} onChange={e => setFolder(e.target.value)}><option value="all">All templates</option><option value={generalFolder}>General</option>{folders.map(f => <option key={f.id} value={f.id}>{allLibraries ? `${w.organisations.find(o => o.id === f.organisationId)?.name || "Shared library"} · ${f.name}` : f.name}</option>)}</select>}
@@ -158,7 +174,7 @@ export function Templates({ w, orgId, act, onRefresh, onSelect, fullPage = false
           const templates = libraryItems.filter(t => t.folderId === f.id);
           const previews = [...new Set(templates.map(t => t.exampleImageId).filter(Boolean))].slice(0, 3);
           const org = w.organisations.find(o => o.id === f.organisationId);
-          return <article className="project-card" key={f.id}>
+          return <article {...(fullPage ? templateMoves.target(f.id) : {})} className={`project-card ${fullPage ? templateMoves.target(f.id).className : ""}`} data-template-folder-id={f.id} key={f.id}>
             <button className="project-preview" aria-label={`Open folder ${f.name}`} onClick={() => { if (!fullPage) setQuery(""); setFolder(f.id); }} style={{ background: `${org?.color || "#7654cf"}0e` }}>
               <Folder size={38} style={{ color: org?.color || "#7654cf" }} strokeWidth={1.2} />
               {previews.map((id, i) => <div className="project-paper" key={id} style={{ transform: `rotate(${[0, -9, 9][i]}deg) translateX(${[0, -34, 34][i]}px)`, zIndex: 3 - i }}><ImageView id={id} alt="Template preview" /></div>)}
@@ -176,17 +192,17 @@ export function Templates({ w, orgId, act, onRefresh, onSelect, fullPage = false
     {(fullPage || folder !== "all") && <div className={onSelect ? "library-image-grid" : "asset-grid template-grid"}>{items.map(t => onSelect ? <LibraryImageTile key={t.id} name={t.name} imageId={t.exampleImageId} actions={[
       { label: "Use Template", onSelect: () => onSelect(structuredClone(t)) },
       ...(t.exampleImageId ? [{ label: "Use and Attach as Style", onSelect: () => onSelect(structuredClone(t), true) }] : []),
-    ]} /> : <article className="asset-card template-card" key={t.id}>
-      <button className="asset-preview checker" aria-label={`Edit ${t.name}`} onClick={() => setEditing(t)}><ImageView id={t.exampleImageId} alt={t.name} /></button>
+    ]} /> : <article {...(fullPage ? templateMoves.source(t.id, busy) : {})} className={`asset-card template-card ${fullPage ? templateMoves.source(t.id).className : ""}`} data-template-id={t.id} key={t.id}>
+      <button className="asset-preview checker" draggable={fullPage && !busy} aria-label={`Edit ${t.name}`} onClick={() => setEditing(t)}><ImageView id={t.exampleImageId} alt={t.name} /></button>
       <div className="card-caption">
-        <button className="card-name" onClick={() => setEditing(t)}><strong>{t.name}</strong><small>{allLibraries && `${w.organisations.find(o => o.id === t.organisationId)?.name || "Shared library"} · `}{folders.find(f => f.id === t.folderId)?.name || "General"}</small></button>
+        <button className="card-name" draggable={fullPage && !busy} onClick={() => setEditing(t)}><strong>{t.name}</strong><small>{allLibraries && `${w.organisations.find(o => o.id === t.organisationId)?.name || "Shared library"} · `}{folders.find(f => f.id === t.folderId)?.name || "General"}</small></button>
         <button className="icon-button" aria-label={`Edit ${t.name}`} onClick={() => setEditing(t)}><MoreHorizontal size={18} /></button>
       </div>
     </article>)}</div>}
     {(fullPage || folder !== "all") && !items.length && <Empty icon={<FileImage />} title={query || folder !== "all" ? "No matching templates" : "A home for your reusable recipes"} text={query || folder !== "all" ? "Try another search or folder to find your template." : "Save a visual recipe to give your next design a head start."} action={fullPage ? <button className="button primary" onClick={() => setEditing("new")}><Plus size={16} />New template</button> : undefined} />}
     {editing && !transfer && <TemplateForm w={w} act={act} orgId={selectedFolder ? selectedFolder.organisationId : owner} initialFolderId={selectedFolder?.id} template={editing === "new" ? undefined : editing} onClose={() => setEditing(null)} onRefresh={onRefresh} management={editing === "new" ? undefined : {
       duplicate: async () => { await act({ op: "template_duplicate", id: editing.id }); setEditing(null); },
-      transfer: copy => { setDestination(""); setDestinationFolder(generalFolder); setError(""); setTransfer({ template: editing, copy }); },
+      transfer: copy => { setDestination(editing.organisationId || ""); setDestinationFolder(firstTransferFolder(editing.organisationId || "", editing)); setError(""); setTransfer({ template: editing, copy }); },
       trash: async () => { await act({ op: "delete", kind: "template", id: editing.id }); setEditing(null); },
     }} />}
     {folderDialog && <Modal title={folderDialog.id ? "Edit folder" : "Create folder"} onClose={() => { if (!busy) setFolderDialog(null); }}>
@@ -212,9 +228,9 @@ export function Templates({ w, orgId, act, onRefresh, onSelect, fullPage = false
     </Modal>}
     {transfer && <Modal title={transfer.copy ? "Copy template" : "Move template"} onClose={() => { if (!busy) setTransfer(null); }}>
       <form className="template-form" onSubmit={async e => { e.preventDefault(); setBusy(true); setError(""); try { await act({ op: "template_transfer", id: transfer.template.id, copy: transfer.copy, organisationId: destination || null, folderId: destinationFolder }); setTransfer(null); setEditing(null); } catch(e) { setError(String(e)); } finally { setBusy(false); } }}>
-        <label>Destination library<select value={destination} onChange={e => { setDestination(e.target.value); setDestinationFolder(generalFolder); }}><option value="">Shared</option>{activeOrganisations(w).map(o => <option key={o.id} value={o.id}>{o.name}</option>)}</select></label>
-        <FolderSelect w={w} owner={destination} value={destinationFolder} onChange={setDestinationFolder} />
-        {error && <p role="alert">{error}</p>}<button className="button primary" disabled={busy}>{transfer.copy ? "Copy template" : "Move template"}</button>
+        <label>Destination library<select value={destination} onChange={e => { setDestination(e.target.value); setDestinationFolder(firstTransferFolder(e.target.value, transfer.template)); }}><option value="">Shared</option>{activeOrganisations(w).map(o => <option key={o.id} value={o.id}>{o.name}</option>)}</select></label>
+        <FolderSelect w={w} owner={destination} value={destinationFolder} onChange={setDestinationFolder} excludeFolderId={destination === (transfer.template.organisationId || "") ? transfer.template.folderId : undefined} />
+        {error && <p role="alert">{error}</p>}<button className="button primary" disabled={busy || !destinationFolder}>{transfer.copy ? "Copy template" : "Move template"}</button>
       </form>
     </Modal>}
   </section>;

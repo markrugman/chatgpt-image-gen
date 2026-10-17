@@ -1,5 +1,37 @@
 # Next version design interview
 
+## 0.10.3 release and deployment authorised (2026-10-17)
+
+Mark explicitly requested building, deploying and releasing all current updates. This lifts the earlier publication/deployment holds for canvas corner/Shift resizing and rotation, drawer left-click Place/right-click options, clipboard permission recovery, precise edit recency across libraries, same-organisation Copy/Move and typed library drag moves. Windows packages, immutable server image and the existing local server upgrade are in scope. Qualification/preservation evidence will be added here after verification.
+
+## Copy/Move within organisations and library drag moves — local only (2026-10-17)
+
+Mark paused the earlier build/deploy/release request with “Don't deploy, I have another change to make”. Keep the complete pending set local; no publication/deployment by this follow-up.
+
+Copy to and Move to for designs now begin with their current organisation and offer its other projects, excluding the current project. Creating a new project remains available. Same-organisation moves preserve document/page/history/provider-session identities and existing library references; copies create independent document/page identities while retaining referenced Asset/Upload versions, and leave the source untouched. Cross-organisation transfers retain their existing independent source-library copy behaviour.
+
+Templates use the same current-library default and exclude their current folder for Copy/Move. Main library design cards can be dragged onto project cards; template cards can be dragged onto Template Folders. Matching destinations highlight, and a successful drop moves directly. Designs and templates have separate drag types, including in Overview; cross-type, external, same-location and cancelled drops do not save. In All organisations, dropping a template onto the virtual General folder keeps its owning library. Busy/protected designs cannot be dragged. Touch retains the Copy/Move dialogs; native touch dragging was not added. See [VALIDATION.md](VALIDATION.md).
+
+## Consistent edit recency across libraries — local fix (2026-10-17)
+
+Mark reported Halloween Docs staying behind Test Projects, Sam Photo staying ahead of newly edited designs, and Brain Haemorrhage remaining third after editing. Reproduced: canvas overlay saves did not update document modification dates. The overview already sorted the stale dates correctly. Assets/Uploads drawers additionally retained storage order and Template contents were alphabetical.
+
+All successful Store edits now record precise, monotonic millisecond `modifiedAt` for changed designs, Assets/Uploads and Templates, retaining existing second-resolution dates for compatibility. Unchanged items and reads do not acquire timestamps. The shared sorting logic uses precise dates where present and recorded legacy/version dates otherwise. Overview/project design cards, project/folder recency, Asset/Upload full libraries/drawers/pickers, Template contents and design reference pickers use newest edit first; creation remains the secondary order where known. Original image versions/media remain intact. Unknown historical canvas-edit times cannot be reconstructed; existing recorded dates remain until a new edit. Qualification is in [VALIDATION.md](VALIDATION.md). Local only; no version bump, publication, deployment or installed-app replacement.
+
+## Drawer click placement and right-click menus — local only (2026-10-17)
+
+Mark requested single left-click Place and right-click options in the Assets/Uploads drawers. Both drawers now use direct mouse/keyboard activation to Place, while right-click and Shift+F10/ContextMenu open the existing Add as… / Place menu. Touch taps retain the existing menu. Image pickers, template cards and drawers without a design canvas retain their existing activation behaviour. Dragging remains available and does not trigger an extra click placement. Local implementation only; no version bump, release, push or deployment.
+
+## Overlay corner resizing and canvas rotation — local only (2026-10-17)
+
+Mark requested resizing from all four selection corners and rotating directly on the canvas. All four corners now resize proportionally around the opposite fixed corner, including already-rotated overlays on portrait/landscape pages and at manual zoom. Holding Shift while dragging any corner resizes from the original centre instead, keeping that centre fixed and preserving proportions. The circular handle above a selected overlay rotates around its centre and updates the existing toolbar angle. Each completed gesture saves one undoable layout; cancellation restores the starting geometry, and locked overlays have no transform handles. Larger invisible hit areas make the small corner controls easier to grab. Scope and test evidence are recorded in [VALIDATION.md](VALIDATION.md). Local implementation only; no version bump, push, release, deployment or installed-app replacement.
+
+## First clipboard permission paste — local only (2026-10-17)
+
+Mark requested that the first right-click Paste complete after allowing clipboard access, without needing a second attempt. Reproduced in fresh Edge InPrivate: Allow closed the prompt but the pending read failed and showed the keyboard fallback; the second Paste worked. The canvas now checks granted permission after a `NotAllowedError`, waits briefly for document focus to return (bounded at one second), and retries the read once. Denied/unsupported access and persistent failures keep the keyboard fallback and restore canvas focus; they never paste a stale internal placement. Verification is recorded in [VALIDATION.md](VALIDATION.md).
+
+Mark explicitly requested no deployment or release while more changes are pending. Keep this change local; no version bump, push, release, server update or installed-app replacement by this task.
+
 ## 0.10.2 — all updates published and deployed (2026-10-17)
 
 Mark's subsequent instruction to publish all updates lifted the separate ordering hold. File-drop/proportion fixes and newest-first Asset/Upload/Project/Template ordering are now in [0.10.2](https://github.com/markrugman/chatgpt-image-gen/releases/tag/v0.10.2), source `68a83da67a85eea0a56a22eee8b28edbdd39dd59`, with Windows downloads and public server image. The local server is upgraded with data/sign-in preserved and verified backups. [Validation](VALIDATION.md) is canonical. Prior local-only statements below describe the original implementation stages.

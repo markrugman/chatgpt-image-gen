@@ -39,6 +39,7 @@ export interface Composition {
   framing?: "fit" | "crop" | null;
 }
 export interface Template {
+  modifiedAt?: number;
   createdAt?: number;
   updatedAt?: number;
   id: string;
@@ -122,6 +123,7 @@ export interface EditBatch {
   id: string; source: Composition; historyIndex: number; items: EditItem[]; createdAt: number;
 }
 export interface DesignDocument {
+  modifiedAt?: number;
   id: string;
   projectId: string;
   name: string;
@@ -142,6 +144,7 @@ export interface AssetVersion {
 export type LibraryKind = "asset" | "upload";
 export const libraryKind = (asset: Asset): LibraryKind => asset.libraryKind || "asset";
 export interface Asset {
+  modifiedAt?: number;
   libraryKind?: LibraryKind;
   descriptionJson?: string | null;
   sourceReferences?: string[];

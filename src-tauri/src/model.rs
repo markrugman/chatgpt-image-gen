@@ -1,6 +1,8 @@
 use serde::{Deserialize, Serialize};
 use std::time::{SystemTime, UNIX_EPOCH};
 
+fn is_zero(value: &u64) -> bool { *value == 0 }
+
 pub fn id() -> String {
     uuid::Uuid::new_v4().to_string()
 }
@@ -67,6 +69,8 @@ pub struct Project {
 #[derive(Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Document {
+    #[serde(default, skip_serializing_if = "is_zero")]
+    pub modified_at: u64,
     pub id: String,
     pub project_id: String,
     pub name: String,
@@ -220,6 +224,8 @@ pub struct Overlay {
 #[derive(Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Template {
+    #[serde(default, skip_serializing_if = "is_zero")]
+    pub modified_at: u64,
     #[serde(default)]
     pub created_at: u64,
     #[serde(default)]
@@ -270,6 +276,8 @@ fn is_asset_kind(kind: &String) -> bool { kind == "asset" }
 #[derive(Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Asset {
+    #[serde(default, skip_serializing_if = "is_zero")]
+    pub modified_at: u64,
     #[serde(default = "default_library_kind", skip_serializing_if = "is_asset_kind")]
     pub library_kind: String,
     #[serde(default)]
@@ -309,6 +317,31 @@ pub struct Target {
     pub page_id: String,
 }
 impl Workspace {
+    pub fn record_modifications(&mut self, before: &Workspace) {
+        // A monotonic millisecond timestamp preserves order for rapid edits too.
+        let previous = before.documents.iter().map(|d| d.modified_at)
+            .chain(before.assets.iter().map(|a| a.modified_at))
+            .chain(before.templates.iter().map(|t| t.modified_at)).max().unwrap_or(0);
+        let timestamp = (SystemTime::now().duration_since(UNIX_EPOCH).unwrap_or_default().as_millis() as u64).max(previous + 1);
+        for item in &mut self.documents {
+            if before.documents.iter().find(|old| old.id == item.id).map(|old| serde_json::to_value(old).unwrap()) != Some(serde_json::to_value(&*item).unwrap()) {
+                item.modified_at = timestamp;
+                item.updated_at = timestamp / 1000;
+            }
+        }
+        for item in &mut self.assets {
+            if before.assets.iter().find(|old| old.id == item.id).map(|old| serde_json::to_value(old).unwrap()) != Some(serde_json::to_value(&*item).unwrap()) {
+                item.modified_at = timestamp;
+            }
+        }
+        for item in &mut self.templates {
+            if before.templates.iter().find(|old| old.id == item.id).map(|old| serde_json::to_value(old).unwrap()) != Some(serde_json::to_value(&*item).unwrap()) {
+                item.modified_at = timestamp;
+                item.updated_at = timestamp / 1000;
+            }
+        }
+    }
+
     pub fn reference_image(&self, reference: &str) -> Result<&str, String> {
         if let Some(image_id) = reference.strip_prefix("image:") {
             return self
@@ -390,6 +423,7 @@ impl Workspace {
         let mut page = Page::new("Page 1");
         page.history[0].image_id = source_image_id;
         self.documents.push(Document {
+            modified_at: 0,
             id: doc_id.clone(),
             project_id,
             name: name.trim().into(),
@@ -485,6 +519,25 @@ mod tests {
         )
     }
     #[test]
+    fn modification_times_track_changes_without_touching_reads_or_legacy_records() {
+        let (mut workspace, target) = sample();
+        let original = workspace.clone();
+        workspace.record_modifications(&original);
+        assert_eq!(workspace.documents[0].modified_at, 0);
+        assert!(serde_json::to_value(&workspace).unwrap()["documents"][0].get("modifiedAt").is_none());
+        workspace.page_mut(&target).unwrap().history[0].framing = Some("crop".into());
+        workspace.record_modifications(&original);
+        let first = workspace.documents[0].modified_at;
+        assert!(first > 0);
+        let before = workspace.clone();
+        workspace.documents[0].tags.push("edited".into());
+        workspace.record_modifications(&before);
+        assert!(workspace.documents[0].modified_at > first);
+        let before = workspace.clone();
+        workspace.record_modifications(&before);
+        assert_eq!(workspace.documents[0].modified_at, before.documents[0].modified_at);
+    }
+    #[test]
     fn restore_preserves_future_revisions_and_context() {
         let (mut w, t) = sample();
         for n in 1..=3 {
@@ -512,6 +565,7 @@ mod tests {
     fn deleted_asset_keeps_exact_version_reachable() {
         let mut w = Workspace::default();
         w.assets.push(Asset {
+            modified_at: 0,
             library_kind: "asset".into(),
             description_json: None,
             source_references: vec![],

@@ -129,6 +129,7 @@ pub fn change(w: &mut Workspace, a: &Value) -> Result<Value, String> {
         let org = owner(a);
         crate::organisations::require_active(w, org.as_deref())?;
         let mut t = Template {
+            modified_at: 0,
             created_at: now(),
             updated_at: now(),
             id: a["id"].as_str().map(String::from).unwrap_or_else(id),
@@ -574,6 +575,7 @@ mod tests {
                     created_at: now(),
                 });
                 w.assets.push(Asset {
+                    modified_at: 0,
                     library_kind: "asset".into(),
                     description_json: None,
                     source_references: vec![],

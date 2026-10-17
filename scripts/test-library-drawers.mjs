@@ -1,8 +1,8 @@
-import { createServer } from 'vite';
+import { preview } from 'vite';
 import { chromium, webkit, expect } from '@playwright/test';
 import assert from 'node:assert/strict';
 
-// Isolated development-frontend fixture: no real workspace writes or generation.
+// Isolated compiled-frontend fixture: no real workspace writes or generation.
 const image = 'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="400" height="200"><rect width="400" height="200" fill="#bda1f5"/><circle cx="200" cy="100" r="70" fill="#6540b7"/></svg>');
 const pageData = { id: 'page', name: 'Page 1', messages: [], revisions: [], history: [{ imageId: null, revisionId: null, overlays: [] }], historyIndex: 0 };
 const workspace = {
@@ -13,7 +13,7 @@ const workspace = {
   images: [{ id: 'image', width: 400, height: 200, mime: 'image/svg+xml' }], customSizes: [], handoffs: {}, templateFolders: [],
   templates: Array.from({ length: 3 }, (_, i) => ({ id: `template${i}`, name: `Template ${i}`, recipe: 'Hidden recipe text', usageNotes: 'Hidden usage notes', exampleImageId: 'image', organisationId: 'org', folderId: 'general', tags: ['hidden tag'], version: 1 })),
 };
-const server = await createServer({ server: { host: '127.0.0.1', port: 0, strictPort:false } }); await server.listen();
+const server = await preview({ preview: { host: '127.0.0.1', port: 0, strictPort: false } });
 const origin = `http://127.0.0.1:${server.httpServer.address().port}`;
 try {
   for (const [name, engine, options] of [['Edge', chromium, { channel: 'msedge' }], ['WebKit', webkit, {}]]) {
@@ -46,7 +46,7 @@ try {
           await expect(grid).not.toContainText('Hidden');
           for (const index of [0, 1, 2]) {
             const trigger = grid.locator('.library-image .library-image-trigger').nth(index);
-            await trigger.click();
+            await trigger.click(tab === 'Templates' ? {} : { button: 'right' });
             const menu = drawer.getByRole('menu');
             await expect(menu).toBeVisible();
             await expect(menu.getByRole('menuitem')).toHaveText(tab === 'Templates' ? ['Use Template', 'Use and Attach as Style'] : ['Add as…', 'Place']);
@@ -59,7 +59,7 @@ try {
             await expect(trigger).toBeFocused();
           }
           if (tab !== 'Templates') {
-            await grid.locator('.library-image .library-image-trigger').first().click();
+            await grid.locator('.library-image .library-image-trigger').first().click({ button: 'right' });
             await page.getByRole('menuitem', { name: 'Add as…', exact: true }).click();
             await expect(drawer.getByRole('menuitem')).toHaveText(['Back', 'Style', 'Subject', 'Logo', 'Other']);
             await page.keyboard.press('Escape');
@@ -88,4 +88,4 @@ try {
       }
     } finally { await browser.close(); }
   }
-} finally { await server.close(); }
+} finally { await new Promise(resolve => server.httpServer.close(resolve)); }

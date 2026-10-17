@@ -154,6 +154,7 @@ mod tests {
                     created_at: 1,
                 };
                 w.assets.push(Asset {
+                    modified_at: 0,
                     library_kind: "asset".into(),
                     description_json: None,
                     source_references: vec![],

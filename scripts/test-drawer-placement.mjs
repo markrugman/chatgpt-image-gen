@@ -57,6 +57,31 @@ try {
           assert.equal(writes.at(-1), 'overlays');
           assert.equal(last().assetVersionId, kind + '-v');
         };
+        for (const [label, kind] of [['Assets', 'asset'], ['Uploads', 'upload']]) {
+          await tab(label);
+          const before = writes.length, history = p.historyIndex;
+          await source(kind).click();
+          await expect.poll(() => writes.length).toBe(before + 1);
+          await expect(page.locator('.library-image-menu')).toHaveCount(0);
+          assert.equal(last().assetVersionId, kind + '-v');
+          assert.equal(p.historyIndex, history + 1);
+          await source(kind).click({ button: 'right' });
+          const menu = page.locator('.editor-library').getByRole('menu');
+          await expect(menu).toBeVisible();
+          assert.equal(writes.length, before + 1, 'Right-click must not place');
+          await page.getByRole('menuitem', { name: 'Add as…', exact: true }).click();
+          await expect(menu.getByRole('menuitem')).toHaveText(['Back', 'Style', 'Subject', 'Logo', 'Other']);
+          await page.keyboard.press('Escape'); await page.keyboard.press('Escape');
+          await source(kind).focus(); await page.keyboard.press('Shift+F10');
+          await expect(menu).toBeVisible();
+          await page.keyboard.press('Escape');
+          await source(kind).press('Enter');
+          await expect.poll(() => writes.length).toBe(before + 2);
+          await expect(menu).toHaveCount(0);
+          // Clear these placements so the existing drag/undo assertions start empty.
+          await surface.press('Control+z'); await expect.poll(() => p.historyIndex).toBe(history + 1);
+          await surface.press('Control+z'); await expect.poll(() => p.historyIndex).toBe(history);
+        }
         await tab('Assets');
         await drag('asset', 50, 50);
         assert(Math.abs(last().x - 37.5) < .2);
@@ -85,7 +110,7 @@ try {
         assert.equal(last().height, 80);
         assert(Math.abs(last().width * dw / (last().height * dh) - .05) < 1e-8);
         await source('tall').click();
-        await page.getByRole('menuitem', { name: 'Place', exact: true }).click();
+        await expect(page.locator('.library-image-menu')).toHaveCount(0);
         await expect.poll(() => writes.length).toBe(cancelled + 2);
         assert.equal(last().height, 80); assert.equal(last().x, 8);
         assert(Math.abs(last().width * dw / (last().height * dh) - .05) < 1e-8);

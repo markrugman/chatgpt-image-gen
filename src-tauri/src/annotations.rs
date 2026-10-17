@@ -92,7 +92,7 @@ pub fn apply(w: &mut Workspace, target: &Target, batch_id: &str) -> Result<(), S
             let version_id = id();
             let mut page = Page::new("Asset");
             page.history[0].image_id = Some(result.clone());
-            w.assets.push(Asset { library_kind: "asset".into(), description_json: None, source_references: vec![format!("image:{}", item.source_image_id)], id: id(), name: format!("{} — edited", item.name), organisation_id: Some(organisation.clone()), tags: vec![], versions: vec![AssetVersion { id: version_id.clone(), image_id: result.clone(), created_at: now() }], current_version_id: Some(version_id.clone()), page, deleted_at: None });
+            w.assets.push(Asset { modified_at: 0, library_kind: "asset".into(), description_json: None, source_references: vec![format!("image:{}", item.source_image_id)], id: id(), name: format!("{} — edited", item.name), organisation_id: Some(organisation.clone()), tags: vec![], versions: vec![AssetVersion { id: version_id.clone(), image_id: result.clone(), created_at: now() }], current_version_id: Some(version_id.clone()), page, deleted_at: None });
             overlay.asset_version_id = version_id;
         }
     }
@@ -178,7 +178,7 @@ mod tests {
         for name in ["base","original","candidate","new-base","wrong-ratio"] {
             w.images.push(ImageRecord { id: name.into(), file: format!("{name}.png"), width: if name == "wrong-ratio" { 200 } else { 100 }, height: 100, mime: "image/png".into() });
         }
-        w.assets.push(Asset { library_kind: "upload".into(), description_json: None, source_references: vec![], id: "source".into(), name: "Shared upload".into(), organisation_id: None, tags: vec![], versions: vec![AssetVersion { id: "version".into(), image_id: "original".into(), created_at: 0 }], current_version_id: Some("version".into()), page: Page::new("Upload"), deleted_at: None });
+        w.assets.push(Asset { modified_at: 0, library_kind: "upload".into(), description_json: None, source_references: vec![], id: "source".into(), name: "Shared upload".into(), organisation_id: None, tags: vec![], versions: vec![AssetVersion { id: "version".into(), image_id: "original".into(), created_at: 0 }], current_version_id: Some("version".into()), page: Page::new("Upload"), deleted_at: None });
         let o = Overlay { id: "one".into(), asset_version_id: "version".into(), x: 10., y: 20., width: 30., height: 40., rotation: 45., locked: false };
         w.page_mut(&target).unwrap().history[0].overlays = vec![o.clone(), Overlay { id: "two".into(), ..o }];
         w.page_mut(&target).unwrap().region_notes = vec![RegionNote { id: "n".into(), target_key: "one".into(), source_image_id: "original".into(), x: 0.05, y: 0.02, width: 0.95, height: 0.95, text: "Change the whole phone background to red".into(), enabled: true }];

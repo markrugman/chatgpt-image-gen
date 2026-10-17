@@ -145,12 +145,9 @@ pub fn change(w: &mut Workspace, action: &Value) -> Result<Value, String> {
         .position(|d| d.id == item_id && d.deleted_at.is_none())
         .ok_or("Design not found")?;
     let mut doc = w.documents[index].clone();
-    if w.projects
+    let same_organisation = w.projects
         .iter()
-        .any(|p| p.id == doc.project_id && p.organisation_id == org)
-    {
-        return Err("Choose a different organisation".into());
-    }
+        .any(|p| p.id == doc.project_id && p.organisation_id == org);
     let project_id = if let Some(project) = action["projectId"].as_str().filter(|s| !s.is_empty()) {
         if !w
             .projects
@@ -178,6 +175,24 @@ pub fn change(w: &mut Workspace, action: &Value) -> Result<Value, String> {
         w.projects.push(project);
         result
     };
+    if same_organisation {
+        if doc.project_id == project_id {
+            return Err("Choose a different project".into());
+        }
+        if !moving {
+            let mut value = serde_json::to_value(&doc).unwrap();
+            let mut ids = HashMap::new();
+            identities(&value, &mut ids);
+            remap(&mut value, &ids);
+            doc = serde_json::from_value(value).map_err(|e| e.to_string())?;
+            for page in &mut doc.pages { detach(page); }
+        }
+        doc.project_id = project_id;
+        doc.updated_at = now();
+        let result = doc.id.clone();
+        if moving { w.documents[index] = doc; } else { w.documents.push(doc); }
+        return Ok(json!(result));
+    }
     let mut refs = HashSet::new();
     references(&serde_json::to_value(&doc).unwrap(), &mut refs);
     // Include transitive library references so copied artwork can still be refined.
@@ -335,6 +350,41 @@ mod tests {
     }
     fn transfer(w: &Workspace, mode: &str) -> Value {
         json!({"op":"transfer","kind":"document","id":w.documents[0].id,"mode":mode,"organisationId":"destination","projectId":"destination-project"})
+    }
+    #[test]
+    fn moves_design_between_projects_in_its_organisation_without_copying_sources() {
+        let mut w = fixture();
+        let mut project = w.projects[0].clone();
+        project.id = "another-project".into();
+        w.projects.push(project);
+        let before = serde_json::to_value(&w).unwrap();
+        let request = json!({"op":"transfer","kind":"document","id":w.documents[0].id,"mode":"move","organisationId":"source","projectId":"another-project"});
+        let result = change(&mut w, &request).unwrap();
+        assert_eq!(result, before["documents"][0]["id"]);
+        assert_eq!(w.documents[0].project_id, "another-project");
+        assert_eq!(serde_json::to_value(&w.assets).unwrap(), before["assets"]);
+        assert_eq!(serde_json::to_value(&w.documents[0].pages).unwrap(), before["documents"][0]["pages"]);
+        assert_eq!(w.documents.len(), 1);
+    }
+    #[test]
+    fn copies_design_within_organisation_without_copying_library_and_rejects_current_project() {
+        let mut w = fixture();
+        let mut project = w.projects[0].clone();
+        project.id = "another-project".into();
+        w.projects.push(project);
+        let before = serde_json::to_value(&w).unwrap();
+        let mut request = json!({"op":"transfer","kind":"document","id":w.documents[0].id,"mode":"copy","organisationId":"source","projectId":"source-project"});
+        assert!(change(&mut w, &request).is_err());
+        request["projectId"] = json!("another-project");
+        let result = change(&mut w, &request).unwrap();
+        assert_ne!(result, before["documents"][0]["id"]);
+        assert_eq!(w.documents.len(), 2);
+        assert_eq!(w.documents[1].project_id, "another-project");
+        assert_eq!(serde_json::to_value(&w.documents[0]).unwrap(), before["documents"][0]);
+        assert_eq!(serde_json::to_value(&w.assets).unwrap(), before["assets"]);
+        assert_eq!(w.documents[1].pages[0].history[0].overlays[0].asset_version_id, "v1");
+        assert_ne!(w.documents[1].pages[0].id, w.documents[0].pages[0].id);
+        assert!(w.documents[1].pages[0].thread_id.is_none());
     }
     #[test]
     fn copies_history_and_only_used_library_versions_with_independent_identities() {

@@ -52,6 +52,12 @@ impl Store {
         base: Option<&Workspace>,
         edit: impl FnOnce(&mut Workspace) -> Result<T, String>,
     ) -> Result<T, String> {
+        let edit = |workspace: &mut Workspace| {
+            let before = workspace.clone();
+            let result = edit(workspace)?;
+            workspace.record_modifications(&before);
+            Ok(result)
+        };
         let mut slot = self.remote.lock().map_err(|_| "Workspace lock failed")?;
         if let Some(r) = slot.as_mut() {
             let base = base.unwrap_or(&r.snapshot.workspace).clone();

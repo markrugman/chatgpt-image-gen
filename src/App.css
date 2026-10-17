@@ -1977,6 +1977,38 @@ label small {
 .resize-handle {
   cursor: nwse-resize;
   pointer-events: auto;
+  touch-action: none;
+}
+.resize-handle::after {
+  content: "";
+  position: absolute;
+  inset: -7px;
+}
+.top-right.resize-handle, .bottom-left.resize-handle {
+  cursor: nesw-resize;
+}
+.rotation-stem {
+  position: absolute;
+  left: 50%;
+  top: -25px;
+  height: 23px;
+  border-left: 1px solid #ac80d8;
+  pointer-events: none;
+}
+.rotation-handle {
+  position: absolute;
+  left: 50%;
+  top: -34px;
+  transform: translateX(-50%);
+  width: 20px;
+  height: 20px;
+  display: grid;
+  place-items: center;
+  border: 1px solid #ac80d8;
+  border-radius: 50%;
+  background: #fff;
+  color: #7547a1;
+  cursor: grab;
 }
 .generation-indicator {
   display: flex;
@@ -3482,3 +3514,7 @@ label small {
 .region-compare-toggle button[aria-pressed=true] { color: var(--accent); background: var(--soft); }
 .region-result-preview { position: absolute; inset: 0; z-index: 20; width: 100%; height: 100%; pointer-events: none; }
 @media(max-width:600px) { .region-focus-label { font-size: 11px; } .region-inline-instruction input { font-size: 16px; } .region-review-card button, .region-inline-instruction button, .region-focus-label button { min-height: 44px; min-width: 44px; } }
+
+.library-moving { opacity: .5; }
+.library-move-target { outline: 2px solid #9670cd; outline-offset: 2px; background: var(--theme-soft, #f1ecfa); }
+.document-card[draggable="true"], .template-card[draggable="true"] { cursor: grab; }

@@ -23,9 +23,12 @@ export function TransferDialog({
   const sourceOrg =
     asset?.organisationId ||
     w.projects.find((p) => p.id === doc?.projectId)?.organisationId;
-  const organisations = activeOrganisations(w).filter((o) => o.id !== sourceOrg);
-  const [org, setOrg] = useState(organisations[0]?.id || "");
-  const [project, setProject] = useState(""),
+  const design = item.kind === "document";
+  const organisations = activeOrganisations(w).filter((o) => design || o.id !== sourceOrg);
+  const initialOrg = design ? sourceOrg || organisations[0]?.id || "" : organisations[0]?.id || "";
+  const projectsIn = (orgId: string) => w.projects.filter(p => !p.deletedAt && p.organisationId === orgId && p.id !== doc?.projectId);
+  const [org, setOrg] = useState(initialOrg);
+  const [project, setProject] = useState(design ? projectsIn(initialOrg)[0]?.id || "" : ""),
     [projectName, setProjectName] = useState("");
   const [busy, setBusy] = useState(false),
     [error, setError] = useState("");
@@ -63,7 +66,7 @@ export function TransferDialog({
               value={org}
               onChange={(e) => {
                 setOrg(e.target.value);
-                setProject("");
+                setProject(design ? projectsIn(e.target.value)[0]?.id || "" : "");
               }}
             >
               {!organisations.length && (
@@ -85,8 +88,7 @@ export function TransferDialog({
                   onChange={(e) => setProject(e.target.value)}
                 >
                   <option value="">Create a new project…</option>
-                  {w.projects
-                    .filter((p) => !p.deletedAt && p.organisationId === org)
+                  {projectsIn(org)
                     .map((p) => (
                       <option key={p.id} value={p.id}>
                         {p.name}
@@ -106,9 +108,9 @@ export function TransferDialog({
                 </label>
               )}
               <p>
-                Pages, conversations, and history are preserved. Used assets and
-                uploads receive independent copies in the destination; source
-                library items stay available.
+                {design && org === sourceOrg
+                  ? "Pages, conversations, history, and library references are preserved."
+                  : "Pages, conversations, and history are preserved. Used assets and uploads receive independent copies in the destination; source library items stay available."}
               </p>
             </>
           )}
