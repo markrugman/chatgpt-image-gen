@@ -1,5 +1,9 @@
 # Next version design interview
 
+## 0.10.2 — all updates published and deployed (2026-10-17)
+
+Mark's subsequent instruction to publish all updates lifted the separate ordering hold. File-drop/proportion fixes and newest-first Asset/Upload/Project/Template ordering are now in [0.10.2](https://github.com/markrugman/chatgpt-image-gen/releases/tag/v0.10.2), source `68a83da67a85eea0a56a22eee8b28edbdd39dd59`, with Windows downloads and public server image. The local server is upgraded with data/sign-in preserved and verified backups. [Validation](VALIDATION.md) is canonical. Prior local-only statements below describe the original implementation stages.
+
 ## 0.10.2 release and server update authorised (2026-10-17)
 
 Mark requested building and publishing the external-file canvas-drop, original-proportion and Uploads drop-feedback fixes as 0.10.2, including Windows downloads and the server image, then updating the existing local server. Mark subsequently requested publishing all updates: Asset/Upload library ordering and Project/Template folder ordering are included too. This lifts their earlier local-only holds. Qualification and preservation evidence will be recorded in VALIDATION.md.

@@ -7,7 +7,7 @@
 - Full Uploads-library drops have clearer guidance and recognise file items as well as the standard Files drag type.
 - Keep successful files after individual batch failures and apply their placements as one undo step. Original image bytes and Uploads remain available after Undo.
 - Assets and Uploads sort newest first. Projects and Template folders sort by the latest modification inside them, with creation dates breaking ties. Empty folders use their own dates; legacy unknown dates remain unknown.
-- Windows installer, portable app, companion and immutable Linux server image are being prepared for publication, including all pending updates.
+- Windows installer, portable app, companion and immutable Linux server image are published. The local server is upgraded with its workspace, images and sign-in preserved.
 
 ## New in 0.10.1 — inline canvas editing (2026-10-17)
 

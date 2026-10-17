@@ -1,5 +1,7 @@
 # Building and releasing Image Gen
 
+Current release and local server: [0.10.2](https://github.com/markrugman/chatgpt-image-gen/releases/tag/v0.10.2) (2026-10-17), source `68a83da67a85eea0a56a22eee8b28edbdd39dd59`, all-success [workflow](https://github.com/markrugman/chatgpt-image-gen/actions/runs/39044328340). All pending drop/proportion and library/folder-order updates are published with Windows Setup/Portable/Companion and immutable GHCR image. Private production is `releases/v0102-release` using the public image, with verified stopped-volume/off-host backups and unchanged workspace/media, sessions/jobs, configuration and signed-in worker. [VALIDATION.md](VALIDATION.md) records evidence/limitations. Earlier holds and current-version statements below are historical.
+
 ## 0.10.2 release and server update authorised (2026-10-17)
 
 Mark requested building and publishing the external-file canvas-drop, original-proportion and Uploads drop-feedback fixes as 0.10.2, including Windows downloads and the server image, then updating the existing local server. Mark subsequently requested publishing all updates: Asset/Upload library ordering and Project/Template folder ordering are included too. This lifts their earlier local-only holds. Qualification and preservation evidence will be recorded in VALIDATION.md.
