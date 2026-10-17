@@ -54,6 +54,10 @@ pub struct Organisation {
 #[derive(Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Project {
+    #[serde(default)]
+    pub created_at: u64,
+    #[serde(default)]
+    pub updated_at: u64,
     pub id: String,
     pub organisation_id: String,
     pub name: String,
@@ -216,6 +220,10 @@ pub struct Overlay {
 #[derive(Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Template {
+    #[serde(default)]
+    pub created_at: u64,
+    #[serde(default)]
+    pub updated_at: u64,
     pub id: String,
     pub name: String,
     pub recipe: String,
@@ -230,6 +238,10 @@ pub struct Template {
 #[derive(Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct TemplateFolder {
+    #[serde(default)]
+    pub created_at: u64,
+    #[serde(default)]
+    pub updated_at: u64,
     pub id: String,
     pub name: String,
     pub organisation_id: Option<String>,
@@ -443,6 +455,8 @@ mod tests {
     fn sample() -> (Workspace, Target) {
         let mut w = Workspace::default();
         w.projects.push(Project {
+            created_at: now(),
+            updated_at: now(),
             id: "p".into(),
             organisation_id: "o".into(),
             name: "Halloween".into(),

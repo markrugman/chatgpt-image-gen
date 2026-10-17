@@ -205,6 +205,8 @@ pub async fn mutate(
                     return Err("Organisation not found".into());
                 }
                 let p = Project {
+                    created_at: now(),
+                    updated_at: now(),
                     id: id(),
                     organisation_id: org,
                     name: text(&action, "name")?,
@@ -340,6 +342,7 @@ pub async fn mutate(
                         if operation == "tags" || action.get("tags").is_some() {
                             p.tags = tags;
                         }
+                        p.updated_at = now();
                     }
                     "asset" => {
                         let a = w

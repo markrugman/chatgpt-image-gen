@@ -172,7 +172,7 @@ mod tests {
     fn fixture() -> (Workspace, Target) {
         let mut w = Workspace::default();
         w.organisations.push(Organisation { id: "org".into(), name: "Organisation".into(), color: "purple".into(), position: None, deleted_at: None, trashed_items: vec![] });
-        w.projects.push(Project { id: "project".into(), organisation_id: "org".into(), name: "Project".into(), tags: vec![], deleted_at: None });
+        w.projects.push(Project { created_at: now(), updated_at: now(), id: "project".into(), organisation_id: "org".into(), name: "Project".into(), tags: vec![], deleted_at: None });
         let d = w.add_document("project".into(), "Design".into(), 100., 80., "px".into(), None, Some("base".into())).unwrap();
         let target = Target { kind: "document".into(), id: d, page_id: w.documents[0].pages[0].id.clone() };
         for name in ["base","original","candidate","new-base","wrong-ratio"] {

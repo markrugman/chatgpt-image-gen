@@ -166,6 +166,8 @@ pub fn change(w: &mut Workspace, action: &Value) -> Result<Value, String> {
             return Err("Enter a destination project name".into());
         }
         let project = Project {
+            created_at: now(),
+            updated_at: now(),
             id: id(),
             organisation_id: org.into(),
             name: name.into(),
@@ -262,6 +264,8 @@ mod tests {
                 color: "#7654cf".into(),
             });
             w.projects.push(Project {
+                created_at: now(),
+                updated_at: now(),
                 id: format!("{org}-project"),
                 organisation_id: org.into(),
                 name: org.into(),

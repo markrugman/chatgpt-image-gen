@@ -112,8 +112,11 @@ pub fn change(w: &mut Workspace, a: &Value) -> Result<Value, String> {
                 return Err("Folder belongs to another library".into());
             }
             f.name = name;
+            f.updated_at = now();
         } else {
             w.template_folders.push(TemplateFolder {
+                created_at: now(),
+                updated_at: now(),
                 id: id.clone(),
                 name,
                 organisation_id: org,
@@ -126,6 +129,8 @@ pub fn change(w: &mut Workspace, a: &Value) -> Result<Value, String> {
         let org = owner(a);
         crate::organisations::require_active(w, org.as_deref())?;
         let mut t = Template {
+            created_at: now(),
+            updated_at: now(),
             id: a["id"].as_str().map(String::from).unwrap_or_else(id),
             name: text(a, "name")?,
             recipe: text(a, "recipe")?,
@@ -154,6 +159,7 @@ pub fn change(w: &mut Workspace, a: &Value) -> Result<Value, String> {
                 return Err("Template changed. Reload before saving.".into());
             }
             t.version = old.version + 1;
+            t.created_at = old.created_at;
             *old = t.clone();
         } else {
             w.templates.push(t.clone());
@@ -169,7 +175,9 @@ pub fn change(w: &mut Workspace, a: &Value) -> Result<Value, String> {
         .clone();
     crate::organisations::require_active(w, source.organisation_id.as_deref())?;
     let mut t = source.clone();
+    t.updated_at = now();
     if op == "template_duplicate" {
+        t.created_at = now();
         t.id = id();
         t.name = format!("Copy of {}", t.name);
         t.version = 1;
@@ -179,6 +187,7 @@ pub fn change(w: &mut Workspace, a: &Value) -> Result<Value, String> {
         crate::organisations::require_active(w, t.organisation_id.as_deref())?;
         t.folder_id = a["folderId"].as_str().unwrap_or("general").into();
         if a["copy"] == true {
+            t.created_at = now();
             t.id = id();
             t.version = 1;
             w.templates.push(t.clone());
@@ -281,6 +290,48 @@ mod tests {
         json!({"op":"template_save","name":"Avatar","recipe":"Portrait in blue","exampleImageId":"img","tags":["Vector"],"usageNotes":"Attach subject photos"})
     }
     #[test]
+    fn dates_survive_edits_copies_and_reload() {
+        let mut w = fixture();
+        let folder = change(&mut w, &json!({"op":"template_folder","name":"Avatars"})).unwrap();
+        assert!(w.template_folders[0].created_at > 0);
+        w.template_folders[0].created_at = 1;
+        w.template_folders[0].updated_at = 1;
+        change(&mut w, &json!({"op":"template_folder","id":folder,"name":"Portraits"})).unwrap();
+        assert_eq!(w.template_folders[0].created_at, 1);
+        assert!(w.template_folders[0].updated_at > 1);
+        let mut action = save();
+        action["folderId"] = folder;
+        let id = change(&mut w, &action).unwrap();
+        assert!(w.templates[0].created_at > 0);
+        w.templates[0].created_at = 2;
+        w.templates[0].updated_at = 2;
+        action["id"] = id.clone();
+        action["version"] = json!(1);
+        change(&mut w, &action).unwrap();
+        assert_eq!(w.templates[0].created_at, 2);
+        assert!(w.templates[0].updated_at > 2);
+        change(&mut w, &json!({"op":"template_duplicate","id":id})).unwrap();
+        assert!(w.templates[1].created_at > 2);
+        assert!(w.templates[1].updated_at >= w.templates[1].created_at);
+        let saved = serde_json::to_value(&w).unwrap();
+        let reloaded: Workspace = serde_json::from_value(saved.clone()).unwrap();
+        assert_eq!(serde_json::to_value(reloaded).unwrap(), saved);
+    }
+    #[test]
+    fn legacy_folder_project_and_template_dates_default_to_unknown() {
+        let project: Project = serde_json::from_value(json!({"id":"p","organisationId":"o","name":"Project","tags":[],"deletedAt":null})).unwrap();
+        let folder: TemplateFolder = serde_json::from_value(json!({"id":"f","organisationId":null,"name":"Folder"})).unwrap();
+        let mut w = fixture();
+        change(&mut w, &save()).unwrap();
+        let mut value = serde_json::to_value(&w.templates[0]).unwrap();
+        value.as_object_mut().unwrap().remove("createdAt");
+        value.as_object_mut().unwrap().remove("updatedAt");
+        let template: Template = serde_json::from_value(value).unwrap();
+        assert_eq!((project.created_at, project.updated_at), (0, 0));
+        assert_eq!((folder.created_at, folder.updated_at), (0, 0));
+        assert_eq!((template.created_at, template.updated_at), (0, 0));
+    }
+    #[test]
     fn recipe_only_templates_can_be_saved_reloaded_and_enriched_later() {
         let mut w = fixture();
         let minimal = json!({"op":"template_save","name":"Recipe only","recipe":"Portrait in blue"});
@@ -365,6 +416,8 @@ mod tests {
             trashed_items: vec![],
         });
         w.projects.push(Project {
+            created_at: now(),
+            updated_at: now(),
             id: "project".into(),
             organisation_id: "org".into(),
             name: "Portraits".into(),

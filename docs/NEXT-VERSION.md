@@ -2,7 +2,12 @@
 
 ## 0.10.2 release and server update authorised (2026-10-17)
 
-Mark requested building and publishing the external-file canvas-drop, original-proportion and Uploads drop-feedback fixes as 0.10.2, including Windows downloads and the server image, then updating the existing local server. Separate library/folder-ordering work remains held and is excluded from this release. Qualification and preservation evidence will be recorded in VALIDATION.md.
+Mark requested building and publishing the external-file canvas-drop, original-proportion and Uploads drop-feedback fixes as 0.10.2, including Windows downloads and the server image, then updating the existing local server. Mark subsequently requested publishing all updates: Asset/Upload library ordering and Project/Template folder ordering are included too. This lifts their earlier local-only holds. Qualification and preservation evidence will be recorded in VALIDATION.md.
+
+
+## Library and folder ordering — local only (2026-10-17)
+
+Mark requested newest-first Asset/Upload libraries and Project/Template folder cards, with creation descending as the secondary order. He clarified that project modification must come from the designs inside it. Implemented: projects use the latest active design modification; template folders use the latest active template modification. Empty folders fall back to their own dates. New project/folder/template timestamps are persisted; absent historical dates remain unknown. Assets/Uploads use newest/earliest image-version dates. Build, 56 frontend tests, 40 shared backend tests and compiled Edge/WebKit regressions pass; details in [VALIDATION.md](VALIDATION.md). Local only: do not publish, release or deploy these changes yet.
 
 ## External file drops and original proportions — local fix (2026-10-17)
 

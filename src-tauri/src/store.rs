@@ -284,6 +284,8 @@ mod tests {
                     color: "purple".into(),
                 });
                 w.projects.push(Project {
+                    created_at: now(),
+                    updated_at: now(),
                     id: "project".into(),
                     organisation_id: "org".into(),
                     name: "Halloween".into(),

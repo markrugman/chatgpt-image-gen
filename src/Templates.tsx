@@ -4,6 +4,7 @@ import { api } from "./api";
 import { LibraryImageTile } from "./LibraryImages";
 import { Empty, ImageView, Modal, PageHeading, SectionHeading, type Act } from "./ui";
 import { activeOrganisations, matchesSearch, type Message, type Template, type Workspace } from "./types";
+import { folderDates, newestFirst } from "./folderOrdering";
 
 export type TemplateSource = { imageId: string; recipe: string; messages?: Message[] };
 export const generalFolder = "general";
@@ -129,8 +130,11 @@ export function Templates({ w, orgId, act, onRefresh, onSelect, fullPage = false
   const libraryItems = (w.templates || []).filter(t => !t.deletedAt && (allLibraries || t.organisationId === owner));
   const items = libraryItems.filter(t => (folder === "all" || t.folderId === folder)
     && matchesSearch(`${t.name} ${t.recipe}`, t.tags, query)).sort((a,b) => a.name.localeCompare(b.name));
-  const displayFolders = [{ id: generalFolder, name: "General", organisationId: owner }, ...folders]
-    .sort((a,b) => a.name.localeCompare(b.name)).filter(f => fullPage || matchesSearch(f.name, [], query));
+  const displayFolders = [{ id: generalFolder, name: "General", organisationId: owner, createdAt: 0, updatedAt: 0 }, ...folders]
+    .sort((a,b) => newestFirst(
+      folderDates(a, libraryItems.filter(t => t.folderId === a.id)),
+      folderDates(b, libraryItems.filter(t => t.folderId === b.id)),
+    )).filter(f => fullPage || matchesSearch(f.name, [], query));
   const actions = <div className="button-row template-library-actions">
     <button className="button secondary" onClick={() => { setError(""); setFolderDialog({ name: "" }); }}><FolderPlus size={16} />Create folder</button>
     <button className="button primary" onClick={() => setEditing("new")}><Plus size={16} />New template</button>

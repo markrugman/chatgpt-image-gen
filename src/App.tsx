@@ -54,6 +54,7 @@ import { UserMenu } from "./UserMenu";
 import { useNavigation } from "./navigation";
 import { useUploads, useUploadDrop } from "./Uploads";
 import type { OverlayClipboard } from "./overlayOperations";
+import { folderDates, newestFirst } from "./folderOrdering";
 
 export default function App() {
   const compact = useCompactLayout();
@@ -206,7 +207,10 @@ export default function App() {
   const organisation = organisations.find((o) => o.id === orgId);
   const visibleProjects = w.projects.filter(
     (p) => !p.deletedAt && (orgId === "all" || p.organisationId === orgId),
-  );
+  ).sort((a, b) => newestFirst(
+    folderDates(a, w.documents.filter(d => !d.deletedAt && d.projectId === a.id)),
+    folderDates(b, w.documents.filter(d => !d.deletedAt && d.projectId === b.id)),
+  ));
   const docs = w.documents.filter(
     (d) =>
       !d.deletedAt &&
@@ -218,7 +222,13 @@ export default function App() {
       !a.deletedAt &&
       (route === "uploads" ? libraryKind(a) === "upload" : libraryKind(a) === "asset") &&
       (libraryScope === "shared" ? !a.organisationId : orgId === "all" || a.organisationId === orgId),
-  );
+  ).sort((a, b) => {
+    const aDates = a.versions.map(v => v.createdAt),
+      bDates = b.versions.map(v => v.createdAt);
+    // Version dates supply modification/creation dates for existing library items.
+    return Math.max(0, ...bDates) - Math.max(0, ...aDates) ||
+      (bDates.length ? Math.min(...bDates) : 0) - (aDates.length ? Math.min(...aDates) : 0);
+  });
   const navigate = (to: string) => {
     setRoute(to);
     setLibraryScope("owned");

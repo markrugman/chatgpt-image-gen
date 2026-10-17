@@ -6,7 +6,8 @@
 - Preserve displayed proportions for Place, library drags, external drops and pasted files, including phone photos with EXIF rotation and existing Uploads.
 - Full Uploads-library drops have clearer guidance and recognise file items as well as the standard Files drag type.
 - Keep successful files after individual batch failures and apply their placements as one undo step. Original image bytes and Uploads remain available after Undo.
-- Windows installer, portable app, companion and immutable Linux server image are being prepared for publication. Separate library/folder-ordering changes are excluded.
+- Assets and Uploads sort newest first. Projects and Template folders sort by the latest modification inside them, with creation dates breaking ties. Empty folders use their own dates; legacy unknown dates remain unknown.
+- Windows installer, portable app, companion and immutable Linux server image are being prepared for publication, including all pending updates.
 
 ## New in 0.10.1 — inline canvas editing (2026-10-17)
 

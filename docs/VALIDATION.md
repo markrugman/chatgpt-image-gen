@@ -2,7 +2,16 @@
 
 ## 0.10.2 release and server update authorised (2026-10-17)
 
-Mark requested building and publishing the external-file canvas-drop, original-proportion and Uploads drop-feedback fixes as 0.10.2, including Windows downloads and the server image, then updating the existing local server. Separate library/folder-ordering work remains held and is excluded from this release. Qualification and preservation evidence will be recorded in VALIDATION.md.
+Mark requested building and publishing the external-file canvas-drop, original-proportion and Uploads drop-feedback fixes as 0.10.2, including Windows downloads and the server image, then updating the existing local server. Mark subsequently requested publishing all updates: Asset/Upload library ordering and Project/Template folder ordering are included too. This lifts their earlier local-only holds. Qualification and preservation evidence will be recorded in VALIDATION.md.
+
+
+## Project and template folder ordering — local only (2026-10-17)
+
+- Project cards on Overview and Projects sort by the most recently modified non-deleted design inside each project, descending; project creation date descending breaks ties. A newer project rename does not override contained design dates. Template folder cards (library and drawer, including virtual General) use the latest non-deleted contained template's modification date, then folder creation date, descending. Empty/undated-content folders fall back to their own saved dates. Exact date ties retain their previous order.
+- Added backward-compatible created/updated timestamps for projects, template folders and templates. New records/copies get current dates; template edits/moves preserve creation and update modification. Legacy missing dates default to unknown (zero), rather than fabricated history. Existing projects can immediately use their designs' existing `updatedAt`; historical template/folder creation and modification dates cannot be recovered.
+- `node scripts/test-folder-order.mjs` reproduced stored-order failure before the display fix. Compiled Edge/WebKit tests now pass Overview/Projects/Templates, all-organisations and organisation views, Shared and reload, creation tie-breaks, empty/legacy folders, deliberately conflicting parent/child dates, and exclusion of deleted designs. Uses isolated API fixtures, never production data.
+- `npm run build`, `npm test` (56 tests), shared backend `cargo test --manifest-path server/Cargo.toml --lib` (40 tests), and the prior Edge/WebKit `node scripts/test-library-order.mjs` all pass. Backend tests cover timestamp creation, edit preservation, fresh duplicate dates, reload and legacy deserialization.
+- No version bump, deployment, publication or release. The user's local-only testing hold remains in effect.
 
 ## External file drops and EXIF portrait proportions — local fix (2026-10-17)
 
@@ -13,6 +22,12 @@ Mark requested building and publishing the external-file canvas-drop, original-p
 - Compiled Edge/WebKit upload matrices (393/1440px, light/dark), drawer-placement matrices, canvas clipboard/touch/commands, selection/zoom layout (320/393/768/1440px), and inline single-item region-editing regressions pass. Backend generation code is unchanged by this fix; no new model request is needed to qualify file placement.
 - A separate hidden native QA build uses identifier `com.mark.imagegenapp.file-drop-qa` and fresh disposable data. Real WebView2/CDP filesystem drags pass on full Uploads empty space/image cards and the canvas. Native JPEG raw 80 × 40 with EXIF rotation displays/places at 40 × 80 through external drop, drawer drag and Place; original bytes remain identical. No page errors. Only the recorded QA processes were stopped; the user's installed app process/path stayed unchanged. Evidence/screenshot: ignored `work/file-drop-native-evidence.json` and `work/file-drop-native-canvas.png`. This tests the real WebView file path, not a physical Explorer mouse gesture.
 - Local source and isolated builds only. No new release, GitHub push, server deployment or installed-app replacement for this task. Concurrent unrelated library-order changes are preserved separately.
+
+## Asset and Upload library ordering — local only (2026-10-17)
+
+- Both full-page libraries sort descending by the newest image-version timestamp, then descending by the earliest version timestamp. Assets have no independent modified/created fields, so these represent image modification and creation; metadata-only edits do not affect this order. Empty drafts have date zero and follow dated items. Sorting the filtered list leaves persisted workspace order unchanged.
+- `node scripts/test-library-order.mjs` reproduced the stored-order failure before the fix, then passed against the compiled UI in Edge and WebKit for Assets/Uploads, all-organisations, one organisation, Shared and reload. Fixtures cover an old asset revised recently, equal modification dates with different creation dates, unordered version dates and empty drafts. API responses are isolated fixtures; no live data is accessed.
+- `npm run build` and `npm test` pass (52 tests). No publication, release, deployment or version bump; Mark explicitly requested local fix/testing only.
 
 ## 0.10.1 published release (2026-10-17)
 

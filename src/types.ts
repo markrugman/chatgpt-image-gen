@@ -7,6 +7,8 @@ export interface Organisation {
   color: string;
 }
 export interface Project {
+  createdAt?: number;
+  updatedAt?: number;
   id: string;
   organisationId: string;
   name: string;
@@ -37,6 +39,8 @@ export interface Composition {
   framing?: "fit" | "crop" | null;
 }
 export interface Template {
+  createdAt?: number;
+  updatedAt?: number;
   id: string;
   name: string;
   recipe: string;
@@ -49,6 +53,8 @@ export interface Template {
   deletedAt: number | null;
 }
 export interface TemplateFolder {
+  createdAt?: number;
+  updatedAt?: number;
   id: string;
   name: string;
   organisationId: string | null;
