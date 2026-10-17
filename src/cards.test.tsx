@@ -38,14 +38,25 @@ describe("project composition previews", () => {
     expect(renderProject({ ...w, documents: [undone] })).not.toContain('src="rose-image"');
   });
 
-  it("keeps three unique recent images, excludes deleted designs and retains revision overlays", () => {
+  it("shows current first-page compositions from the three latest modified designs", () => {
     const revisions = [revision, { ...revision, id: "old", imageId: "old", createdAt: 5, overlays: [overlay] }, { ...revision, id: "oldest", imageId: "oldest", createdAt: 1 }];
     const active = { ...doc, pages: [{ ...doc.pages[0], revisions }] };
-    const html = renderProject({ ...w, documents: [active, { ...doc, id: "deleted", deletedAt: 30, pages: [{ ...doc.pages[0], revisions: [{ ...revision, imageId: "deleted-image", createdAt: 50 }] }] }] });
+    const single = renderProject({ ...w, documents: [active] });
+    expect(single.match(/class="project-paper"/g)).toHaveLength(1);
+    const another = (id: string, modifiedAt: number) => ({ ...doc, id, modifiedAt, pages: [{ ...doc.pages[0], history: [{ imageId: id, revisionId: null, overlays: [] }] }] });
+    const html = renderProject({ ...w, documents: [active, another("older", 19000), another("latest", 21002), another("second", 21001), { ...another("deleted-image", 50000), deletedAt: 30 }] });
     expect(html.match(/class="project-paper"/g)).toHaveLength(3);
-    expect(html.match(/src="rose-image"/g)).toHaveLength(2);
-    expect(html.indexOf('src="fire"')).toBeLessThan(html.indexOf('src="old"'));
+    expect(html.match(/src="rose-image"/g)).toHaveLength(1);
+    expect(html.indexOf('src="latest"')).toBeLessThan(html.indexOf('src="second"'));
+    expect(html.indexOf('src="second"')).toBeLessThan(html.indexOf('src="fire"'));
+    for (const id of ["old", "oldest", "older"]) expect(html).not.toContain(`src="${id}"`);
     expect(html).not.toContain('src="deleted-image"');
+  });
+
+  it("shows only one preview per design even with multiple pages and revisions", () => {
+    const multiPage = { ...doc, pages: [...doc.pages, { ...doc.pages[0], id: "page-2" }] };
+    const html = renderProject({ ...w, documents: [multiPage] });
+    expect(html.match(/class="project-paper"/g)).toHaveLength(1);
   });
 
   it("previews imported backgrounds and designs containing only placed images", () => {

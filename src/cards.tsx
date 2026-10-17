@@ -1,5 +1,5 @@
 import type { HTMLAttributes } from "react";
-import { modificationDate } from "./folderOrdering";
+import { newestFirst } from "./folderOrdering";
 import {
   ChevronRight,
   FileImage,
@@ -65,20 +65,8 @@ export function ProjectCard({
     docs = w.documents.filter(
       (d) => d.projectId === project.id && !d.deletedAt,
     );
-  const previews = docs.flatMap(d => d.pages.flatMap(page => {
-    const current = currentComposition(page);
-    const images = page.revisions.map(r => ({
-      id: r.imageId, doc: d,
-      comp: r.imageId === current.imageId ? current : { imageId: r.imageId, revisionId: r.id, overlays: r.overlays },
-      createdAt: r.imageId === current.imageId && current.overlays.length ? modificationDate(d) : r.createdAt,
-    }));
-    if ((current.imageId || current.overlays.length) && !images.some(image => image.id === current.imageId)) {
-      images.push({ id: current.imageId || page.id, doc: d, comp: current, createdAt: modificationDate(d) });
-    }
-    return images;
-  })).sort((a, b) => b.createdAt - a.createdAt)
-    .filter((image, index, images) => images.findIndex(other => other.id === image.id) === index)
-    .slice(0, 3);
+  const previews = [...docs].sort(newestFirst).slice(0, 3)
+    .map(doc => ({ id: doc.id, doc, comp: currentComposition(doc.pages[0]) }));
   return (
     <article {...dropProps} data-project-id={project.id} className={`project-card ${dropProps?.className || ""}`}>
       <button

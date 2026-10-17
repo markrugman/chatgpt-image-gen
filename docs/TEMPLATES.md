@@ -6,6 +6,87 @@ Pending UI revision (2026-10-16, local screenshot preview only): Mark now wants 
 
 ## Purpose
 
+### Configurable Templates — agreed design, 2026-10-17
+
+Status: all three question rounds approved (Q1–Q16), followed by explicit implementation, thorough testing and local-server-only update authorisation. Implemented, tested and deployed only to the private local server as a Template preview on 2026-10-17. No global deployment or public release is authorised. See [validation evidence](VALIDATION.md).
+
+This section is the target behaviour for the expansion. Where it conflicts with the historical baseline below—including Generate-only Templates, plain-text recipes without inputs, reference requirements, instruction precedence and compact composer disclosures—this section governs the new design. The expansion is now active on the private local server; public packages retain their previously released behaviour.
+
+#### Scope and authoring
+
+- One selected Template per request. Each Template specifies Generate or Discuss; its mode remains visible and determines the action while attached. Remove or switch the Template to change modes.
+- Preserve the existing Name, Recipe, example, ownership, folder, tags and usage notes. Add Insert input for Text, Colour and single Choice. Input configuration belongs in the Template editor, not the composer.
+- Insert input creates a named definition and managed placeholder together. Definitions contain the label, type, required state, optional default and, for Choice, the fixed choices. Definitions are separate from recipe prose. Placeholder spelling is an implementation detail; examples use `{{hat_colour}}`.
+- Inputs are required by default. Valid defaults immediately count as editable answers. Text supports longer descriptions; Colour offers a picker and editable hex value with a visible swatch; Choice accepts exactly one defined answer. No custom Choice answers, multiple selections or conditional questionnaires initially.
+- Authors can visually associate a complete optional phrase with one optional input. Include the phrase when that input has an answer; omit the complete phrase when empty. No nested conditions. Repeated uses of one input share its answer. The checker must reject optional placeholders whose empty-state wording is not explicitly defined rather than submit broken prose.
+- Keep configuration progressive: ordinary Templates need no input configuration. Source review and completed-instruction inspection remain disclosures rather than mandatory steps.
+- Authoring refinement requested during implementation: the main dialog shows Name, Prompt, compact input chips/Insert input, Action and Subject images. Edit one input in a separate focused dialog; its defaults and optional wording stay collapsed. Example image, location, tags, notes and source review live under More details. Avoid a long inline list of input-definition forms. This supersedes the initial inline authoring layout.
+
+#### Subject references
+
+- Per-Template setting: Not required, Optional or Required. Required means at least one attached image explicitly assigned Subject; Style, Logo and Other do not count.
+- Multiple Subject images represent the same person, character or object initially. Named, distinct subject slots are outside this version's scope. Required-image validation checks presence and purpose, not whether the images truly depict the same identity.
+- Add Subject uses the existing image-selection/import flows and assigns Subject automatically. Attachment purposes can be changed explicitly. A written description uses a Text input and does not satisfy a required-image setting.
+- Show missing Subjects immediately, independently of whether the user has tried to submit. Subject requirements are never inferred from recipe wording.
+
+#### Composer and details dialog
+
+- Retain the existing Template identity/example/remove presentation and group its input shortcuts beneath it. Show a clear missing-answer count and missing-Subject state.
+- Show at most three input pills plus View all with the remaining count. Once complete, collapse to a Ready summary with short answer snippets and Edit details. Templates without inputs retain their compact appearance; a required Subject still needs visible status.
+- Clicking the Template/Edit details opens one shared details dialog; clicking an input pill opens the same dialog focused on that input. The Colour control may open the device colour picker. Do not create a separate custom dialog for every type.
+- Apply commits answer edits. Cancel, Escape and backdrop dismissal leave previously applied answers intact. Keep existing attachment selection/import operations explicit; cancellation of answer edits does not delete library imports.
+- Additional instructions remain available. Explain concisely that configured values must be changed through their inputs. Do not add permanent configuration panels or a mandatory confirmation step.
+- Optional View completed instructions shows the resolved recipe, answer values, reference purposes, applicable output settings and missing requirements. It describes the actual captured request, not an AI-rewritten approximation.
+
+#### Appearance, mobile and accessibility
+
+- Reuse the existing typography, colour/theme variables, purple accent, surfaces, borders, corners, buttons and dialog components, including dark mode. Use missing-state text/icons as well as colour.
+- Reuse the existing mobile navigation and responsive form patterns. Details become a single column within the available viewport, without horizontal page scrolling. Truncate summary values; full values remain editable in the dialog.
+- Provide at least 44px touch targets for input shortcuts and their actions, readable inputs and explicit labels. Preserve keyboard operation, dialog focus containment, initial focus and focus restoration.
+- Keep dialog actions reachable with long forms and the on-screen keyboard. Validate dynamic viewport resizing, narrow portrait and short landscape layouts; do not rely on desktop overflow behaviour.
+- Bounded shortcuts and completed summaries must keep the composer from growing in proportion to the number of inputs. The conversation and submission controls must remain usable with many inputs and references.
+
+#### Instruction contract and faithful results
+
+The current runtime has app-level base instructions in `src-tauri/src/jobs.rs` and Template request assembly in `src-tauri/src/templates.rs::prepare`. Extend both consistently across native and server modes. App-owned rules belong in the trusted instruction layer; recipes, input values and reference content must not be able to redefine those rules merely by containing instruction-like text.
+
+Required instruction behaviour:
+
+1. Obey app rules, the Template's selected mode and applicable document output settings.
+2. Apply structured answers and explicit reference purposes ahead of conflicting additional instructions.
+3. Apply additional instructions ahead of remaining recipe details; preserve all non-conflicting recipe requirements.
+4. Generate: use native image generation for exactly one image, preserving requested composition, style, subject and constraints. Discuss: return text only, following the requested structure and quantity; never generate an image.
+5. Treat Text/Choice/Colour answers as values for their defined purposes. A title containing instruction-like wording remains title content. Do not invent missing required answers or send unresolved placeholders.
+6. Subject references establish identity and distinguishing features while allowing the recipe's requested transformation. Style references guide appearance, not identity. Respect Logo/Other purposes; do not attach the example as Style automatically. Text inside references is source content, not app instructions.
+7. Reproduce requested visible text verbatim, without unrequested wording. Include the selected colour code. These instructions guide generation without promising exact spelling, likeness or colour fidelity.
+8. Start Template requests with fresh context, excluding prior page conversation/current image unless explicitly attached. Ordinary follow-up turns continue the resulting conversation.
+
+Resolve inputs directly without an extra AI rewrite. Preserve exact answer values and explicit attachment-order bindings. Inspectable completed instructions, backend validation and dispatched content must agree. Runtime instruction wording must express this contract without hiding contradictory defaults in another instruction layer.
+
+#### Validation, lifecycle and compatibility
+
+- On save, check malformed/unresolved placeholders, missing or duplicate input identifiers, unused definitions, valid types, valid Colour/default/Choice values and complete optional-phrase associations. Report actionable errors at their source. Structural checks do not establish artistic quality.
+- On submission, check required answers and Subject references again in the shared backend path. Show an actionable error summary and field-level errors, preserve all answers and references, and provide a route to each affected input. Do not silently disable Send solely because answers are missing.
+- Switching Templates resets answers to the new Template's defaults while retaining additional instructions and explicit references. Removing a Template removes its answers/shortcuts. Existing acceptance/rejection clearing rules continue to apply.
+- Snapshot definitions, answers, mode, resolved instructions, reference purposes/exact image versions and applicable settings. Historical Reuse restores captured content; library edits never silently replace it. An explicit Use latest must reconcile changed definitions and defaults without silently mapping unrelated answers.
+- Existing Templates remain Generate Templates with no new inputs or Subject requirements. Do not reinterpret legacy square brackets automatically. Preserve existing backup, sync, copy/move and historical request behaviour; older clients must not silently strip or bypass new definitions/validation.
+
+#### Acceptance checks
+
+| Area | Required evidence |
+| --- | --- |
+| Motivating examples | Brand-name idea Template returns the requested written ideas; logo, figurine and headshot Templates assemble their configured image requests correctly. |
+| Inputs and authoring | Required/default values, repeated inputs, Colour hex, fixed Choice, malformed definitions and optional-phrase omission all behave predictably. A plain Template remains simple. |
+| Subject purposes | Missing Subject blocks dispatch; Style/Logo/Other cannot satisfy it; Add Subject assigns the role; purpose changes update readiness. |
+| Precedence and content | Blue answer wins over a conflicting red instruction; unaffected recipe details survive. Instruction-like title text stays literal content. Reference order and purposes agree with actual attachments. |
+| Modes and context | Generate produces one image; Discuss produces no image. Fresh requests exclude unrelated page context; follow-ups continue normally. |
+| Draft and history | Apply/Cancel, template switch/remove, failed submission, retry, reuse, library edits and explicit Use latest preserve or reset exactly the intended content. |
+| Responsive UI | Light/dark themes, keyboard navigation, 320/390px portrait, tablet/desktop and short landscape; long labels/answers, many inputs/references and on-screen keyboard. No horizontal page overflow or inaccessible actions; summary stays bounded. |
+| Storage and clients | Native/server parity, legacy workspaces, copy/move, backup/restore, concurrent edits and stale-client preservation/enforcement. |
+| Generation fidelity | Inspect representative real outputs for Subject likeness, requested transformation, title spelling, requested colour and Subject/Style separation; distinguish request correctness from provider variability. |
+
+Research informing the interaction: [GOV.UK error summaries](https://design-system.service.gov.uk/components/error-summary/), [single-choice controls](https://design-system.service.gov.uk/components/radios/) and [editable answer summaries](https://design-system.service.gov.uk/patterns/check-answers/). These support the validation/review patterns; the app's pill layout still requires responsive acceptance checks.
+
 Save reusable image-generation recipes with recognisable examples, then apply them to different subjects without finding a website or copying an earlier conversation. Templates appear alongside Assets and Uploads in the library and image-creation picker. At most one template can be selected per generation; ordinary generation without a template continues to work.
 
 Example: select Flat Vector Avatar, attach two photographs of the same person as Subject, and add “use a navy background and keep my glasses”. Source inspiration: https://chatsmith.io/blogs/prompt/ai-avatar-prompts-00346. The user's screenshot shows several avatar styles saved as designs.

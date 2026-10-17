@@ -216,6 +216,7 @@ export function LibraryImageTile({ name, imageId, actions, dragVersionId, onActi
       {open && (
         <div
           className="library-image-menu"
+          onMouseDown={e => e.preventDefault()}
           role="menu"
           aria-label={submenu ? `Add ${name} as` : `Use ${name}`}
         >

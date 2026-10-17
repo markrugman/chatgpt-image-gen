@@ -152,7 +152,7 @@ pub async fn generate_annotations(app: AppHandle, state: State<'_, Arc<AppState>
             let transparent = state.store.image_path(&item.source_image_id).ok().and_then(|p| image::open(p).ok()).is_some_and(|i| i.to_rgba8().pixels().any(|p| p[3] < 255));
             let mut references = vec![format!("image:{}",item.source_image_id)];
             references.extend(batch.references.iter().filter(|r| *r != &references[0]).cloned().collect::<Vec<_>>());
-            let request = jobs::Submit { target: target.clone(), template: None, reference_purposes: batch.reference_purposes.clone(), template_request: None, expected_instructions: None, prompt: format!("{}\n\nAdditional instructions for this same image:\n{}\nAny other attached images are references only, not additional edit targets.", prompt(item), batch.instructions), mode: "generate".into(), references, transparent, fresh_context: true, annotation: Some((batch.id.clone(),key.clone())) };
+            let request = jobs::Submit { target: target.clone(), template: None, template_answers: Default::default(), reference_purposes: batch.reference_purposes.clone(), template_request: None, expected_instructions: None, prompt: format!("{}\n\nAdditional instructions for this same image:\n{}\nAny other attached images are references only, not additional edit targets.", prompt(item), batch.instructions), mode: "generate".into(), references, transparent, fresh_context: true, annotation: Some((batch.id.clone(),key.clone())) };
             let result = jobs::run(state.clone(), &app, &job.id, &request).await;
             match result { Ok(false) => (), Ok(true) => { cancelled = true; break; }, Err(error) => {
                 failed = true;

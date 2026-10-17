@@ -1,4 +1,4 @@
-import { createServer } from 'vite';
+import { preview } from 'vite';
 import { chromium, webkit, expect } from '@playwright/test';
 import assert from 'node:assert/strict';
 
@@ -14,7 +14,7 @@ const workspace = {
 workspace.templateFolders = [{id:'portraits',name:'Portraits',organisationId:'org'}, {id:'posters',name:'Posters',organisationId:'other'}, {id:'shared-folder',name:'Shared folder',organisationId:null}];
 workspace.templates = ['org','other',null].map((organisationId,i) => ({id:'t'+i,name:['Portrait recipe','Poster recipe','Shared recipe'][i],organisationId,folderId:['portraits','posters','shared-folder'][i],recipe:'Recipe '+i,tags:['tag'+i],usageNotes:'Notes',exampleImageId:'image',version:1}));
 workspace.templates.push({...workspace.templates[0],id:'deleted',name:'Deleted recipe',deletedAt:1});
-const server = await createServer({server:{host:'127.0.0.1',port:0,strictPort:false}}); await server.listen();
+const server = await preview({preview:{host:'127.0.0.1',port:0,strictPort:false}});
 const origin = 'http://127.0.0.1:'+server.httpServer.address().port;
 try {
  for (const [name,engine,options] of [['Edge',chromium,{channel:'msedge'}],['WebKit',webkit,{}]]) {
@@ -25,7 +25,7 @@ try {
  await page.route('**/web/session',r=>r.fulfill({json:{hasOwner:true,setupNeeded:false}}));
  await page.route('**/health',r=>r.fulfill({json:{service:'image-gen-server',version:'0.9.1'}}));
  await page.route('**/api/*',r=>{const cmd=r.request().url().split('/').pop();if(cmd==='mutate') actions.push(r.request().postDataJSON().action);return r.fulfill({json:cmd==='get_workspace'?workspace:cmd==='image_data'?image:cmd==='get_jobs'?[]:cmd==='connection'?{account:null,capabilities:{}}:cmd==='server_status'?{connected:true,online:true,pending:0}:{}});});
- await page.goto(origin+'/#view=templates&org=all');
+ await page.goto(origin+'/#view=templates&org=all',{waitUntil:'domcontentloaded'});
  const library=page.getByRole('region',{name:'Templates library'}), cards=library.locator('.template-card');
  await expect(cards).toHaveCount(3);
  for (const theme of ['light','dark']) {
@@ -75,4 +75,4 @@ try {
  await page.close(); console.log('PASS '+name+' '+width+': all organisations, Shared, search, folders and organisation switching');
  }}finally{await browser.close();}
  }
-}finally{await server.close();}
+}finally{await new Promise(resolve=>server.httpServer.close(resolve));}

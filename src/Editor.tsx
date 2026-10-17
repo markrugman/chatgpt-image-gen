@@ -59,6 +59,8 @@ import { resizeOverlay, rotateOverlay, type OverlayCorner } from "./overlayTrans
 import { AssetJsonDialog } from "./AssetJsonDialog";
 import { ExtractAssetDialog } from "./ExtractAssetDialog";
 import { renderPage } from "./export";
+import { TemplateComposer } from "./TemplateComposer";
+import { templateDefaults, templateErrors } from "./templateInputs";
 import { Templates, TemplateForm, type TemplateSource } from "./Templates";
 import type { Template, TemplateRequest, ReferencePurpose, Message } from "./types";
 import { ExportDialog } from "./ExportDialog";
@@ -149,12 +151,19 @@ export function Editor({
     [zoom, setZoom] = useState(100),
     [selected, setSelected] = useState<string | null>(null);
   const [template, setTemplate] = useState<Template | null>(null);
+  const [templateAnswers, setTemplateAnswers] = useState<Record<string, string>>({});
+  const submissionLock = useRef(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [showTemplateErrors, setShowTemplateErrors] = useState(false);
+  const [pendingPurpose, setPendingPurpose] = useState<ReferencePurpose["purpose"] | undefined>();
   const [referencePurposes, setReferencePurposes] = useState<Record<string, ReferencePurpose>>({});
   const [templateSource, setTemplateSource] = useState<TemplateSource | null>(null);
   const [requestPreview, setRequestPreview] = useState<TemplateRequest | null>(null);
   const [previewError, setPreviewError] = useState("");
   const [historicalSettings, setHistoricalSettings] = useState("");
   const [showTemplatePicker, setShowTemplatePicker] = useState(false);
+  const hasSubject = references.some(r => referencePurposes[r]?.purpose === "Subject");
+  const answerErrors = template ? templateErrors(template, templateAnswers, hasSubject) : {};
   const currentTemplate = w.templates?.find(t => t.id === template?.id);
   useEffect(() => {
     if (!template) return;
@@ -170,7 +179,7 @@ export function Editor({
   }, [template?.id, onRefresh]);
   const selectTemplate = (t: Template, attachStyle = false) => {
     if (page.regionNotes?.length || page.editBatch) { notify("Remove or finish the pending region edits before using a template"); return; }
-    setTemplate(structuredClone(t)); setMode("generate"); setShowTemplatePicker(false); setHistoricalSettings("");
+    setTemplate(structuredClone(t)); setTemplateAnswers(templateDefaults(t)); setShowTemplateErrors(false); setMode(t.mode || "generate"); setShowTemplatePicker(false); setHistoricalSettings("");
     setPrompt(p => p.replace(/\/templates\s*$/, ""));
     if (attachStyle && t.exampleImageId) {
       const reference = `image:${t.exampleImageId}`;
@@ -183,9 +192,9 @@ export function Editor({
   const reuseRequest = (m: Message) => {
     const snapshot = m.templateRequest;
     if (snapshot) {
-      setTemplate(structuredClone(snapshot.template)); setTransparent(snapshot.transparent);
+      setTemplate(structuredClone(snapshot.template)); setTemplateAnswers(snapshot.answers || templateDefaults(snapshot.template)); setShowTemplateErrors(false); setTransparent(snapshot.transparent);
       setReferencePurposes(Object.fromEntries(snapshot.referencePurposes.map(p => [p.reference, p])));
-      if (doc && (doc.width !== snapshot.width || doc.height !== snapshot.height || doc.unit !== snapshot.unit)) {
+      if (snapshot.template.mode !== "discuss" && doc && (doc.width !== snapshot.width || doc.height !== snapshot.height || doc.unit !== snapshot.unit)) {
         setHistoricalSettings(`Historical output was ${snapshot.width} × ${snapshot.height} ${snapshot.unit}. This document is ${doc.width} × ${doc.height} ${doc.unit}.`);
       } else {
         setHistoricalSettings("");
@@ -197,7 +206,7 @@ export function Editor({
   const sourceFor = (imageId: string, messages: Message[], fallback: string): TemplateSource => {
     const last = [...messages].reverse().find(m => m.role === "user" && m.mode === "generate");
     const snapshot = last?.templateRequest;
-    return { imageId, recipe: snapshot ? `${snapshot.template.recipe}\n\n${snapshot.additionalInstructions}`.trim() : last?.text || fallback, messages };
+    return { imageId, template: snapshot?.template, answers: snapshot?.answers, recipe: snapshot ? `${snapshot.template.recipe}\n\n${snapshot.additionalInstructions}`.trim() : last?.text || fallback, messages };
   };
   const [uploadsPending, setUploadsPending] = useState(0);
   const [editingKey, setEditingKey] = useState<string | null>(null), [editingNote, setEditingNote] = useState<RegionNote | null>(null);
@@ -244,12 +253,12 @@ export function Editor({
     let active = true;
     setRequestPreview(null); setPreviewError("");
     const timer = setTimeout(() => {
-      api<TemplateRequest>("preview_template", { request: { target, template, prompt, mode: "generate", references,
+      api<TemplateRequest>("preview_template", { request: { target, template, prompt, mode: template.mode || "generate", templateAnswers, references,
         referencePurposes: references.map(reference => referencePurposes[reference] || { reference, purpose: "Other", explanation: "" }), transparent } })
         .then(p => { if (active) setRequestPreview(p); }).catch(e => { if (active) setPreviewError(String(e)); });
     }, 150);
     return () => { active = false; clearTimeout(timer); };
-  }, [template, prompt, references, referencePurposes, transparent, doc?.width, doc?.height, doc?.unit, page.id]);
+  }, [template, templateAnswers, prompt, references, referencePurposes, transparent, doc?.width, doc?.height, doc?.unit, page.id]);
   const canvas = useRef<HTMLDivElement>(null),
     end = useRef<HTMLDivElement>(null),
     textarea = useRef<HTMLTextAreaElement>(null),
@@ -342,6 +351,7 @@ export function Editor({
     setReferences((current) =>
       current.includes(version) ? current : [...current, version],
     );
+    purpose = pendingPurpose || purpose; setPendingPurpose(undefined);
     if (purpose) setReferencePurposes(current => ({ ...current, [version]: { reference: version, purpose, explanation: "" } }));
     setPicker(null);
     setPrompt((p) => p.replace(/\/(asset|upload)\s*$/, ""));
@@ -374,24 +384,29 @@ export function Editor({
   };
   const placeAsset = (asset: Asset) => placeVersion(asset.currentVersionId);
   async function submit() {
-    if ((!prompt.trim() && !template && !regionNotes.length) || busyJob || annotationLocked || regionSaving || uploadsPending || canvasCommands.busy || (template && (mode !== "generate" || !requestPreview || previewError || historicalSettings))) return;
+    if ((!prompt.trim() && !template && !regionNotes.length) || busyJob || annotationLocked || regionSaving || uploadsPending || canvasCommands.busy || historicalSettings || submissionLock.current) return;
+    if (template && Object.keys(answerErrors).length) { setShowTemplateErrors(true); return; }
     const value = prompt;
+    submissionLock.current = true; setSubmitting(true);
     try {
+      const validatedInstructions = template ? (await api<TemplateRequest>("preview_template", { request: { target, template, templateAnswers, prompt: value, mode, references, transparent,
+        referencePurposes: references.map(reference => referencePurposes[reference] || { reference, purpose: "Other", explanation: "" }) } })).instructions : undefined;
       await overlaySaves.current;
       if (regionNotes.length) {
         if (mode !== "generate") throw Error("Choose Generate / Edit to submit these region edits");
         await api("generate_annotations", { target, request: { instructions: value, references, referencePurposes: references.map(reference => referencePurposes[reference] || { reference, purpose: "Other", explanation: "" }) } });
         setEditingKey(null); setEditingNote(null);
       } else await api("submit_prompt", {
-        request: { target, prompt: value, mode, references, transparent, template, expectedInstructions: template ? requestPreview?.instructions : undefined,
+        request: { target, prompt: value, mode, references, transparent, template, templateAnswers, expectedInstructions: validatedInstructions,
           referencePurposes: references.map(reference => referencePurposes[reference] || { reference, purpose: "Other", explanation: "" }) },
       });
       setPrompt("");
-      setReferences([]); setTemplate(null); setReferencePurposes({});
+      setReferences([]); setTemplate(null); setTemplateAnswers({}); setShowTemplateErrors(false); setReferencePurposes({});
       await onRefresh();
     } catch (error) {
+      if (template) { setPreviewError(String(error)); setShowTemplateErrors(true); }
       notify(String(error));
-    }
+    } finally { submissionLock.current = false; setSubmitting(false); }
   }
   useEffect(() => {
     const element = viewportRef.current;
@@ -739,15 +754,6 @@ export function Editor({
               )}
             </div>
             <div className="button-row">
-              <button
-                className={`canvas-touch-actions${canvasCommands.touchUsed ? " touch-used" : ""}`}
-                aria-label="Actions"
-                aria-haspopup="menu"
-                aria-expanded={canvasCommands.menuOpen}
-                onClick={e => canvasCommands.openActions(e.currentTarget)}
-              >
-                <MoreHorizontal size={17} /> Actions
-              </button>
               {image && (
                 <button
                   className="text-button"
@@ -858,7 +864,7 @@ export function Editor({
               </div>
               <div
                 ref={canvas}
-                className={`design-canvas ${asset && previewBackground === "checker" ? "checker" : ""}`}
+                className={`design-canvas ${!asset || previewBackground === "checker" ? "checker" : ""}`}
                 style={{
                   aspectRatio: ratio,
                   ...(asset && previewBackground !== "checker"
@@ -1233,6 +1239,7 @@ export function Editor({
             <div className="mode-switch">
               <button
                 className={mode === "generate" ? "active" : ""}
+                disabled={!!template && template.mode === "discuss"}
                 onClick={() => setMode("generate")}
               >
                 <Sparkles size={14} />
@@ -1240,7 +1247,7 @@ export function Editor({
               </button>
               <button
                 className={mode === "discuss" ? "active" : ""}
-                disabled={!!regionNotes.length || annotationLocked}
+                disabled={!!regionNotes.length || annotationLocked || (!!template && template.mode !== "discuss")}
                 onClick={() => setMode("discuss")}
               >
                 <MessageCircle size={14} />
@@ -1254,14 +1261,11 @@ export function Editor({
               </span>)}</div>}
               {regionNotes.some(n=>annotationSource(w,comp,n.targetKey)!==n.sourceImageId) && <p className="region-draft-warning">Source image changed. Open each highlighted instruction to review its area and update it.</p>}
               {regionNotes.some(n=>n.targetKey!==regionNotes[0]?.targetKey) && <p className="region-draft-warning">These older notes target several items. <button onClick={()=>void run(()=>saveRegionNotes([]))} disabled={annotationLocked || regionSaving}>Remove all region edits</button> to choose one item.</p>}
-              {template && <div className="selected-template">
-                <ImageView id={template.exampleImageId} alt="Selected template example" /><strong>{template.name}</strong>
-                <button className="text-button" onClick={() => setTemplate(null)}>Remove template</button>
-                {historicalSettings && <p role="alert">{historicalSettings} <button className="text-button" onClick={() => setHistoricalSettings("")}>Use current document settings</button></p>}
-                {(!currentTemplate || currentTemplate.deletedAt) ? <small>Template deleted</small> : currentTemplate.version !== template.version && <small>Template updated <button className="text-button" onClick={() => setTemplate(structuredClone(currentTemplate))}>Use latest</button></small>}
-                {previewError && <p role="alert">{previewError}</p>}
-                {mode === "discuss" && <p role="alert">Choose Generate to use this template, or remove it to discuss.</p>}
-              </div>}
+              {template && <TemplateComposer key={template.id + ":" + template.version} template={template} answers={templateAnswers} hasSubject={hasSubject} preview={requestPreview} previewError={previewError} showErrors={showTemplateErrors} current={currentTemplate} historicalSettings={historicalSettings}
+                onAnswers={setTemplateAnswers} onRemove={() => { setTemplate(null); setTemplateAnswers({}); setShowTemplateErrors(false); }} onSettings={() => setHistoricalSettings("")}
+                onLatest={() => { if (currentTemplate) { selectTemplate(currentTemplate); notify("Latest Template loaded; answers reset to defaults. References and additional instructions retained."); } }}
+                onSubject={kind => { setPendingPurpose("Subject"); setPicker(kind); }}
+                onImport={files => { setUploadsPending(c => c + 1); void run(async () => { try { for (const file of files) { const id = await importImageFile(file, orgId || null); const next = await api<Workspace>("get_workspace"); const version = next.assets.find(a => a.id === id)?.currentVersionId; if (!version) throw Error("Find the imported Subject in Uploads and attach it again."); setReferences(r => r.includes(version) ? r : [...r, version]); setReferencePurposes(p => ({ ...p, [version]: { reference: version, purpose: "Subject", explanation: "" } })); } await onRefresh(); } finally { setUploadsPending(c => c - 1); } }); }} />}
               {uploadsPending > 0 && <div className="job-progress" role="status"><LoaderCircle size={15} className="spin" />Adding pasted image…</div>}
               {references.length > 0 && (
                 <div className="reference-chips">
@@ -1274,6 +1278,7 @@ export function Editor({
                       <span key={v} title={`${name} · ${referencePurposes[v]?.purpose || "Other"}`} data-purpose={referencePurposes[v]?.purpose || "Other"}>
                         <ImageView id={referenceImage(w, v)} />
                         <span className="reference-name">{name}</span>
+                        <select className="reference-purpose" aria-label={`Purpose of ${name} reference`} value={referencePurposes[v]?.purpose || "Other"} onChange={e => setReferencePurposes(p => ({ ...p, [v]: { reference: v, purpose: e.target.value as ReferencePurpose["purpose"], explanation: p[v]?.explanation || "" } }))}>{["Subject", "Style", "Logo", "Other"].map(p => <option key={p}>{p}</option>)}</select>
                         <button
                           aria-label={`Remove ${name} reference`}
                           onClick={() =>
@@ -1324,7 +1329,7 @@ export function Editor({
                   if (command?.[1] === "templates") { setShowTemplatePicker(true); setPrompt(e.target.value.replace(/\/templates\s*$/, "")); }
                   else if (command) setPicker(command[1] as "asset" | "upload");
                 }}
-                placeholder={
+                placeholder={template ? "Additional instructions (optional; change configured values in Edit details)…" :
                   mode === "discuss"
                     ? "Ask a question or explore an idea…"
                     : "Describe your image or what to change…"
@@ -1364,7 +1369,7 @@ export function Editor({
                     aria-label={
                       mode === "discuss" ? "Send discussion" : "Generate image"
                     }
-                    disabled={annotationLocked || regionSaving || regionNotes.some(n=>n.targetKey!==regionNotes[0]?.targetKey || annotationSource(w,comp,n.targetKey)!==n.sourceImageId) || (!prompt.trim() && !template && !regionNotes.length) || uploadsPending > 0 || canvasCommands.busy || (!!template && (mode !== "generate" || !requestPreview || !!previewError || !!historicalSettings))}
+                    disabled={submitting || annotationLocked || regionSaving || regionNotes.some(n=>n.targetKey!==regionNotes[0]?.targetKey || annotationSource(w,comp,n.targetKey)!==n.sourceImageId) || (!prompt.trim() && !template && !regionNotes.length) || uploadsPending > 0 || canvasCommands.busy || !!historicalSettings}
                     onClick={submit}
                   >
                     <ArrowUp size={18} />
@@ -1401,7 +1406,7 @@ export function Editor({
           onReference={addReference}
           onPageReference={addPageReference}
           onPlace={doc ? placeAsset : undefined}
-          onClose={() => setPicker(null)}
+          onClose={() => { setPicker(null); setPendingPurpose(undefined); }}
         />
       )}
       {showExport && (

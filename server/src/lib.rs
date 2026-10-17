@@ -264,6 +264,9 @@ pub fn merge(current: &Value, base: &Value, next: &Value) -> Result<Value, Strin
             }
             if let Some(i) = index {
                 if let Some(after) = after {
+                    if key == "templates" && items[i]["inputVersion"].as_u64().unwrap_or(0) > 0 && after["inputVersion"].as_u64().unwrap_or(0) == 0 {
+                        return Err("Update this client before changing configurable Templates".into());
+                    }
                     items[i] = after.clone();
                 } else {
                     items.remove(i);

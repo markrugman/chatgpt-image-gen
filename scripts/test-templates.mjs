@@ -89,8 +89,9 @@ try {
   await expect(card).toHaveText('Vector portraitAvatars');
   await card.locator('.icon-button').click();
   const details = page.getByRole('dialog', { name: 'Edit template', exact: true });
+  await details.locator('.template-more-details > summary').click();
   await expect(details.getByRole('textbox', { name: 'Usage notes', exact: true })).toHaveValue(create.usageNotes);
-  await expect(details.getByRole('textbox', { name: 'Recipe', exact: true })).toHaveValue(create.recipe);
+  await expect(details.getByRole('textbox', { name: 'Prompt', exact: true })).toHaveValue(create.recipe);
   for (const name of ['Duplicate', 'Copy to…', 'Move to…', 'Move to Trash']) await expect(details.getByRole('button', { name, exact: true })).toBeVisible();
   await details.getByRole('button', { name: 'Cancel', exact: true }).click();
   await expect(details).toHaveCount(0);
@@ -100,13 +101,14 @@ try {
   await expect(saveMinimal).toBeDisabled();
   await minimalForm.getByLabel('Name', { exact: true }).fill('Recipe only');
   await expect(saveMinimal).toBeDisabled();
-  await minimalForm.getByLabel('Recipe', { exact: true }).fill('A text-only recipe');
+  await minimalForm.getByLabel('Prompt', { exact: true }).fill('A text-only recipe');
   await expect(saveMinimal).toBeEnabled();
   await saveMinimal.click();
   await expect(minimalForm).toHaveCount(0);
   await page.reload();
   await page.getByRole('button', { name: 'Edit Recipe only', exact: true }).first().click();
-  await expect(page.getByRole('dialog').getByRole('textbox', { name: 'Recipe', exact: true })).toHaveValue('A text-only recipe');
+  await expect(page.getByRole('dialog').getByRole('textbox', { name: 'Prompt', exact: true })).toHaveValue('A text-only recipe');
+  await page.getByRole('dialog').locator('.template-more-details > summary').click();
   await page.getByRole('dialog').getByLabel('Example image', { exact: true }).setInputFiles({ name: 'later.png', mimeType: 'image/png', buffer: Buffer.from(png, 'base64') });
   await page.getByRole('dialog').getByRole('textbox', { name: 'Tags (comma separated)', exact: true }).fill('later');
   await page.getByRole('dialog').getByRole('textbox', { name: 'Usage notes', exact: true }).fill('Added later');
@@ -123,7 +125,8 @@ try {
   await page.getByRole('button', { name: 'New template', exact: true }).click();
   const form = page.getByRole('dialog');
   await form.getByLabel('Name', { exact: true }).fill('Uploaded example');
-  await form.getByLabel('Recipe', { exact: true }).fill('A minimal poster');
+  await form.getByLabel('Prompt', { exact: true }).fill('A minimal poster');
+  await form.locator('.template-more-details > summary').click();
   await form.getByLabel('Example image', { exact: true }).setInputFiles({ name: 'example.png', mimeType: 'image/png', buffer: Buffer.from(png, 'base64') });
   await expect(form.getByRole('button', { name: 'Save template', exact: true })).toBeEnabled();
   await form.getByRole('button', { name: 'Save template', exact: true }).click();
@@ -142,7 +145,8 @@ try {
   await expect(prompt).toHaveValue('Keep glasses ');
   await expect.poll(() => latestPreview?.instructions).toContain('Keep glasses');
   await expect(page.locator('.selected-template')).not.toContainText('Attach two Subject');
-  await expect(page.locator('.selected-template details')).toHaveCount(0);
+  await expect(page.locator('.selected-template .template-completed-instructions')).toHaveCount(1);
+  await expect(page.locator('.selected-template .template-completed-instructions')).not.toHaveAttribute('open', '');
   await expect(page.locator('.reference-chips')).toHaveCount(0);
   await prompt.fill('Keep glasses /templates');
   await page.getByRole('dialog').getByRole('button', { name: 'Open folder Avatars', exact: true }).click();
@@ -154,7 +158,7 @@ try {
   await page.getByRole('menuitem', { name: 'Add as…', exact: true }).click();
   await page.getByRole('menuitem', { name: 'Subject', exact: true }).click();
   await expect(page.locator('.reference-chips > span').filter({ hasText: 'Person one' })).toHaveAttribute('data-purpose', 'Subject');
-  await expect(page.locator('.reference-chips input, .reference-chips select')).toHaveCount(0);
+  await expect(page.locator('.reference-chips select')).toHaveCount(2);
   await expect.poll(() => latestPreview?.referencePurposes.find(p => p.purpose === 'Subject')?.explanation).toBe('');
   await prompt.fill('Keep these instructions /templates');
   await page.getByRole('dialog').getByRole('button', { name: 'Open folder General', exact: true }).click();

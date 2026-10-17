@@ -1,5 +1,15 @@
 # Release history
 
+## New in 0.11.0 — configurable Templates (2026-10-18)
+
+- Add Text, Colour and single-choice inputs to reusable Templates, with required answers, defaults and optional prompt phrases.
+- Declare Subject image requirements and choose Generate or Discuss. Fill compact input pills in chat; missing answers and Subjects are explained before sending.
+- Keep authoring simple with Name/Prompt, Insert input, focused input editing and supporting settings under More details. Dialogs fit desktop and mobile layouts.
+- Preserve template answers and reference roles in conversation history, with explicit reuse/latest behaviour and faithful request composition.
+- Show transparent canvas areas clearly and preserve real alpha in PNG exports for ordinary designs as well as Assets. JPEG/PDF remain opaque.
+- Project previews show the current image from each of the three latest modified designs; previous image revisions no longer occupy separate slots.
+- Include documented server retention, verified archival cleanup and deployment disk preflight checks.
+
 ## New in 0.10.3 — canvas controls and library organisation (2026-10-17)
 
 - Resize overlays from all four corners; hold Shift to resize from the centre. Rotate directly with the circular canvas handle.

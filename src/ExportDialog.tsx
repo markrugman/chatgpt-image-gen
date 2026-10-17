@@ -85,7 +85,7 @@ export function ExportDialog({
       currentComposition(doc.pages[pageIndex]),
       Math.max(1, Math.round(dimensions.width * scale)),
       Math.max(1, Math.round(dimensions.height * scale)),
-      asset && format === "png",
+      format === "png",
     )
       .then((canvas) => {
         if (active) setSource(canvas);
@@ -160,7 +160,7 @@ export function ExportDialog({
         format,
         pageIndex,
         dpi,
-        asset,
+        format === "png",
         options,
       );
       if (result) {
@@ -360,7 +360,7 @@ export function ExportDialog({
               {format === "pdf"
                 ? `Includes all ${doc.pages.length} pages. Preview shows page ${pageIndex + 1}.`
                 : "Exports the current page."}{" "}
-              {asset && format === "png" ? "Transparency is preserved." : ""}
+              {format === "png" ? "Transparency is preserved." : ""}
             </p>
           </fieldset>
           <section className="export-preview-panel" aria-label="Export preview">
@@ -397,7 +397,7 @@ export function ExportDialog({
               </div>
             )}
             <div
-              className={`export-preview-stage ${asset && format === "png" ? "checker" : ""}`}
+              className={`export-preview-stage ${format === "png" ? "checker" : ""}`}
             >
               {preview && (
                 <div className="export-sheet">

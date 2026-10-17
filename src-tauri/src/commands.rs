@@ -97,7 +97,9 @@ pub async fn cancel_login(state: State<'_, Arc<AppState>>, login_id: String) -> 
 }
 #[cfg_attr(not(feature = "headless"), tauri::command)]
 pub async fn preview_template(state: State<'_, Arc<AppState>>, request: jobs::Submit) -> Result<TemplateRequest, String> {
-    crate::templates::prepare(&state.store.refresh()?, &request.target, request.template.as_ref().ok_or("Select a template")?, &request.prompt, &request.references, &request.reference_purposes, request.transparent)
+    let template = request.template.as_ref().ok_or("Select a template")?;
+    if request.mode != template.mode { return Err("Use the Template's configured mode".into()); }
+    crate::templates::prepare_with_answers(&state.store.refresh()?, &request.target, template, &request.prompt, &request.references, &request.reference_purposes, request.transparent, &request.template_answers)
 }
 #[cfg_attr(not(feature = "headless"), tauri::command)]
 pub async fn submit_prompt(

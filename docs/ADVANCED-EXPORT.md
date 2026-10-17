@@ -20,7 +20,7 @@ Optional crop marks are eight 0.25-point vector strokes outside the bleed, with 
 
 ### JPEG and PNG
 
-JPEG quality ranges from 1 to 100, default 90. The preview and estimated size are encoded at the actual output dimensions with the selected quality; compression changes bytes, not dimensions. Export uses the same quality. PNG remains lossless; asset PNG retains transparency. PDF bleed/marks/colour settings do not affect PNG or JPEG.
+JPEG quality ranges from 1 to 100, default 90. The preview and estimated size are encoded at the actual output dimensions with the selected quality; compression changes bytes, not dimensions. Export uses the same quality. PNG remains lossless; PNG preserves existing transparency for both documents and assets. Transparent areas appear on a checkerboard in the design canvas; the checkerboard is a viewing aid and is not exported. JPEG and print/PDF composition use a white background. PDF bleed/marks/colour settings do not affect PNG or JPEG.
 
 ## Preservation and limits
 

@@ -1,5 +1,26 @@
 # Next version design interview
 
+## 0.11.0 release and deployment authorised (2026-10-18)
+
+Mark requested a full build, GitHub publication and server deployment of all current updates. This lifts the earlier local-only holds for configurable Templates, the simplified authoring dialog, transparency preview/PNG export and current-design project previews. Windows Setup/Portable/Companion and the immutable Linux server image are in scope. Apply the [retention and deployment headroom policy](SERVER-RETENTION.md), preserve workspace/media, sessions/jobs/configuration and signed-in worker state, and qualify the published downloads and server before recording completion. Earlier release statuses below are historical.
+
+## Project previews — local server only (2026-10-17)
+
+Project cards show the current first-page composition from each of the three most recently modified active designs, using the shared precise edit ordering. Historical revisions and additional pages no longer occupy separate preview slots. Design counts remain unchanged.
+
+## Transparency preview and PNG export — private local-server fix (2026-10-17)
+
+The reported Chibi Sticker and Sex on the Beach cocktail originals both contain real alpha (range 0–255, corner alpha 0). Generation instructions were not causing the observed white backgrounds. Document canvases used a white viewing background, and ExportDialog preserved alpha only when exporting an Asset, flattening ordinary document PNGs onto white.
+
+- Document canvases now show transparent areas on the existing checkerboard. PNG preview/render/export preserves source alpha for documents and Assets; JPEG and print/PDF composition retain their opaque behaviour. No artwork was regenerated or edited.
+Verified and deployed locally only. [VALIDATION.md](VALIDATION.md) records alpha-channel, browser and preservation checks.
+
+## Configurable Templates — private local-server preview (2026-10-17)
+
+Implemented the approved configurable Templates design and updated only the existing LAN server. Public releases, GitHub and the installed Windows app are unchanged. The user rejected the first long authoring layout; the shipped editor is prompt-first, with compact input chips, a focused per-input editor and supporting metadata under More details. See [the canonical specification](TEMPLATES.md).
+
+Private preview is available at the existing local server. Configurable Text/Colour/single Choice inputs, optional phrases, explicit Subject requirements, Generate/Discuss, faithful request composition and compact responsive dialogs are implemented. [VALIDATION.md](VALIDATION.md) records testing and preservation evidence. No public release, push or global deployment is authorised.
+
 ## 0.10.3 — all current updates released and deployed (2026-10-17)
 
 Mark authorised the complete pending set. All canvas transforms, drawer/clipboard, precise recency and same-organisation Copy/Move/type-safe drag changes are published in [0.10.3](https://github.com/markrugman/chatgpt-image-gen/releases/tag/v0.10.3) from `55180e8f5b4c47bd83e4e2834f299f2ba6b52416` and deployed to the existing server with workspace/media, configuration, sessions/jobs and signed-in worker preserved. Verified stopped-volume/off-host backups and successful [workflow](https://github.com/markrugman/chatgpt-image-gen/actions/runs/39059113530); [VALIDATION.md](VALIDATION.md) is canonical. Earlier holds/statuses below are historical.

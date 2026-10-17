@@ -29,7 +29,8 @@ try {
   await page.goto(editorURL);
   await expect(page.locator('.design-canvas img').first()).toBeVisible();
   await page.getByRole('button',{name:'Save as template',exact:true}).click();
-  await expect(page.getByRole('dialog').getByRole('textbox',{name:'Recipe',exact:true})).toHaveValue(/Make the illustrated outlines a little thicker/);
+  await expect(page.getByRole('dialog').getByRole('textbox',{name:'Prompt',exact:true})).toHaveValue(/Make the illustrated outlines a little thicker/);
+  await page.getByRole('dialog').locator('.template-more-details > summary').click();
   await page.getByRole('dialog').getByText('Review source conversation and references',{exact:true}).click();
   await expect(page.locator('.template-source')).toContainText('navy circle');
   const previewImage=await page.getByRole('dialog').locator('.template-example img').getAttribute('src');
@@ -39,8 +40,9 @@ try {
   await page.getByRole('button',{name:'History',exact:true}).click();
   await page.getByRole('button',{name:'Save revision as template',exact:true}).last().click();
   const dialog=page.getByRole('dialog');
-  await expect(dialog.getByRole('textbox',{name:'Recipe',exact:true})).toHaveValue(/Create a clean flat vector avatar/);
-  await expect(dialog.getByRole('textbox',{name:'Recipe',exact:true})).toHaveValue(/Use a navy circle background/);
+  await dialog.locator('.template-more-details > summary').click();
+  await expect(dialog.getByRole('textbox',{name:'Prompt',exact:true})).toHaveValue(/Create a clean flat vector avatar/);
+  await expect(dialog.getByRole('textbox',{name:'Prompt',exact:true})).toHaveValue(/Use a navy circle background/);
   await dialog.getByLabel('Name',{exact:true}).fill(savedName);
   const correctFirst=await post('image_data',{imageId:p.revisions[0].imageId});
   assert.equal(await dialog.locator('.template-example img').getAttribute('src'),correctFirst);
@@ -84,7 +86,7 @@ try {
   await expect(page.getByText(`Copy of ${savedName}`,{exact:true})).toBeVisible();
   const copy=page.locator('.template-card').filter({hasText:`Copy of ${savedName}`});
   await copy.getByRole('button',{name:'Edit',exact:true}).click();
-  await page.getByRole('dialog').getByRole('textbox',{name:'Recipe',exact:true}).fill('Independent copy recipe');
+  await page.getByRole('dialog').getByRole('textbox',{name:'Prompt',exact:true}).fill('Independent copy recipe');
   await page.getByRole('dialog').getByRole('button',{name:'Save template',exact:true}).click();
   await expect(page.getByRole('dialog')).toHaveCount(0);
   w=await post('get_workspace');

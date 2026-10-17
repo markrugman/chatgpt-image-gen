@@ -1955,7 +1955,7 @@ dependencies = [
 
 [[package]]
 name = "image-gen-app"
-version = "0.10.3"
+version = "0.11.0"
 dependencies = [
  "axum",
  "base64 0.22.1",
@@ -1984,7 +1984,7 @@ dependencies = [
 
 [[package]]
 name = "image-gen-server"
-version = "0.10.3"
+version = "0.11.0"
 dependencies = [
  "argon2",
  "axum",

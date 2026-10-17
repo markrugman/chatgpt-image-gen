@@ -35,3 +35,6 @@ dist-ssr
 /release-assets/
 /server-image.tar.gz
 /.agents/
+
+# Python bytecode is not release source
+__pycache__/

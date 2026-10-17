@@ -31,6 +31,7 @@ jobs:
       - run: python scripts/release.py check --version "$RELEASE_VERSION"
       - run: bash -n server/install.sh
       - run: python scripts/test_distribution.py -v
+      - run: python scripts/test_server_retention.py
 
   windows:
     needs: check

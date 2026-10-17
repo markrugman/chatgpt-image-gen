@@ -71,7 +71,7 @@ try {
         const templateTrigger = page.locator('.editor-library').getByRole('button', { name: 'Use Template 0', exact: true });
         await templateTrigger.click();
         await page.getByRole('menuitem', { name: 'Use Template', exact: true }).click();
-        await expect(page.locator('.selected-template > strong')).toHaveText('Template 0');
+        await expect(page.locator('.selected-template .template-name')).toHaveText('Template 0');
         await expect(page.locator('.reference-chips')).toHaveCount(0);
         for (let repeat = 0; repeat < 2; repeat++) {
           if (width <= 1024) await page.getByRole('button', { name: 'Tools', exact: true }).click();

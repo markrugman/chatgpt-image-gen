@@ -3320,14 +3320,10 @@ label small {
 .canvas-overlay.locked { cursor: default; }
 .overlay-lock { position: absolute; top: -8px; right: -8px; padding: 3px; border-radius: 4px; background: var(--accent); color: white; display: flex; }
 .canvas-scroll:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
-.canvas-touch-actions { display: none; align-items: center; gap: 5px; min-height: 44px; padding: 8px; font-size: 12px; color: var(--ink); border-radius: 6px; }
-.canvas-touch-actions.touch-used { display: flex; }
-.canvas-touch-actions:hover, .canvas-touch-actions:focus-visible { background: var(--theme-soft, #f0eafa); }
 .canvas-context-menu.touch-menu { overflow: auto; }
 .canvas-context-menu.touch-menu button { min-height: 44px; font-size: 14px; }
 .canvas-context-menu.touch-menu .canvas-layer-menu > [role="menu"] { position: static; width: 100%; box-shadow: none; }
 @media (any-pointer: coarse) {
-  .canvas-touch-actions { display: flex; }
   .design-canvas { -webkit-touch-callout: none; user-select: none; }
 }
 @media (max-width: 600px) {
@@ -3370,6 +3366,7 @@ label small {
   .browser-app .message-author, .browser-app .chat-heading small { font-size: 12px; }
   .browser-app .canvas-scroll { padding: 18px 16px; }
   .browser-app .canvas-toolbar { padding: 6px 10px; height: auto; min-height: 54px; flex-wrap: wrap; gap: 4px; }
+  .browser-app .canvas-toolbar .toolbar-caption { min-width: 0; }
   .browser-app .overlay-inspector { flex-wrap: wrap; }
   .browser-app .modal { max-width: calc(100vw - 16px); max-height: calc(100dvh - 16px); }
   .browser-app .modal[open]:has(.export-workspace) { width: min(940px, calc(100vw - 16px)); max-width: calc(100vw - 16px); max-height: calc(100dvh - 16px); }
@@ -3483,6 +3480,48 @@ label small {
 .selected-template { padding: 10px; border-bottom: 1px solid var(--border); display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
 .selected-template > img { width: 42px; height: 42px; object-fit: contain; }
 .selected-template p { flex-basis: 100%; min-width: 0; margin: 0; }
+.configurable-template { min-width: 0; }
+.configurable-template .template-name { font-weight: 600; flex: 1; min-width: 0; text-align: left; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.template-remove { display: grid; place-items: center; background: transparent; border: 0; color: var(--muted); border-radius: 7px; }
+.template-status { flex-basis: 100%; display: flex; gap: 3px; font-size: 12px; min-width: 0; overflow: hidden; white-space: nowrap; }
+.template-status span { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.template-input-pills { display: flex; flex-wrap: wrap; gap: 6px; min-width: 0; width: 100%; }
+.template-input-pills button { min-width: 0; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; border: 1px solid var(--border); background: var(--theme-soft, #f0eafa); color: var(--ink); padding: 6px 10px; border-radius: 8px; font-size: 12px; }
+.template-input-pills button.incomplete { border-style: dashed; }
+.template-input-pills i { display: inline-block; width: 12px; height: 12px; border: 1px solid var(--border); border-radius: 50%; margin-right: 5px; vertical-align: middle; }
+.template-error-summary { flex-basis: 100%; display: grid; gap: 5px; font-size: 12px; }
+.template-error-summary button { text-align: left; }
+.template-completed-instructions { flex-basis: 100%; min-width: 0; font-size: 12px; }
+.template-completed-instructions summary, .template-more-details > summary, .template-details-form details > summary { cursor: pointer; padding: 8px 0; }
+.template-completed-instructions pre { white-space: pre-wrap; overflow-wrap: anywhere; max-height: 180px; overflow: auto; }
+.template-details-form { display: flex; flex-direction: column; min-height: 0; }
+.modal[open]:has(.template-details-form), .modal[open]:has(.template-editor-form) { display: flex; flex-direction: column; overflow: hidden; max-height: 90dvh; }
+.modal:has(.template-details-form) > .modal-head, .modal:has(.template-editor-form) > .modal-head { flex-shrink: 0; }
+.template-editor-form { display: flex; flex-direction: column; min-height: 0; }
+.template-details-form .form-body, .template-editor-form .form-body { overflow-y: auto; min-height: 0; }
+.template-details-form .modal-footer, .template-editor-form .modal-footer { flex-shrink: 0; }
+.template-answer, .template-subject-picker { display: grid; gap: 8px; min-width: 0; }
+.template-answer + .template-answer { margin-top: 16px; }
+.template-answer textarea, .template-answer select, .template-answer input { width: 100%; min-width: 0; box-sizing: border-box; }
+.prompt-box .template-answer textarea { border: 1px solid var(--theme-border, var(--border)); border-radius: 7px; background: var(--theme-surface, var(--surface)); color: var(--theme-ink, var(--ink)); padding: 10px 11px; min-height: 76px; height: 76px; font-size: 13px; resize: vertical; }
+.template-colour { display: flex; gap: 8px; align-items: center; min-width: 0; }
+.template-colour input[type="color"] { width: 48px; flex: 0 0 48px; padding: 4px; }
+.template-colour input:not([type="color"]) { flex: 1; }
+.template-author-inputs { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.template-author-chip { border: 1px solid var(--border); border-radius: 8px; padding: 7px 10px; color: var(--ink); background: var(--soft); }
+.template-extra-fields { display: grid; gap: 18px; padding-top: 14px; }
+.template-details-form details > label { margin-top: 14px; }
+.template-details-form .template-checkbox { display: flex; flex-direction: row; align-items: center; gap: 8px; }
+.template-checkbox input { width: auto; }
+.reference-chips .reference-purpose { width: auto; max-width: 90px; padding: 3px; font-size: 11px; background: transparent; color: var(--ink); }
+@media (max-width: 600px), (any-pointer: coarse) {
+  .template-input-pills button, .configurable-template button, .configurable-template summary, .reference-chips button, .reference-chips .reference-purpose { min-height: 44px; }
+  .template-remove { min-width: 44px; }
+  .template-more-details > summary, .template-details-form details > summary { min-height: 44px; padding: 12px 0; }
+  .template-answer input, .template-answer textarea, .template-answer select, .template-author-chip { font-size: 16px; min-height: 44px; }
+  .prompt-box .template-answer textarea { font-size: 16px; }
+  .reference-chips .reference-purpose { font-size: 12px; }
+}
 .reference-chips > span { max-width: 100%; }
 .reference-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .reference-chips img, .reference-chips button { flex-shrink: 0; }

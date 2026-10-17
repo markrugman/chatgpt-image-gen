@@ -224,6 +224,14 @@ pub struct Overlay {
 #[derive(Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Template {
+    #[serde(default, skip_serializing_if = "is_zero_u32")]
+    pub input_version: u32,
+    #[serde(default = "default_template_mode", skip_serializing_if = "is_generate_mode")]
+    pub mode: String,
+    #[serde(default = "default_subject_requirement", skip_serializing_if = "is_no_subject_requirement")]
+    pub subject_requirement: String,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub inputs: Vec<TemplateInput>,
     #[serde(default, skip_serializing_if = "is_zero")]
     pub modified_at: u64,
     #[serde(default)]
@@ -262,6 +270,8 @@ pub struct ReferencePurpose {
 #[derive(Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct TemplateRequest {
+    #[serde(default, skip_serializing_if = "std::collections::BTreeMap::is_empty")]
+    pub answers: std::collections::BTreeMap<String, String>,
     pub template: Template,
     pub additional_instructions: String,
     pub reference_purposes: Vec<ReferencePurpose>,
@@ -270,6 +280,21 @@ pub struct TemplateRequest {
     pub unit: String,
     pub transparent: bool,
     pub instructions: String,
+}
+pub fn default_template_mode() -> String { "generate".into() }
+pub fn default_subject_requirement() -> String { "none".into() }
+fn is_zero_u32(value: &u32) -> bool { *value == 0 }
+fn is_generate_mode(value: &String) -> bool { value == "generate" }
+fn is_no_subject_requirement(value: &String) -> bool { value == "none" }
+#[derive(Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct TemplateInput {
+    pub id: String,
+    pub label: String,
+    pub kind: String,
+    pub required: bool,
+    pub default_value: String,
+    pub choices: Vec<String>,
 }
 pub fn default_library_kind() -> String { "asset".into() }
 fn is_asset_kind(kind: &String) -> bool { kind == "asset" }

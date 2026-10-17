@@ -38,7 +38,19 @@ export interface Composition {
   overlays: Overlay[];
   framing?: "fit" | "crop" | null;
 }
+export interface TemplateInput {
+  id: string;
+  label: string;
+  kind: "text" | "colour" | "choice";
+  required: boolean;
+  defaultValue: string;
+  choices: string[];
+}
 export interface Template {
+  inputVersion?: number;
+  mode?: "generate" | "discuss";
+  subjectRequirement?: "none" | "optional" | "required";
+  inputs?: TemplateInput[];
   modifiedAt?: number;
   createdAt?: number;
   updatedAt?: number;
@@ -66,6 +78,7 @@ export interface ReferencePurpose {
   explanation: string;
 }
 export interface TemplateRequest {
+  answers?: Record<string, string>;
   template: Template;
   additionalInstructions: string;
   referencePurposes: ReferencePurpose[];

@@ -74,14 +74,26 @@ A searchable label attached to a project, document, asset, upload, or template.
 **Generation Reference**:
 A selected image supplied to guide generation, shown explicitly in the prompt. It is distinct from placing an original image unchanged as an overlay.
 
+**Subject Reference**:
+A Generation Reference identified as showing the person, character or object to depict. Several Subject References may show the same subject.
+
 **Template**:
-A reusable image-generation prompt with an example image, selected to guide a new generation. A generation can use at most one template.
+A reusable prompt for image generation or written design discussion, optionally including an example image and configurable inputs. A request can use at most one Template.
 
 **Template Folder**:
 A user-created, single-level grouping of templates, such as Avatars or Posters. Each template belongs to one folder.
 
+**Template Input**:
+A named, configurable part of a Template completed with text, a colour or one of its defined choices.
+
+**Template Answer**:
+The value supplied for a Template Input in a particular use of a Template.
+
+**Optional Phrase**:
+A complete part of a Template recipe included only when its associated optional Template Input has an answer.
+
 **Template Snapshot**:
-The preserved name and recipe of a template selected for a draft or used in a generation. Later library edits do not change that captured content.
+The preserved content of a Template selected for a draft or used in a request, including its mode and input definitions. Later library edits do not change that captured content.
 
 **Template Usage Notes**:
 Guidance for applying a template, such as which subject photographs to attach. Usage notes are shown to the user separately from the generation recipe.

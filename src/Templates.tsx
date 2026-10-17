@@ -1,13 +1,14 @@
 import { useLibraryMove } from "./useLibraryMove";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { ArrowLeft, FileImage, Folder, FolderPlus, MoreHorizontal, Plus, Trash2 } from "lucide-react";
 import { api } from "./api";
 import { LibraryImageTile } from "./LibraryImages";
 import { Empty, ImageView, Modal, PageHeading, SectionHeading, type Act } from "./ui";
-import { activeOrganisations, matchesSearch, type Message, type Template, type Workspace } from "./types";
+import { activeOrganisations, matchesSearch, type Message, type Template, type TemplateInput, type Workspace } from "./types";
+import { TemplateInputDialog } from "./TemplateControls";
 import { folderDates, newestFirst } from "./folderOrdering";
 
-export type TemplateSource = { imageId: string; recipe: string; messages?: Message[] };
+export type TemplateSource = { imageId: string; recipe: string; messages?: Message[]; template?: Template; answers?: Record<string, string> };
 export const generalFolder = "general";
 
 export function TemplateForm({ w, act, orgId, initialFolderId, template, source, onClose, onRefresh, management }: {
@@ -21,24 +22,72 @@ export function TemplateForm({ w, act, orgId, initialFolderId, template, source,
   const [owner, setOwner] = useState(template ? template.organisationId || "" : orgId || "");
   const [folder, setFolder] = useState(template?.folderId || initialFolderId || generalFolder);
   const [tags, setTags] = useState(template?.tags.join(", ") || "");
+  const config = template || source?.template;
+  const [templateMode, setTemplateMode] = useState(config?.mode || "generate");
+  const [subjectRequirement, setSubjectRequirement] = useState(config?.subjectRequirement || "none");
+  const [inputs, setInputs] = useState<TemplateInput[]>((config?.inputs || []).map(i => ({ ...i, defaultValue: source?.answers?.[i.id] ?? i.defaultValue })));
+  const recipeInput = useRef<HTMLTextAreaElement>(null);
+  const recipeSelection = useRef({ start: 0, end: 0 });
+  const [editingInput, setEditingInput] = useState<TemplateInput | "new" | null>(null);
+  const openInput = (input: TemplateInput | "new") => {
+    const el = recipeInput.current;
+    if (el) recipeSelection.current = { start: el.selectionStart, end: el.selectionEnd };
+    setEditingInput(input);
+  };
+  const insertInput = (input: TemplateInput) => {
+    const { start, end } = recipeSelection.current;
+    const token = `{{${input.id}}}`;
+    setRecipe(recipe.slice(0, start) + token + recipe.slice(end));
+    if (!inputs.some(i => i.id === input.id)) setInputs([...inputs, input]);
+    requestAnimationFrame(() => { const el = recipeInput.current; el?.focus(); el?.setSelectionRange(start + token.length, start + token.length); });
+  };
+  const markOptional = (input: TemplateInput) => {
+    const { start, end } = recipeSelection.current;
+    const phrase = recipe.slice(start, end);
+    if (!phrase.includes(`{{${input.id}}}`) || phrase.includes("{{#") || phrase.includes("{{/")) { setError("Select the complete phrase containing this input; optional phrases cannot nest."); return; }
+    setRecipe(recipe.slice(0, start) + `{{#${input.id}}}${phrase}{{/${input.id}}}` + recipe.slice(end)); setError("");
+  };
   const [notes, setNotes] = useState(template?.usageNotes || "");
   const [error, setError] = useState(""), [busy, setBusy] = useState(false);
   const manage = async (action: () => Promise<void>) => {
     setBusy(true); setError("");
     try { await action(); } catch (e) { setError(String(e)); } finally { setBusy(false); }
   };
+  if (editingInput) return <TemplateInputDialog input={editingInput === "new" ? undefined : editingInput} selection={recipe.slice(recipeSelection.current.start, recipeSelection.current.end)} hasOptionalPhrase={editingInput !== "new" && recipe.includes(`{{#${editingInput.id}}}`)} onClose={() => setEditingInput(null)}
+    onRemove={editingInput === "new" ? undefined : () => { const i = editingInput; setInputs(inputs.filter(x => x.id !== i.id)); setRecipe(r => r.split(`{{${i.id}}}`).join("").split(`{{#${i.id}}}`).join("").split(`{{/${i.id}}}`).join("")); setEditingInput(null); }}
+    onSave={(input, mark) => {
+      if (editingInput === "new") {
+        let base = input.label.toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_|_$/g, "").slice(0,52);
+        if (!/^[a-z]/.test(base)) base = `input_${base}`;
+        let id = base, n = 2; while (inputs.some(i => i.id === id)) id = `${base}_${n++}`;
+        insertInput({ ...input, id });
+      } else {
+        setInputs(inputs.map(i => i.id === input.id ? input : i));
+        if (input.required) setRecipe(r => r.split(`{{#${input.id}}}`).join("").split(`{{/${input.id}}}`).join(""));
+        else if (mark) markOptional(input);
+      }
+      setEditingInput(null);
+    }} />;
   return <Modal title={template ? "Edit template" : "New template"} onClose={() => { if (!busy) onClose(); }} wide>
     <form className="template-editor-form" onSubmit={async e => {
       e.preventDefault(); setError(""); setBusy(true);
       try {
         await act({ op: "template_save", ...(template ? { id: template.id, version: template.version } : {}),
-          name, recipe, exampleImageId: example, organisationId: owner || null, folderId: folder,
+          name, recipe, inputVersion: 1, mode: templateMode, subjectRequirement, inputs, exampleImageId: example, organisationId: owner || null, folderId: folder,
           tags: tags.split(",").map(s => s.trim()).filter(Boolean), usageNotes: notes });
         onClose();
       } catch (e) { setError(String(e)); } finally { setBusy(false); }
     }}>
       <div className="form-body">
       <label>Name<input required placeholder="Give your template a name" value={name} onChange={e => setName(e.target.value)} /></label>
+      <div className="template-field">
+      <label>Prompt<textarea aria-label="Prompt" ref={recipeInput} onSelect={e => { recipeSelection.current = { start: e.currentTarget.selectionStart, end: e.currentTarget.selectionEnd }; }} required rows={5} placeholder="Describe the style, composition and instructions to reuse…" value={recipe} onChange={e => setRecipe(e.target.value)} /></label>
+      <p className="muted">Write the instructions to reuse. Place the cursor where an answer belongs, then choose Insert input.</p>
+      </div>
+      <div className="template-author-inputs"><button type="button" className="button secondary small" onClick={() => openInput("new")}>Insert input</button>{inputs.map(i => <button type="button" className="template-author-chip" key={i.id} onClick={() => openInput(i)}>{i.label}</button>)}</div>
+      <div className="form-grid"><label>Action<select aria-label="Action" value={templateMode} onChange={e => setTemplateMode(e.target.value as "generate" | "discuss")}><option value="generate">Generate image</option><option value="discuss">Discuss (text only)</option></select></label>
+        <label>Subject images<select aria-label="Subject images" value={subjectRequirement} onChange={e => setSubjectRequirement(e.target.value as "none" | "optional" | "required")}><option value="none">Not required</option><option value="optional">Optional</option><option value="required">Required</option></select></label></div>
+      <details className="template-more-details"><summary>More details</summary><div className="template-extra-fields">
       <div className="template-field">
       <label>Example image<input className="template-image-input" type="file" accept="image/png,image/jpeg,image/webp" disabled={busy} onChange={async e => {
         const file = e.target.files?.[0]; if (!file) return;
@@ -55,10 +104,6 @@ export function TemplateForm({ w, act, orgId, initialFolderId, template, source,
       {example && <div className="template-example checker"><ImageView id={example} alt="Template example" /></div>}
       <p className="muted">Optional — add an example now or later. It is sent to generation only when explicitly attached as Style.</p>
       </div>
-      <div className="template-field">
-      <label>Recipe<textarea required rows={7} placeholder="Describe the style, composition and instructions to reuse…" value={recipe} onChange={e => setRecipe(e.target.value)} /></label>
-      <p className="muted">Make this recipe self-contained. For results refined over several edits, include the earlier instructions too. Source photographs, logos and conversations are not carried forward.</p>
-      </div>
       {!!source?.messages?.length && <details><summary>Review source conversation and references</summary>
         <div className="template-source">{source.messages.map(m => <div key={m.id}>
           <strong>{m.role}</strong><p>{m.templateRequest?.instructions || m.text}</p>
@@ -72,12 +117,13 @@ export function TemplateForm({ w, act, orgId, initialFolderId, template, source,
       <FolderSelect w={w} owner={owner} value={folder} onChange={setFolder} />
       </div>
       <label>Tags (comma separated)<input placeholder="e.g. portrait, illustration, product" value={tags} onChange={e => setTags(e.target.value)} /></label>
-      <label>Usage notes<textarea rows={2} placeholder="Optional tips for using this template" value={notes} onChange={e => setNotes(e.target.value)} /></label>
+      <label>Usage notes<textarea aria-label="Usage notes" rows={2} placeholder="Optional tips for using this template" value={notes} onChange={e => setNotes(e.target.value)} /></label>
       {management && <div className="button-row">
         <button type="button" className="button secondary" disabled={busy} onClick={() => manage(management.duplicate)}>Duplicate</button>
         <button type="button" className="button secondary" disabled={busy} onClick={() => management.transfer(true)}>Copy to…</button>
         <button type="button" className="button secondary" disabled={busy} onClick={() => management.transfer(false)}>Move to…</button>
       </div>}
+      </div></details>
       {error && <p role="alert" className="error">{error} {template && <button type="button" onClick={async () => { try { await onRefresh(); onClose(); } catch (e) { setError(String(e)); } }}>Close and reload template</button>}</p>}
       </div>
       <div className="modal-footer template-form-footer">{management && <button type="button" className="button danger-text template-trash" disabled={busy} onClick={() => manage(management.trash)}><Trash2 size={14} />Move to Trash</button>}<button type="button" className="button secondary" disabled={busy} onClick={onClose}>Cancel</button>

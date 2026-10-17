@@ -22,6 +22,9 @@ readline.createInterface({input:process.stdin}).on('line',line=>{
       if(mode==='fail'){
         send({method:'error',params:{threadId,error:{message:'Deliberate fixture failure'}}});
         send({method:'turn/completed',params:{threadId,turn:{id:turnId,status:'failed'}}});
+      }else if(mode==='discuss'){
+        send({method:'item/completed',params:{threadId,item:{type:'agentMessage',text:'1. A rising arch\n2. Two joined curves\n3. An open square'}}});
+        send({method:'turn/completed',params:{threadId,turn:{id:turnId,status:'completed'}}});
       }else{
         send({method:'item/completed',params:{threadId,item:{type:'imageGeneration',status:'completed',savedPath:path.join(root,'source.png')}}});
         send({method:'turn/completed',params:{threadId,turn:{id:turnId,status:'completed'}}});

@@ -1,5 +1,7 @@
 # Image Gen desktop and browser access (0.8.2)
 
+The existing private LAN deployment uses the approved [storage retention and deployment headroom policy](SERVER-RETENTION.md). Run its preflight before building/pulling an update or stopping the service for backup.
+
 ## Published-image installer
 
 The `server/install.sh` and `server/compose.release.yaml` provide the [README server setup](../README.md#2-server--debianubuntu-linux-x64) using the public release and immutable server image. The installer is qualified separately from existing manual deployments. The source-build `server/compose.yaml` remains available for development.

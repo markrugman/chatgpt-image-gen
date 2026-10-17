@@ -15,7 +15,6 @@ export function useCanvasCommands({ w, overlays, setOverlays, selected, setSelec
   onEdit?: (key: string) => void | Promise<void>; canEdit?: (key: string) => boolean;
 }) {
   const [menu, setMenu] = useState<{ x: number; y: number; point: { x: number; y: number }; id: string | null; touch: boolean } | null>(null);
-  const [touchUsed, setTouchUsed] = useState(false);
   const hold = useRef<{ pointerId: number; x: number; y: number; timer: ReturnType<typeof setTimeout>; opened: boolean } | null>(null);
   const touches = useRef(new Set<number>()), suppressClick = useRef(false);
   const [submenu, setSubmenu] = useState(false), [busy, setBusy] = useState(false);
@@ -269,16 +268,12 @@ export function useCanvasCommands({ w, overlays, setOverlays, selected, setSelec
       {item("lock", object?.locked ? "Unlock" : "Lock", "", blocked || !object)}
     </>}
   </div>, document.body);
-  return { busy, ui, touchUsed, placeVersion, dropFiles: (files: File[], point: { x: number; y: number }) => paste(files, "", point, true), menuOpen: !!menu, openActions: (button: HTMLButtonElement) => {
-    const rect = button.getBoundingClientRect();
-    const point = object ? { x: object.x + object.width / 2, y: object.y + object.height / 2 } : { x: 50, y: 50 };
-    openMenu(rect.left, rect.bottom, object?.id ?? null, true, point);
-  }, isNudging: () => nudge.current, undo: () => action("undo"), redo: () => action("redo"), handlers: {
+  return { busy, ui, placeVersion, dropFiles: (files: File[], point: { x: number; y: number }) => paste(files, "", point, true), isNudging: () => nudge.current, undo: () => action("undo"), redo: () => action("redo"), handlers: {
     onPointerDownCapture: (e: React.PointerEvent) => {
       const target = e.target as HTMLElement;
       if (target.closest('[data-region-surface], .region-inline-instruction, .region-focus-label')) { cancelHold(); suppressClick.current = false; return; }
       if (e.pointerType !== "touch") { suppressClick.current = false; return; }
-      setTouchUsed(true); touches.current.add(e.pointerId); cancelHold();
+      touches.current.add(e.pointerId); cancelHold();
       if (!e.isPrimary || touches.current.size > 1) { cancelDrag(); e.stopPropagation(); return; }
       suppressClick.current = false;
       if (!target.closest('.design-canvas') || target.closest('.resize-handle')) return;

@@ -1,5 +1,9 @@
 # Building and releasing Image Gen
 
+## 0.11.0 release and deployment authorised (2026-10-18)
+
+Mark requested a full build, GitHub publication and server deployment of all current updates. This lifts the earlier local-only holds for configurable Templates, the simplified authoring dialog, transparency preview/PNG export and current-design project previews. Windows Setup/Portable/Companion and the immutable Linux server image are in scope. Apply the [retention and deployment headroom policy](SERVER-RETENTION.md), preserve workspace/media, sessions/jobs/configuration and signed-in worker state, and qualify the published downloads and server before recording completion. Earlier release statuses below are historical.
+
 ## 0.10.3 — all current updates released and deployed (2026-10-17)
 
 Mark authorised the complete pending set. All canvas transforms, drawer/clipboard, precise recency and same-organisation Copy/Move/type-safe drag changes are published in [0.10.3](https://github.com/markrugman/chatgpt-image-gen/releases/tag/v0.10.3) from `55180e8f5b4c47bd83e4e2834f299f2ba6b52416` and deployed to the existing server with workspace/media, configuration, sessions/jobs and signed-in worker preserved. Verified stopped-volume/off-host backups and successful [workflow](https://github.com/markrugman/chatgpt-image-gen/actions/runs/39059113530); [VALIDATION.md](VALIDATION.md) is canonical. Earlier holds/statuses below are historical.

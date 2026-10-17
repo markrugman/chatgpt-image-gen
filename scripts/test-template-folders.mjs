@@ -1,4 +1,4 @@
-import { createServer } from 'vite';
+import { preview } from 'vite';
 import { chromium, webkit, expect } from '@playwright/test';
 import assert from 'node:assert/strict';
 // Development-only mocked workspace; no production connection or generation.
@@ -23,7 +23,7 @@ const image='data:image/svg+xml,'+encodeURIComponent('<svg xmlns="http://www.w3.
 workspace.templateFolders=[{id:'zulu',name:'Zulu',organisationId:'org'},{id:'avatars',name:'Avatars',organisationId:'org'},{id:'empty',name:'Empty folder',organisationId:'org'},{id:'shared-folder',name:'Shared folder',organisationId:null}];
 workspace.templates[0].folderId='avatars';
 workspace.templates.push({...workspace.templates[0],id:'general-template',name:'General recipe',folderId:'general'});
-const server=await createServer({server:{host:'127.0.0.1',port:0,strictPort:false}});await server.listen();
+const server=await preview({preview:{host:'127.0.0.1',port:0,strictPort:false}});
 const origin='http://127.0.0.1:'+server.httpServer.address().port;
 try {
  for(const [name,engine,options] of [['Edge',chromium,{channel:'msedge'}],['WebKit',webkit,{}]]) {
@@ -39,13 +39,13 @@ try {
     else if(a.op==='template_folder_delete'){w.templateFolders=w.templateFolders.filter(f=>f.id!==a.id);w.templates=w.templates.map(t=>t.folderId===a.id?{...t,folderId:'general'}:t);}
     else throw Error('Unexpected mutation '+a.op);
    }return r.fulfill({json:cmd==='get_workspace'?w:cmd==='image_data'?image:cmd==='get_jobs'?[]:cmd==='server_status'?{connected:true,online:true,pending:0}:cmd==='connection'?{account:null,capabilities:{}}:{}});});
-   await page.goto(origin+'/#view=projects&org=org&design=doc&page=page');await expect(page.locator('.editor')).toBeVisible();
+   await page.goto(origin+'/#view=projects&org=org&design=doc&page=page',{waitUntil:'domcontentloaded'});await expect(page.locator('.editor')).toBeVisible();
    await page.evaluate(theme=>{localStorage.setItem('imagegen-theme',theme);document.documentElement.dataset.theme=theme;},theme);
    if(width<=1024)await page.getByRole('button',{name:'Tools',exact:true}).click();
    await page.locator('.tool-tabs').getByRole('button',{name:'Templates',exact:true}).click();
    const editorUrl=page.url();
    const drawer=page.locator('.editor-library');const folders=drawer.getByLabel('Template folders',{exact:true});
-   await expect(folders.locator('.card-name strong')).toHaveText(['Avatars','Empty folder','General','Zulu']);
+   await expect(folders.locator('.card-name strong')).toHaveText(['General','Avatars','Empty folder','Zulu']);
    await expect(drawer.getByRole('combobox')).toHaveCount(0);await expect(drawer.locator('.icon-button')).toHaveCount(0);
    await expect(drawer.getByRole('button',{name:/Rename folder|Edit folder|Delete folder/})).toHaveCount(0);
    await expect(drawer.locator('.library-image-trigger')).toHaveCount(0);
@@ -62,7 +62,7 @@ try {
    await page.keyboard.press('Escape');await drawer.getByRole('button',{name:'Folders',exact:true}).click();
    await drawer.getByRole('button',{name:'Shared',exact:true}).click();await expect(folders.locator('.card-name strong')).toHaveText(['General','Shared folder']);
    await folders.getByRole('button',{name:'Open folder Shared folder',exact:true}).click();await expect(drawer.getByRole('button',{name:'Use Shared recipe',exact:true})).toBeVisible();
-   await drawer.getByRole('button',{name:'Organisation',exact:true}).click();await expect(folders.locator('.card-name strong')).toHaveText(['Avatars','Empty folder','General','Zulu']);
+   await drawer.getByRole('button',{name:'Organisation',exact:true}).click();await expect(folders.locator('.card-name strong')).toHaveText(['General','Avatars','Empty folder','Zulu']);
    assert.equal(actions.length,0,'Drawer browsing must not mutate the workspace');assert.equal(page.url(),editorUrl,'Drawer folders remain local editor tools');
    await folders.getByRole('button',{name:'Open folder Avatars',exact:true}).click();await drawer.getByRole('button',{name:'Use Portrait recipe',exact:true}).click();
    await drawer.getByRole('menuitem',{name:'Use Template',exact:true}).click();await expect(page.locator('.selected-template')).toContainText('Portrait recipe');
@@ -83,4 +83,4 @@ try {
    assert.deepEqual(errors,[]);await page.close();console.log(`PASS ${name} ${width} ${theme}: sorted folders, search/back/empty/scope/selection; drawer has no management; library rename and delete correct folder`);
   }}finally{await browser.close();}
  }
-}finally{await server.close();}
+}finally{await new Promise(resolve=>server.httpServer.close(resolve));}
