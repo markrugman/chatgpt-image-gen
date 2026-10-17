@@ -93,6 +93,7 @@ try {
           assert(Math.hypot(fixed.x - nextFixed.x, fixed.y - nextFixed.y) < 1, fromCenter ? 'centre must stay fixed' : 'opposite corner must stay fixed');
           await page.locator('.canvas-scroll').focus(); await page.keyboard.press('Control+z');
           await expect.poll(async () => (await state()).o).toEqual(before.o);
+          await expect(page.getByTitle('Redo', { exact: true })).toBeEnabled();
           await page.keyboard.press('Control+Shift+z');
           await expect.poll(async () => (await state()).o).toEqual(after.o);
         }
