@@ -348,8 +348,13 @@ impl Database {
             serde_json::from_value::<model::Workspace>(change.workspace).map_err(internal)?,
         )
         .map_err(internal)?;
+        // Stored legacy records can omit new defaulted fields, such as ordering dates.
+        let current_workspace = serde_json::to_value(
+            serde_json::from_value::<model::Workspace>(current.workspace).map_err(internal)?,
+        )
+        .map_err(internal)?;
         change.workspace = merge(
-            &current.workspace,
+            &current_workspace,
             &change.base_workspace,
             &change.workspace,
         )

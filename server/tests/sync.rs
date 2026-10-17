@@ -3,6 +3,46 @@ use reqwest::{Client, StatusCode};
 use serde_json::{Value, json};
 const KEY: &str = "test-only-key-012345678901234567890123456789";
 
+#[tokio::test]
+async fn legacy_dates_do_not_create_sync_conflicts_after_upgrade() {
+    for collection in ["projects", "templateFolders", "templates"] {
+        let root = std::env::temp_dir().join(format!("imagegen-legacy-dates-{}", model::id()));
+        std::fs::create_dir_all(&root).unwrap();
+        let mut legacy = empty();
+        legacy["organisations"] = json!([{"id":"o","name":"Studio","color":"purple","deletedAt":null,"trashedItems":[],"position":null}]);
+        legacy["projects"] = json!([{"id":"p","organisationId":"o","name":"Legacy project","tags":[],"deletedAt":null}]);
+        legacy["templateFolders"] = json!([{"id":"f","name":"Legacy folder","organisationId":"o"}]);
+        legacy["templates"] = json!([{"id":"t","name":"Legacy template","recipe":"Portrait","exampleImageId":"","usageNotes":"","organisationId":"o","folderId":"f","tags":[],"version":1,"deletedAt":null}]);
+        {
+            let db = rusqlite::Connection::open(root.join("workspace.sqlite3")).unwrap();
+            db.execute_batch("CREATE TABLE workspace(id INTEGER PRIMARY KEY,data TEXT NOT NULL);").unwrap();
+            db.execute("INSERT INTO workspace VALUES(1,?1)", [legacy.to_string()]).unwrap();
+        }
+        let listen = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let address = format!("http://{}", listen.local_addr().unwrap());
+        let app = router(root.clone(), "Upgrade QA".into(), KEY.into()).unwrap();
+        let task = tokio::spawn(async move { axum::serve(listen, app).await.unwrap() });
+        let client = Client::new();
+        let snapshot: Value = client.get(format!("{address}/v1/workspace")).bearer_auth(KEY).send().await.unwrap().json().await.unwrap();
+        assert_eq!(snapshot["workspace"], legacy, "Opening legacy data must not rewrite it");
+        let typed: model::Workspace = serde_json::from_value(snapshot["workspace"].clone()).unwrap();
+        let base = serde_json::to_value(typed).unwrap();
+        let mut next = base.clone();
+        next[collection][0]["name"] = json!("Renamed after upgrade");
+        next[collection][0]["updatedAt"] = json!(model::now());
+        let response = client.put(format!("{address}/v1/workspace")).bearer_auth(KEY)
+            .json(&json!({"serverId":snapshot["serverId"],"baseWorkspace":base,"workspace":next,"requireEmpty":false}))
+            .send().await.unwrap();
+        let status = response.status();
+        let body: Value = response.json().await.unwrap();
+        task.abort();
+        let _ = task.await;
+        assert_eq!(status, StatusCode::OK, "Legacy {collection} edit failed: {body}");
+        assert_eq!(body["workspace"][collection][0]["name"], "Renamed after upgrade");
+        std::fs::remove_dir_all(root).unwrap();
+    }
+}
+
 #[test]
 fn template_entities_merge_additively_and_stale_edits_cannot_erase_them() {
     let base = empty();
