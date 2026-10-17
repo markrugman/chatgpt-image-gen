@@ -1,8 +1,8 @@
 # Next version design interview
 
-## 0.9.6 release authorised (2026-10-17)
+## 0.9.6 deployed and published (2026-10-17)
 
-Mark confirmed the complete canvas design and explicitly requested implementation, testing and, once checks pass, deployment to the server and GitHub. This authorisation supersedes the earlier holds for the pending organisation highlight, Uploads drag/drop, template destination defaults and completed project composition-preview fix. Release qualification and deployment evidence are recorded in [VALIDATION.md](VALIDATION.md).
+Mark confirmed the complete canvas design and explicitly requested implementation, testing and, once checks pass, deployment to the server and GitHub. This authorisation supersedes the earlier holds for the pending organisation highlight, Uploads drag/drop, template destination defaults and completed project composition-preview fix. All these changes are now deployed and public in [0.9.6](https://github.com/markrugman/chatgpt-image-gen/releases/tag/v0.9.6) from `372e2c7128e9c691fe4be60081a1f5aa14e65b68`. Workspace/media, sessions/jobs and signed-in worker are preserved with verified stopped-volume/off-host backups. All final builds, tests, package/runtime and anonymous download/image checks pass. [VALIDATION.md](VALIDATION.md) records the evidence.
 
 ## Project previews include placed assets - local fix (2026-10-17)
 
