@@ -207,4 +207,3 @@ export function useCanvasCommands({ w, overlays, setOverlays, selected, setSelec
     },
   } };
 }
-

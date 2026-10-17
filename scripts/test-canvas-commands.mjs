@@ -132,6 +132,9 @@ try {
       await expect(page.locator('.toast')).toContainText('This layout changed elsewhere');
       assert.equal((await state(doc2)).overlays.length, 1, 'A stale canvas cannot overwrite a concurrent edit');
       await expect(page.locator('.canvas-overlay')).toHaveCSS('transform', /matrix/);
+      const afterConflict = await state(doc2);
+      await surface.press('Control+z'); await expect.poll(async () => (await state(doc2)).p.historyIndex).toBe(afterConflict.p.historyIndex - 1);
+      await surface.press('Control+Shift+z'); await expect.poll(async () => (await state(doc2)).p.historyIndex).toBe(afterConflict.p.historyIndex);
       // Text editing retains its standard Delete / Ctrl+D behaviour and never edits the canvas.
       const prompt = page.getByRole('textbox', { name: 'Design prompt', exact: true }); await prompt.fill('Keep my text');
       await prompt.press('Delete'); assert.equal((await state(doc2)).overlays.length, 1);

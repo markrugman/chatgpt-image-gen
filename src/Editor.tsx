@@ -398,7 +398,7 @@ export function Editor({
   const pixelWidth = doc?.unit === "px" ? doc.width : image?.width || (doc ? doc.width * 300 / (doc.unit === "in" ? 1 : 25.4) : 1024);
   const canvasCommands = useCanvasCommands({ w, overlays, setOverlays, selected, setSelected, canvas, focus: viewportRef, clipboard: overlayClipboard,
     width: pixelWidth, height: pixelWidth / ratio, organisationId: orgId || null, save: persistOverlays, refresh: onRefresh,
-    history: async direction => { await overlaySaves.current; const base = await api<Workspace>("get_workspace"); await api("mutate", { action: { op: "history", target, direction, _base: base } }); await onRefresh(); },
+    history: async direction => { await overlaySaves.current.catch(() => {}); const base = await api<Workspace>("get_workspace"); await api("mutate", { action: { op: "history", target, direction, _base: base } }); await onRefresh(); },
     canUndo: page.historyIndex > 0, canRedo: page.historyIndex < page.history.length - 1, generationBusy: !!busyJob, notify });
   const displayWidth = autoFit
     ? Math.max(1, Math.min(viewport.width, viewport.height * ratio))
