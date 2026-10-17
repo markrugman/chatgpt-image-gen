@@ -17,6 +17,7 @@ export function LibraryImages({
   search = "",
   onReference,
   onPlace,
+  uploadCard,
 }: {
   w: Workspace;
   orgId?: string | null;
@@ -24,6 +25,7 @@ export function LibraryImages({
   search?: string;
   onReference: (id: string, purpose?: ReferencePurpose["purpose"]) => void;
   onPlace?: (asset: Asset) => void;
+  uploadCard?: React.ReactNode;
 }) {
   const [scope, setScope] = useState("owned");
   const items = w.assets.filter(
@@ -59,7 +61,7 @@ export function LibraryImages({
         </div>
       )}
       {!orgId && <div className="panel-heading">SHARED</div>}
-      <div className="library-image-grid">{items.map((a) => (
+      <div className="library-image-grid">{uploadCard}{items.map((a) => (
         <LibraryImage
           key={a.id}
           asset={a}

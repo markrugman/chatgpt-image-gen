@@ -1,5 +1,68 @@
 # Next version design interview
 
+## 0.9.6 release authorised (2026-10-17)
+
+Mark confirmed the complete canvas design and explicitly requested implementation, testing and, once checks pass, deployment to the server and GitHub. This authorisation supersedes the earlier holds for the pending organisation highlight, Uploads drag/drop, template destination defaults and completed project composition-preview fix. Release qualification and deployment evidence are recorded in [VALIDATION.md](VALIDATION.md).
+
+## Project previews include placed assets - local fix (2026-10-17)
+
+Project cards now render the complete composition using the same renderer as design cards. Current-image previews include the selected history state's placed Asset/Upload versions and transforms; other revisions retain their saved overlays. An overlay edit brings the current composition forward using the design update time. The three unique recent images, imported backgrounds and deleted-design exclusion remain supported, and overlay-only pages also have a preview. Small compositions fit portrait/landscape pages inside the existing paper stack.
+
+Regression coverage: `src/cards.test.tsx`; browser check: `node scripts/test-project-compositions.mjs`. This fix is local for the next release; no deployment performed by this task.
+
+## Canvas context menu and shortcuts - implemented for 0.9.6 (2026-10-17)
+
+Mark confirmed the following design and authorised implementation, tests and release:
+
+- Commands target one selected overlay (a placed Asset or Upload). The generated page image remains the background. Cut/Delete removes the placement without deleting its library source; Copy/Paste/Duplicate creates another placement.
+- Overlay context menu: Undo, Redo, Cut, Copy, Paste, Duplicate, Delete, Layer submenu (Move to top, Move up, Move down, Move to bottom) and Lock/Unlock. Right-click selects the overlay under the pointer before opening its menu. Empty canvas offers Undo, Redo and Paste. Unavailable actions remain visible but disabled.
+- Canvas shortcuts: Ctrl+Z Undo; Ctrl+Shift+Z / Ctrl+Y Redo; Ctrl+X/C/V Cut/Copy/Paste; Ctrl+D Duplicate; Delete/Backspace Delete placement; Escape close menu/deselect; arrows Nudge, Shift+arrows larger Nudge. Use Command equivalents on macOS and show shortcuts in menu items.
+- Shortcuts apply while working on the canvas; prompts, editable fields and dialogs retain their normal typing/text-editing shortcuts, including existing prompt image paste.
+- Locked overlays remain selectable and copyable, while movement, resizing, rotation, layer changes, cutting and deletion are disabled. Duplicate/Paste creates unlocked placements. Lock state persists when reopening a design.
+- The in-app overlay clipboard preserves the exact image version, size and rotation across pages/designs, including other organisations in the same workspace. Pasting creates an independent placement and does not transfer source-library ownership.
+- Menu Paste uses the right-click location. Keyboard Paste and Duplicate use a 10-design-image-pixel offset, keeping the result visible and selected.
+- Arrows nudge by one design-image pixel; Shift+arrows by ten, independent of zoom. A held-key movement is one undoable gesture.
+- Cut/Paste/Duplicate/Delete/layer/Lock/Unlock each use one entry in existing page history, including generated-image changes. Copy/selection add no entries. Undo/Redo remains unavailable during generation.
+- Images pasted from the operating-system clipboard onto the canvas become Uploads and unchanged overlays, rather than generation references. Save to the open design's owning organisation (matching chat paste), including when All organisations is selected; no destination chooser. Prompt paste retains its existing reference behaviour.
+- Paste uses the latest supported clipboard content. A newly copied external image supersedes an older copied overlay; unrelated text does nothing on the canvas rather than pasting a stale overlay.
+- External clipboard images initially use roughly 25% of canvas width, preserving proportions and fitting within the page. Keyboard paste centres them; menu Paste uses the right-click location. Multiple images are staggered to remain distinguishable.
+- Continue after individual import failures, keeping successful uploads/placements and reporting filenames/reasons. One Undo removes the batch's placements; imported Uploads remain in their library.
+- Custom-menu Paste attempts direct clipboard access where supported. If unavailable or denied, show "Press Ctrl+V to paste" (Command equivalent on macOS) and focus the canvas. Do not silently fall back to a stale copied overlay. Existing PNG/JPEG/WebP validation and 50 MB per-image limit apply. Browser clipboard-read constraints: https://developer.mozilla.org/en-US/docs/Web/API/Clipboard/read.
+- Implemented with persisted backward-compatible overlay locks, serialized layout saves, stale-layout conflict checks and canvas-scoped clipboard events. The clipboard is cleared when switching storage workspaces. PNG/JPEG/WebP source bytes are preserved; pasted batches create one placement-history entry, leaving Uploads available after Undo.
+- Production frontend canvas checks pass against a real disposable server in Edge/WebKit. Actual Windows clipboard image and overlay keyboard paste passes in Edge. Hidden isolated native WebView/IPC checks pass for lock persistence, duplicate/delete/undo, image import/placement and Uploads first card. Physical macOS/iOS clipboard behaviour remains unqualified.
+
+## Uploads drag-and-drop and drawer upload card - local implementation (2026-10-17)
+
+Mark confirmed the completed design and authorised local implementation/testing, with no deployment:
+
+- Accept file drops across the Uploads drawer and full Uploads library, with a visible drop highlight including empty space.
+- Add an upload-icon card as the first card in the Uploads drawer. Clicking it opens the file picker. Both picker and drop support multiple images.
+- New uploads target the selected organisation even when viewing Shared; switch to its Organisation tab so the uploaded cards appear.
+- With All organisations selected, ask for a destination organisation instead of silently saving to Shared.
+- Drawer uploads save images without attaching references or placing overlays, and keep the current design open.
+- Keep successful uploads when individual files fail, continue through the batch, and report failed filenames and reasons.
+- Importing the same file again creates a separate Upload; do not overwrite or silently skip existing images.
+- Fix the destination when the batch starts, even if the selected organisation changes during uploading. Show the destination alongside upload progress.
+- Retain the deployment hold; this work is for the next release.
+
+Implemented through one app-level batch upload flow, retaining progress/results across navigation and keeping the destination fixed. The drawer's first upload card works in empty, Organisation and Shared views. A chosen destination is displayed in the drawer without closing the design. The destination chooser requires an active organisation; with none available it explains that an organisation must be created. Assets and the `/upload` selection popup retain their existing controls. Existing PNG/JPEG/WebP validation and the 50,000,000-byte per-file limit are preserved.
+
+Verification: `npx tsc --noEmit`, all 37 frontend tests, `node scripts/test-uploads.mjs`, `node scripts/test-uploads-server.mjs` and `node scripts/test-navigation-paths.mjs` pass. Edge/WebKit upload checks cover 393/1440px in both themes, picker/drop/multiple files, nested drag highlighting, mixed failures, repeat imports, oversize rejection, chooser/cancel/no-organisations, busy-batch rejection and destination preservation while switching organisation. Real disposable-server checks verify actual imports/rejection, original bytes, independent duplicates, unchanged design state and reload. Screenshots under ignored `work/uploads-*.png` were inspected. Physical device dragging and packaged native UI were not tested. No release build, version bump, source push, publication or deployment.
+
+## Organisation selection highlight - local implementation (2026-10-17)
+
+The selected Organisations row, including All organisations, now shares the Workspace selected-row background, text colour and font weight in both themes. Existing selection/navigation behaviour is unchanged. Verified locally with `npx tsc --noEmit` and isolated Edge/WebKit checks at 393/1440px: switching between two organisations and All organisations leaves exactly one organisation highlighted, its computed styles match the active Workspace row, and selection survives reload. Screenshots: ignored `work/organisation-highlight-*.png`. No release build, version bump, publication or deployment; held for the next release as requested.
+
+
+## New template destination defaults - local implementation (2026-10-16)
+
+New template inherits the folder currently open and that folder's library, including when browsing a folder through All organisations. General uses the current organisation or Shared scope; All templates retains the existing default library and General folder. Both controls remain editable, and changing Library resets Folder to General. Existing templates retain their saved locations. This update is local only; production remains 0.9.5. Frontend build and all 37 frontend tests pass. Isolated Edge/WebKit checks at 320/393/1440px verify default Library/Folder values and saved action destinations for organisation, Shared, General and All organisations folder contexts.
+
+
+## Optional template details - privately deployed in 0.9.5 (2026-10-16)
+
+A Name and Recipe are sufficient to save a template. Add an Example image, Tags and Usage notes later through Edit template. Image references are validated when supplied; templates without an example offer recipe-only use. Built locally and deployed to the existing server after explicit authorisation. Edge/WebKit minimal-save, reload and later-enrichment checks pass; production data and signed-in worker are preserved. See [validation](VALIDATION.md). No public release or GitHub push.
+
 ## 0.9.4 deployed and published (2026-10-16)
 
 Mark explicitly authorised building and deploying all completed navigation and Templates drawer changes. They are now deployed on the private server and public in [GitHub 0.9.4](https://github.com/markrugman/chatgpt-image-gen/releases/tag/v0.9.4) from `8f430f3ee587eb3189bc9bb1bfddd38640a977e6`. All builds/tests, compiled Edge/WebKit UI matrices, live read-only browser checks, package/runtime checks and anonymous image/download qualification pass. Workspace/media, access key, sessions/jobs and worker sign-in are preserved with stopped-volume and off-host backups. This supersedes the wait/source-only/pending statuses below. See [VALIDATION.md](VALIDATION.md) for evidence.

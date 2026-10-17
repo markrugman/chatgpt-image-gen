@@ -24,7 +24,16 @@ A continuation from a particular revision and its conversation context. Other co
 A recoverable combination of a page's generated image and overlay arrangement, including the asset versions used.
 
 **Overlay**:
-An original asset or upload placed over a page's generated image without regenerating the placed image.
+An original asset or upload placed over a page's generated image without regenerating the placed image. Removing an overlay removes that placement without deleting its source Asset or Upload.
+
+**Locked Overlay**:
+An overlay protected against placement changes and removal until unlocked. It remains selectable and copyable; copies are independent unlocked placements.
+
+**Overlay Clipboard**:
+A copied placement retaining its exact source image version, size and rotation for reuse across pages and designs in the same workspace. Pasting it creates an independent overlay without transferring source-library ownership.
+
+**Canvas Image Paste**:
+An image imported from the user's clipboard into the open design's organisation as an Upload and placed unchanged as an overlay. Undoing its placement leaves the Upload available in its library.
 
 **Asset**:
 Reusable artwork created, extracted, or explicitly saved as an asset, available as a generation reference or unchanged overlay. Assets belong to an organisation or a shared library.

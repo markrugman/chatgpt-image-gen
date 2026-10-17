@@ -14,6 +14,8 @@ When your design is ready, export individual pages as **PNG or JPEG**, or comple
 
 Use the native app on its own, or connect it to your private server. The optional Codex companion starts designs from a chat on the same computer.
 
+Right-click a placed image on the design canvas for Cut, Copy, Paste, Duplicate, Delete, layer ordering and Lock/Unlock. Canvas shortcuts include Ctrl+C/X/V/D, Delete, Ctrl+Z/Shift+Z and arrow-key nudging (Shift moves ten pixels); use Command on macOS. Pasting an external image onto the canvas saves it in the design organisation's Uploads and places it unchanged. Pasting into the chat instead attaches a generation reference. Uploads also supports multiple-file uploads and drag-and-drop in its library and design drawer.
+
 Download the Windows app, companion and server setup files from [GitHub Releases](https://github.com/markrugman/chatgpt-image-gen/releases). The server image is distributed through GitHub Container Registry. Downloads do not require a GitHub account.
 
 ## 1. Native app — Windows x64

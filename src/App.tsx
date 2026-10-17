@@ -52,9 +52,12 @@ import { OrganisationList } from "./OrganisationList";
 import { Templates } from "./Templates";
 import { UserMenu } from "./UserMenu";
 import { useNavigation } from "./navigation";
+import { useUploads, useUploadDrop } from "./Uploads";
+import type { OverlayClipboard } from "./overlayOperations";
 
 export default function App() {
   const compact = useCompactLayout();
+  const overlayClipboard = useRef<OverlayClipboard | null>(null);
   const [navigationOpen, setNavigationOpen] = useState(false);
   useEffect(() => { if (!compact) setNavigationOpen(false); }, [compact]);
   const [w, setW] = useState<Workspace>(emptyWorkspace),
@@ -100,6 +103,9 @@ export default function App() {
     setLoaded(true);
   }, []);
   const completedJobs = useRef(new Set<string>());
+  const uploads = useUploads(w, orgId, refresh);
+  const revealUploads = () => setLibraryScope("owned");
+  const uploadDrop = useUploadDrop(route === "uploads" && !docId && !assetId ? files => uploads.controls.addFiles(files, revealUploads) : undefined);
   const refreshJobs = useCallback(async () => {
     const next = await api<Job[]>("get_jobs");setJobs(next);
     const newlyFinished = next.filter(j => ["completed","failed","cancelled"].includes(j.status) && !completedJobs.current.has(j.id));
@@ -410,7 +416,8 @@ export default function App() {
           {navigationOpen && <div className="mobile-navigation"><Modal title="Workspace navigation" onClose={() => setNavigationOpen(false)}><div className="form-body">{sidebar}</div></Modal></div>}
         </>
       ) : sidebar}
-      <main className="main">
+      <main className={`main ${uploadDrop.dragging ? "upload-drop-zone upload-dragging" : ""}`} {...uploadDrop.dropProps}>
+        {uploadDrop.dragging && <div className="upload-drop-hint">Drop images to upload</div>}
         {editor ? (
           <Editor
             key={
@@ -419,6 +426,9 @@ export default function App() {
                 : asset!.id
             }
             w={w}
+            uploads={uploads.controls}
+            overlayClipboard={overlayClipboard}
+            selectedOrganisation={orgId}
             doc={document}
             asset={asset}
             pageId={pageId}
@@ -583,7 +593,8 @@ export default function App() {
                       <div className="button-row">
                         <button
                           className="button secondary"
-                          onClick={() => uploadRef.current?.click()}
+                          disabled={route === "uploads" && uploads.controls.busy}
+                          onClick={() => route === "uploads" ? uploads.controls.chooseFiles(revealUploads) : uploadRef.current?.click()}
                         >
                           <Upload size={16} />
                           Upload image
@@ -629,7 +640,8 @@ export default function App() {
                       action={
                         <button
                           className="button primary"
-                          onClick={() => route === "uploads" ? uploadRef.current?.click() : create({ kind: "asset" })}
+                          disabled={route === "uploads" && uploads.controls.busy}
+                          onClick={() => route === "uploads" ? uploads.controls.chooseFiles(revealUploads) : create({ kind: "asset" })}
                         >
                           <Plus size={16} />
                           {route === "uploads" ? "Upload your first image" : "Create your first asset"}
@@ -837,6 +849,7 @@ export default function App() {
           </>
         )}
       </main>
+      {uploads.ui}
       {creating && (
         <CreateDialog
           options={creating}
@@ -880,6 +893,7 @@ export default function App() {
           onConnection={checkConnection}
           onRefresh={async () => {
             clearImageCache();
+            overlayClipboard.current = null;
             await refresh();
             setDocId(null);
             setAssetId(null);
@@ -906,4 +920,3 @@ export default function App() {
     </div>
   );
 }
-

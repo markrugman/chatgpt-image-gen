@@ -8,8 +8,8 @@ import { activeOrganisations, matchesSearch, type Message, type Template, type W
 export type TemplateSource = { imageId: string; recipe: string; messages?: Message[] };
 export const generalFolder = "general";
 
-export function TemplateForm({ w, act, orgId, template, source, onClose, onRefresh, management }: {
-  w: Workspace; act: Act; orgId?: string | null; template?: Template; source?: TemplateSource;
+export function TemplateForm({ w, act, orgId, initialFolderId, template, source, onClose, onRefresh, management }: {
+  w: Workspace; act: Act; orgId?: string | null; initialFolderId?: string; template?: Template; source?: TemplateSource;
   onClose: () => void; onRefresh: () => Promise<void>;
   management?: { duplicate: () => Promise<void>; transfer: (copy: boolean) => void; trash: () => Promise<void> };
 }) {
@@ -17,7 +17,7 @@ export function TemplateForm({ w, act, orgId, template, source, onClose, onRefre
   const [recipe, setRecipe] = useState(template?.recipe || source?.recipe || "");
   const [example, setExample] = useState(template?.exampleImageId || source?.imageId || "");
   const [owner, setOwner] = useState(template ? template.organisationId || "" : orgId || "");
-  const [folder, setFolder] = useState(template?.folderId || generalFolder);
+  const [folder, setFolder] = useState(template?.folderId || initialFolderId || generalFolder);
   const [tags, setTags] = useState(template?.tags.join(", ") || "");
   const [notes, setNotes] = useState(template?.usageNotes || "");
   const [error, setError] = useState(""), [busy, setBusy] = useState(false);
@@ -125,6 +125,7 @@ export function Templates({ w, orgId, act, onRefresh, onSelect, fullPage = false
     setLocalEditing(null); setFolderDialog(null); setTransfer(null); setDeletingFolder(null);
   }, [navigation?.scope, navigation?.folder, navigation?.query, navigation?.templateId]);
   const folders = (w.templateFolders || []).filter(f => allLibraries || f.organisationId === owner).sort((a,b) => a.name.localeCompare(b.name));
+  const selectedFolder = folders.find(f => f.id === folder);
   const libraryItems = (w.templates || []).filter(t => !t.deletedAt && (allLibraries || t.organisationId === owner));
   const items = libraryItems.filter(t => (folder === "all" || t.folderId === folder)
     && matchesSearch(`${t.name} ${t.recipe}`, t.tags, query)).sort((a,b) => a.name.localeCompare(b.name));
@@ -179,7 +180,7 @@ export function Templates({ w, orgId, act, onRefresh, onSelect, fullPage = false
       </div>
     </article>)}</div>}
     {(fullPage || folder !== "all") && !items.length && <Empty icon={<FileImage />} title={query || folder !== "all" ? "No matching templates" : "A home for your reusable recipes"} text={query || folder !== "all" ? "Try another search or folder to find your template." : "Save a visual recipe to give your next design a head start."} action={fullPage ? <button className="button primary" onClick={() => setEditing("new")}><Plus size={16} />New template</button> : undefined} />}
-    {editing && !transfer && <TemplateForm w={w} act={act} orgId={owner} template={editing === "new" ? undefined : editing} onClose={() => setEditing(null)} onRefresh={onRefresh} management={editing === "new" ? undefined : {
+    {editing && !transfer && <TemplateForm w={w} act={act} orgId={selectedFolder ? selectedFolder.organisationId : owner} initialFolderId={selectedFolder?.id} template={editing === "new" ? undefined : editing} onClose={() => setEditing(null)} onRefresh={onRefresh} management={editing === "new" ? undefined : {
       duplicate: async () => { await act({ op: "template_duplicate", id: editing.id }); setEditing(null); },
       transfer: copy => { setDestination(""); setDestinationFolder(generalFolder); setError(""); setTransfer({ template: editing, copy }); },
       trash: async () => { await act({ op: "delete", kind: "template", id: editing.id }); setEditing(null); },

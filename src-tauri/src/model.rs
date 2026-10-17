@@ -153,6 +153,8 @@ pub struct Composition {
 #[derive(Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Overlay {
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub locked: bool,
     pub id: String,
     pub asset_version_id: String,
     pub x: f64,
@@ -377,6 +379,17 @@ impl Workspace {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn overlay_locks_preserve_legacy_defaults_and_round_trip() {
+        let legacy = serde_json::json!({"id":"o","assetVersionId":"v","x":1.0,"y":2.0,"width":3.0,"height":4.0,"rotation":0.0});
+        let mut overlay: Overlay = serde_json::from_value(legacy.clone()).unwrap();
+        assert!(!overlay.locked);
+        assert_eq!(serde_json::to_value(&overlay).unwrap(), legacy);
+        overlay.locked = true;
+        let saved = serde_json::to_value(&overlay).unwrap();
+        assert_eq!(saved["locked"], true);
+        assert!(serde_json::from_value::<Overlay>(saved).unwrap().locked);
+    }
     fn sample() -> (Workspace, Target) {
         let mut w = Workspace::default();
         w.projects.push(Project {

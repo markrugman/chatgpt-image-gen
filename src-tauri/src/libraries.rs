@@ -303,6 +303,7 @@ mod tests {
         });
         page.thread_id = Some("source-thread".into());
         page.history[0].overlays.push(Overlay {
+            locked: false,
             id: "overlay".into(),
             asset_version_id: "v1".into(),
             x: 1.,

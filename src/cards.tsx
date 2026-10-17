@@ -14,12 +14,38 @@ import {
   matchesSearch,
   versionImage,
   type Asset,
+  type Composition,
   type DesignDocument,
   type Job,
   type Project,
   type Workspace,
 } from "./types";
 import { Empty, ImageView, PageHeading } from "./ui";
+
+function CompositionPreview({ comp, doc, w, alt = "" }: {
+  comp: Composition;
+  doc: DesignDocument;
+  w: Workspace;
+  alt?: string;
+}) {
+  return (
+    <div className="card-composition" style={{ aspectRatio: doc.width / doc.height, "--composition-ratio": doc.width / doc.height } as React.CSSProperties}>
+      <ImageView id={comp.imageId} alt={alt} />
+      {comp.overlays.map((o) => (
+        <ImageView
+          key={o.id}
+          id={versionImage(w, o.assetVersionId)}
+          className="card-overlay"
+          style={{
+            left: `${o.x}%`, top: `${o.y}%`, width: `${o.width}%`, height: `${o.height}%`,
+            transform: `rotate(${o.rotation}deg)`,
+          }}
+        />
+      ))}
+    </div>
+  );
+}
+
 export function ProjectCard({
   project,
   w,
@@ -36,9 +62,15 @@ export function ProjectCard({
       (d) => d.projectId === project.id && !d.deletedAt,
     );
   const previews = docs.flatMap(d => d.pages.flatMap(page => {
-    const current = currentComposition(page).imageId;
-    const images = page.revisions.map(r => ({ id: r.imageId, createdAt: r.createdAt }));
-    if (current && !images.some(image => image.id === current)) images.push({ id: current, createdAt: d.updatedAt });
+    const current = currentComposition(page);
+    const images = page.revisions.map(r => ({
+      id: r.imageId, doc: d,
+      comp: r.imageId === current.imageId ? current : { imageId: r.imageId, revisionId: r.id, overlays: r.overlays },
+      createdAt: r.imageId === current.imageId && current.overlays.length ? d.updatedAt : r.createdAt,
+    }));
+    if ((current.imageId || current.overlays.length) && !images.some(image => image.id === current.imageId)) {
+      images.push({ id: current.imageId || page.id, doc: d, comp: current, createdAt: d.updatedAt });
+    }
     return images;
   })).sort((a, b) => b.createdAt - a.createdAt)
     .filter((image, index, images) => images.findIndex(other => other.id === image.id) === index)
@@ -65,7 +97,7 @@ export function ProjectCard({
               zIndex: 3 - i,
             }}
           >
-            <ImageView id={image.id} alt={i === 0 ? "Latest project image" : "Recent project image"} />
+            <CompositionPreview comp={image.comp} doc={image.doc} w={w} alt={i === 0 ? "Latest project image" : "Recent project image"} />
           </div>
         ))}
       </button>
@@ -111,26 +143,7 @@ export function DocumentCard({
         onClick={onOpen}
         aria-label={`Open ${doc.name}`}
       >
-        <div
-          className="card-composition"
-          style={{ aspectRatio: doc.width / doc.height }}
-        >
-          <ImageView id={comp.imageId} />
-          {comp.overlays.map((o) => (
-            <ImageView
-              key={o.id}
-              id={versionImage(w, o.assetVersionId)}
-              className="card-overlay"
-              style={{
-                left: `${o.x}%`,
-                top: `${o.y}%`,
-                width: `${o.width}%`,
-                height: `${o.height}%`,
-                transform: `rotate(${o.rotation}deg)`,
-              }}
-            />
-          ))}
-        </div>
+        <CompositionPreview comp={comp} doc={doc} w={w} />
         <span className="format-badge">
           {doc.width} × {doc.height} {doc.unit}
         </span>

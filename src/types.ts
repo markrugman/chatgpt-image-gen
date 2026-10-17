@@ -21,6 +21,7 @@ export interface ImageRecord {
   mime: string;
 }
 export interface Overlay {
+  locked?: boolean;
   id: string;
   assetVersionId: string;
   x: number;

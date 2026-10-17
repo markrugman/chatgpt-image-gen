@@ -13,6 +13,7 @@ import {
   Images,
   Upload,
   Layers,
+  Lock,
   LoaderCircle,
   Maximize2,
   MessageCircle,
@@ -48,6 +49,9 @@ import {
 } from "./types";
 import { ImageView, Modal, useCompactLayout, type Act } from "./ui";
 import { LibraryImages } from "./LibraryImages";
+import { UploadDrawer, type UploadControls } from "./Uploads";
+import { useCanvasCommands } from "./CanvasCommands";
+import type { OverlayClipboard } from "./overlayOperations";
 import { AssetJsonDialog } from "./AssetJsonDialog";
 import { ExtractAssetDialog } from "./ExtractAssetDialog";
 import { renderPage } from "./export";
@@ -88,8 +92,14 @@ export function Editor({
   onNew,
   onRefresh,
   onOpenAsset,
+  uploads,
+  selectedOrganisation,
+  overlayClipboard,
 }: {
   w: Workspace;
+  uploads: UploadControls;
+  selectedOrganisation: string;
+  overlayClipboard: React.RefObject<OverlayClipboard | null>;
   doc?: DesignDocument;
   asset?: Asset;
   pageId: string | null;
@@ -184,6 +194,8 @@ export function Editor({
   const [uploadsPending, setUploadsPending] = useState(0);
   const [overlays, setOverlays] = useState<Overlay[]>(comp.overlays),
     [showExport, setShowExport] = useState(false);
+  const overlaySaves = useRef(Promise.resolve()), pendingSaves = useRef(0);
+  const savedOverlays = useRef(comp.overlays);
   const [autoFit, setAutoFit] = useState(true);
   const [viewport, setViewport] = useState({ width: 0, height: 0 });
   const [extracting, setExtracting] = useState(false);
@@ -260,14 +272,33 @@ export function Editor({
     localStorage.setItem(`draft:${page.id}`, prompt);
   }, [prompt, page.id]);
   useEffect(() => {
-    setOverlays(comp.overlays);
+    if (!pendingSaves.current && !canvasCommands.isNudging()) { setOverlays(comp.overlays); savedOverlays.current = comp.overlays; }
   }, [page.historyIndex, comp.imageId]);
   useEffect(() => {
     end.current?.scrollIntoView({ behavior: "smooth" });
   }, [page.messages.length, busyJob?.status]);
-  const saveOverlays = (next: Overlay[]) =>
-    run(() => act({ op: "overlays", target, overlays: next }));
+  const persistOverlays = (next: Overlay[]) => {
+    pendingSaves.current++;
+    const work = overlaySaves.current.catch(() => {}).then(async () => {
+      const base = await api<Workspace>("get_workspace");
+      const storedPage = target.kind === "document" ? base.documents.find(d => d.id === target.id)?.pages.find(p => p.id === target.pageId) : base.assets.find(a => a.id === target.id)?.page;
+      const stored = storedPage && currentComposition(storedPage).overlays;
+      const normalise = (items: Overlay[]) => JSON.stringify(items.map(o => [o.id, o.assetVersionId, o.x, o.y, o.width, o.height, o.rotation, !!o.locked]));
+      if (!stored || normalise(stored) !== normalise(savedOverlays.current)) {
+        if (stored) { setOverlays(stored); savedOverlays.current = stored; }
+        await onRefresh();
+        throw Error("This layout changed elsewhere. The latest layout has been loaded; try your change again.");
+      }
+      await api("mutate", { action: { op: "overlays", target, overlays: next, _base: base } });
+      savedOverlays.current = next;
+      await onRefresh();
+    }).catch(async error => { setOverlays(savedOverlays.current); await onRefresh().catch(() => {}); throw error; }).finally(() => { pendingSaves.current--; });
+    overlaySaves.current = work;
+    return work;
+  };
+  const saveOverlays = (next: Overlay[]) => run(() => persistOverlays(next));
   const updateOverlay = (patch: Partial<Overlay>) => {
+    if (currentOverlay?.locked) return;
     const next = overlays.map((o) =>
       o.id === selected ? { ...o, ...patch } : o,
     );
@@ -329,7 +360,7 @@ export function Editor({
     setPicker(null);
   };
   async function submit() {
-    if ((!prompt.trim() && !template) || busyJob || uploadsPending || (template && (mode !== "generate" || !requestPreview || previewError || historicalSettings))) return;
+    if ((!prompt.trim() && !template) || busyJob || uploadsPending || canvasCommands.busy || (template && (mode !== "generate" || !requestPreview || previewError || historicalSettings))) return;
     const value = prompt;
     try {
       await api("submit_prompt", {
@@ -364,11 +395,17 @@ export function Editor({
     return () => observer.disconnect();
   }, []);
   const pageWidth = ratio > 1.2 ? 660 : ratio < 0.8 ? 395 : 510;
+  const pixelWidth = doc?.unit === "px" ? doc.width : image?.width || (doc ? doc.width * 300 / (doc.unit === "in" ? 1 : 25.4) : 1024);
+  const canvasCommands = useCanvasCommands({ w, overlays, setOverlays, selected, setSelected, canvas, focus: viewportRef, clipboard: overlayClipboard,
+    width: pixelWidth, height: pixelWidth / ratio, organisationId: orgId || null, save: persistOverlays, refresh: onRefresh,
+    history: async direction => { await overlaySaves.current; const base = await api<Workspace>("get_workspace"); await api("mutate", { action: { op: "history", target, direction, _base: base } }); await onRefresh(); },
+    canUndo: page.historyIndex > 0, canRedo: page.historyIndex < page.history.length - 1, generationBusy: !!busyJob, notify });
   const displayWidth = autoFit
     ? Math.max(1, Math.min(viewport.width, viewport.height * ratio))
     : (pageWidth * zoom) / 100;
   return (
     <div className={`editor mobile-view-${mobilePanel}`}>
+      {canvasCommands.ui}
       {showAssetJson && asset && (
         <AssetJsonDialog
           asset={asset}
@@ -580,10 +617,11 @@ export function Editor({
               )}
             </div>
           )}
-          {(panel === "assets" || panel === "uploads") && (
+          {panel === "uploads" && <UploadDrawer key={selectedOrganisation} w={w} orgId={selectedOrganisation === "all" ? orgId : selectedOrganisation} uploads={uploads} onReference={addReference} onPlace={doc ? placeAsset : undefined} />}
+          {panel === "assets" && (
             <div className="editor-library">
-              <div className="panel-heading">{panel === "uploads" ? "YOUR UPLOADS" : "YOUR ASSETS"}</div>
-              <LibraryImages key={panel} w={w} orgId={orgId} kind={panel === "uploads" ? "upload" : "asset"} onReference={addReference} onPlace={doc ? placeAsset : undefined} />
+              <div className="panel-heading">YOUR ASSETS</div>
+              <LibraryImages w={w} orgId={orgId} kind="asset" onReference={addReference} onPlace={doc ? placeAsset : undefined} />
             </div>
           )}
           {panel === "templates" && <div className="editor-library"><div className="panel-heading">YOUR TEMPLATES</div><Templates key={orgId} w={w} orgId={orgId} act={act} onRefresh={onRefresh} onSelect={selectTemplate} /></div>}
@@ -624,9 +662,9 @@ export function Editor({
               <button
                 className="icon-button"
                 title="Undo layout or image change"
-                disabled={page.historyIndex === 0 || !!busyJob}
+                disabled={page.historyIndex === 0 || !!busyJob || canvasCommands.busy}
                 onClick={() =>
-                  run(() => act({ op: "history", target, direction: "undo" }))
+                  canvasCommands.undo()
                 }
               >
                 <Undo2 size={17} />
@@ -635,10 +673,10 @@ export function Editor({
                 className="icon-button"
                 title="Redo"
                 disabled={
-                  page.historyIndex >= page.history.length - 1 || !!busyJob
+                  page.historyIndex >= page.history.length - 1 || !!busyJob || canvasCommands.busy
                 }
                 onClick={() =>
-                  run(() => act({ op: "history", target, direction: "redo" }))
+                  canvasCommands.redo()
                 }
               >
                 <Redo2 size={17} />
@@ -717,6 +755,10 @@ export function Editor({
           <div
             ref={viewportRef}
             className="canvas-scroll"
+            tabIndex={0}
+            aria-label="Design canvas"
+            {...canvasCommands.handlers}
+            onPointerDownCapture={e => { if ((e.target as HTMLElement).closest('.design-canvas')) viewportRef.current?.focus({ preventScroll: true }); }}
             onClick={(e) => {
               if (e.target === e.currentTarget) setSelected(null);
             }}
@@ -768,7 +810,8 @@ export function Editor({
                 {overlays.map((o) => (
                   <div
                     key={o.id}
-                    className={`canvas-overlay ${selected === o.id ? "selected" : ""}`}
+                    data-overlay-id={o.id}
+                    className={`canvas-overlay ${selected === o.id ? "selected" : ""} ${o.locked ? "locked" : ""}`}
                     style={{
                       left: `${o.x}%`,
                       top: `${o.y}%`,
@@ -778,8 +821,9 @@ export function Editor({
                     }}
                     onPointerDown={(e) => {
                       e.stopPropagation();
-                      e.currentTarget.setPointerCapture(e.pointerId);
                       setSelected(o.id);
+                      if (e.button !== 0 || o.locked || canvasCommands.busy || busyJob) return;
+                      e.currentTarget.setPointerCapture(e.pointerId);
                       drag.current = {
                         id: o.id,
                         x: e.clientX,
@@ -835,7 +879,8 @@ export function Editor({
                     }}
                   >
                     <ImageView id={versionImage(w, o.assetVersionId)} />
-                    {selected === o.id && (
+                    {o.locked && <span className="overlay-lock"><Lock size={12} /></span>}
+                    {selected === o.id && !o.locked && (
                       <>
                         <span className="overlay-corner top-left" />
                         <span className="overlay-corner top-right" />
@@ -845,6 +890,7 @@ export function Editor({
                     )}
                   </div>
                 ))}
+                {canvasCommands.busy && <div className="generation-indicator" role="status"><LoaderCircle size={17} className="spin" />Pasting images…</div>}
                 {busyJob && mode === "generate" && (
                   <div className="generation-indicator">
                     <LoaderCircle size={17} className="spin" />
@@ -871,6 +917,7 @@ export function Editor({
                 <input
                   type="range"
                   min="3"
+                  disabled={currentOverlay.locked || canvasCommands.busy}
                   max="100"
                   value={currentOverlay.width}
                   onChange={(e) => {
@@ -896,6 +943,7 @@ export function Editor({
                 <input
                   type="number"
                   aria-label="Overlay rotation"
+                  disabled={currentOverlay.locked || canvasCommands.busy}
                   value={currentOverlay.rotation}
                   min="-180"
                   max="180"
@@ -908,6 +956,7 @@ export function Editor({
               <button
                 className="icon-button"
                 title="Bring forward"
+                disabled={currentOverlay.locked || canvasCommands.busy}
                 onClick={() => {
                   const index = overlays.findIndex((o) => o.id === selected),
                     next = [...overlays];
@@ -926,6 +975,7 @@ export function Editor({
               <button
                 className="icon-button"
                 title="Remove overlay"
+                disabled={currentOverlay.locked || canvasCommands.busy}
                 onClick={() => {
                   const next = overlays.filter((o) => o.id !== selected);
                   setOverlays(next);
@@ -1221,7 +1271,7 @@ export function Editor({
                     aria-label={
                       mode === "discuss" ? "Send discussion" : "Generate image"
                     }
-                    disabled={(!prompt.trim() && !template) || uploadsPending > 0 || (!!template && (mode !== "generate" || !requestPreview || !!previewError || !!historicalSettings))}
+                    disabled={(!prompt.trim() && !template) || uploadsPending > 0 || canvasCommands.busy || (!!template && (mode !== "generate" || !requestPreview || !!previewError || !!historicalSettings))}
                     onClick={submit}
                   >
                     <ArrowUp size={18} />
