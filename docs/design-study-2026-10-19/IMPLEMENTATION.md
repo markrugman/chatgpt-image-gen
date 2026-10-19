@@ -1,6 +1,6 @@
-# Responsive workspace local implementation
+# Responsive workspace implementation
 
-2026-10-19. Implemented following Mark's approval of the [Design Brief](DESIGN-BRIEF.md) and [Spec Sheet](SPEC-SHEET.md). Mark subsequently requested deployment to the existing local server for testing. **LAN server testing is authorised; public release, GitHub publication and replacement of the installed Windows app remain on hold.** Product version remains 0.11.0.
+2026-10-19. Implemented following Mark's approval of the [Design Brief](DESIGN-BRIEF.md) and [Spec Sheet](SPEC-SHEET.md). Mark subsequently authorised the full build, release and deployment. **Published and deployed in [0.12.0](https://github.com/markrugman/chatgpt-image-gen/releases/tag/v0.12.0)**, including floating image tools, bottom canvas controls and clipped composition previews. Designs, original media, sessions/jobs/configuration and signed-in worker are preserved. [Validation](../VALIDATION.md) is canonical. Earlier local-only/deployment holds and 0.11.0 references below describe the historical review sequence and are superseded. Installed Windows app files were not replaced.
 
 ## Review
 
