@@ -4,11 +4,9 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { listen, isBrowser } from "./api";
 import {
   ArrowRight,
-  ArrowUpRight,
   ChevronRight,
   CircleHelp,
   FileImage,
-  Folder,
   FolderOpen,
   Grid2X2,
   Images,
@@ -23,7 +21,6 @@ import {
   Trash2,
   Undo2,
   Upload,
-  WandSparkles,
   X,
 } from "lucide-react";
 import { api, clearImageCache, importImageFile } from "./api";
@@ -50,6 +47,7 @@ import { AssetCard, DocumentCard, ProjectCard, SearchResults } from "./cards";
 import { CreateDialog, EditDialog, SettingsDialog } from "./dialogs";
 import { Editor } from "./Editor";
 import "./App.css";
+import "./WorkspaceLayout.css";
 import { OrganisationList } from "./OrganisationList";
 import { Templates } from "./Templates";
 import { UserMenu } from "./UserMenu";
@@ -65,6 +63,7 @@ export default function App() {
   useEffect(() => { if (!compact) setNavigationOpen(false); }, [compact]);
   const [w, setW] = useState<Workspace>(emptyWorkspace),
     [loaded, setLoaded] = useState(false);
+  const [loadError, setLoadError] = useState("");
   const { navigation, updateNavigation, closeTemplate } = useNavigation(loaded ? w : null, isBrowser);
   const { route, orgId, projectId, docId, assetId, pageId, query, libraryScope } = navigation;
   const setRoute = (route: string) => updateNavigation({ route });
@@ -89,21 +88,26 @@ export default function App() {
   const [storage, setStorage] = useState<ServerStatus|null>(null);
   const [toast, setToast] = useState("");
   useEffect(() => {
+    const currentUrl = window.location.href;
     const restore = () => {
+      if (window.location.href === currentUrl) return;
       setNavigationOpen(false); setCreating(null); setEditing(null); setSettings(false);
     };
     window.addEventListener("popstate", restore);
     window.addEventListener("hashchange", restore);
     return () => { window.removeEventListener("popstate", restore); window.removeEventListener("hashchange", restore); };
-  }, []);
+  }, [navigation]);
   const searchRef = useRef<HTMLInputElement>(null),
     uploadRef = useRef<HTMLInputElement>(null);
   const notify = useCallback((message: string) => setToast(message), []);
   const refresh = useCallback(async () => {
-    const next = await api<Workspace>("get_workspace");
-    setW(previous => JSON.stringify(previous) === JSON.stringify(next) ? previous : next);
-    setStorage(await api<ServerStatus>("server_status"));
-    setLoaded(true);
+    try {
+      const next = await api<Workspace>("get_workspace");
+      setW(previous => JSON.stringify(previous) === JSON.stringify(next) ? previous : next);
+      setLoaded(true);
+      setStorage(await api<ServerStatus>("server_status"));
+      setLoadError("");
+    } catch (error) { setLoadError(String(error)); throw error; }
   }, []);
   const completedJobs = useRef(new Set<string>());
   const uploads = useUploads(w, orgId, refresh);
@@ -270,6 +274,51 @@ export default function App() {
     item: { id: string; name: string; tags?: string[] },
   ) =>
     setEditing({ kind, id: item.id, name: item.name, tags: item.tags || [] });
+  const projectsSection = (
+    <>
+      <SectionHeading
+        title="Projects"
+        count={visibleProjects.length}
+        action={
+          <button
+            className="text-button"
+            onClick={() => {
+              setRoute("projects");
+              setProjectId(null);
+            }}
+          >
+            View all
+            <ArrowRight size={15} />
+          </button>
+        }
+      />
+      <div className="project-grid">
+        {visibleProjects.map((p) => (
+          <ProjectCard
+            key={p.id}
+            project={p}
+            dropProps={designMoves.target(p.id)}
+            w={w}
+            onOpen={() => {
+              setProjectId(p.id);
+              setRoute("projects");
+            }}
+            onEdit={() => edit("project", p)}
+          />
+        ))}
+        <button
+          className="new-project-card"
+          onClick={() => create({ kind: "project" })}
+        >
+          <span>
+            <Plus size={22} />
+          </span>
+          <strong>Start a new project</strong>
+          <small>A space for your next big idea</small>
+        </button>
+      </div>
+    </>
+  );
   const sidebar = (
     <aside className="sidebar" onClick={(event) => {
       if (compact && (event.target as HTMLElement).closest("button")) setNavigationOpen(false);
@@ -299,7 +348,7 @@ export default function App() {
         <div className="nav-label">WORKSPACE</div>
         <nav>
           {[
-            { id: "home", name: "Overview", icon: LayoutGrid },
+            { id: "home", name: "Home", icon: LayoutGrid },
             { id: "projects", name: "Projects", icon: FolderOpen },
             { id: "assets", name: "Asset library", icon: Images },
             { id: "uploads", name: "Uploads", icon: Upload },
@@ -402,7 +451,7 @@ export default function App() {
       </aside>
   );
   return (
-    <div className={`app ${isBrowser ? "browser-app" : ""} ${editor ? "editor-open" : ""}`}>
+    <div className={`app responsive-app ${isBrowser ? "browser-app" : ""} ${editor ? "editor-open" : ""}`}>
       <input
         type="file"
         ref={uploadRef}
@@ -422,7 +471,7 @@ export default function App() {
           e.target.value = "";
         }}
       />
-      {compact ? (
+      {!editor && (compact ? (
         <>
           <header className="mobile-appbar">
             <button className="icon-button" aria-label="Open navigation" aria-expanded={navigationOpen} onClick={() => setNavigationOpen(true)}><Menu size={22} /></button>
@@ -433,7 +482,7 @@ export default function App() {
           </header>
           {navigationOpen && <div className="mobile-navigation"><Modal title="Workspace navigation" onClose={() => setNavigationOpen(false)}><div className="form-body">{sidebar}</div></Modal></div>}
         </>
-      ) : sidebar}
+      ) : sidebar)}
       <main className={`main ${uploadDrop.dragging ? "upload-drop-zone upload-dragging" : ""}`} {...uploadDrop.dropProps}>
         {uploadDrop.dragging && <div className="upload-drop-hint">Drop images to upload</div>}
         {editor ? (
@@ -512,9 +561,10 @@ export default function App() {
                 {!compact && <UserMenu />}
               </div>
             </header>
-            <div className="workspace-content">
-              {!loaded ? (
-                <div className="loading-state">
+            <div className={`workspace-content ${route === "home" ? "home-content" : ""}`}>
+              {loadError && <div role="alert" className="workspace-load-error"><strong>{loaded ? "Could not refresh your workspace." : "Could not open your workspace."}</strong><p>{loadError}</p><button className="button secondary" onClick={() => void run(refresh)}>Retry</button></div>}
+              {!loaded && loadError ? null : !loaded ? (
+                <div className="loading-state" role="status">
                   <LoaderCircle className="spin" />
                   Opening your workspace…
                 </div>
@@ -673,12 +723,12 @@ export default function App() {
                   <PageHeading
                     eyebrow={
                       route === "home"
-                        ? "A LITTLE INSPIRATION. ENDLESS POSSIBILITIES."
+                        ? (organisation?.name || "ALL ORGANISATIONS").toUpperCase()
                         : "KEEP EVERY IDEA IN ITS PLACE"
                     }
                     title={
                       route === "home"
-                        ? "Let’s make something great."
+                        ? "Your creative workspace"
                         : projectId
                           ? visibleProjects.find((p) => p.id === projectId)
                               ?.name || "Project"
@@ -686,119 +736,23 @@ export default function App() {
                     }
                     subtitle={
                       route === "home"
-                        ? "Your organisations, projects, and creative work. All together."
+                        ? "Pick up where you left off, or start a new design."
                         : "One place for every campaign, event, and new idea."
                     }
                     action={
                       <button
-                        className="button secondary"
-                        onClick={() => create({ kind: "project" })}
+                        className={`button ${route === "home" ? "primary" : "secondary"}`}
+                        onClick={() => create({ kind: route === "home" ? "document" : "project" })}
                       >
-                        <Folder size={16} />
-                        New project
+                        <Plus size={16} />
+                        {route === "home" ? "Create a design" : "New project"}
                       </button>
                     }
                   />
-                  {route === "home" && (
-                    <section className="creative-hero">
-                      <div className="hero-copy">
-                        <span className="hero-pill">
-                          <Sparkles size={13} />
-                          FROM A THOUGHT TO A FINISHED DESIGN
-                        </span>
-                        <h2>
-                          Your next idea
-                          <br />
-                          starts with a conversation.
-                        </h2>
-                        <p>
-                          Describe it. Refine it. Make it yours.
-                          <br />
-                          Create beautiful images with your ChatGPT account.
-                        </p>
-                        <button
-                          className="button primary"
-                          onClick={() => create({ kind: "document" })}
-                        >
-                          Create a design
-                          <ArrowUpRight size={17} />
-                        </button>
-                      </div>
-                      <div className="hero-art" aria-hidden="true">
-                        <div className="hero-orbit orbit-one" />
-                        <div className="hero-orbit orbit-two" />
-                        <div className="paper paper-back">
-                          <div className="paper-back-line" />
-                          <div className="paper-back-circle" />
-                        </div>
-                        <div className="paper paper-front">
-                          <span>
-                            MAKE
-                            <br />
-                            SOMETHING
-                            <br />
-                            <i>unexpected.</i>
-                          </span>
-                          <div className="abstract-flower">✳</div>
-                          <small>YOUR IDEA. YOUR CREATIVE DIRECTION.</small>
-                        </div>
-                        <div className="floating-label">
-                          <WandSparkles size={15} />A little prompt. A lot of
-                          possibility.
-                        </div>
-                        <span className="art-spark one">✦</span>
-                        <span className="art-spark two">✧</span>
-                      </div>
-                    </section>
-                  )}
-                  {(!projectId || route === "home") && (
-                    <>
-                      <SectionHeading
-                        title="Projects"
-                        count={visibleProjects.length}
-                        action={
-                          <button
-                            className="text-button"
-                            onClick={() => {
-                              setRoute("projects");
-                              setProjectId(null);
-                            }}
-                          >
-                            View all
-                            <ArrowRight size={15} />
-                          </button>
-                        }
-                      />
-                      <div className="project-grid">
-                        {visibleProjects.map((p) => (
-                          <ProjectCard
-                            key={p.id}
-                            project={p}
-                            dropProps={designMoves.target(p.id)}
-                            w={w}
-                            onOpen={() => {
-                              setProjectId(p.id);
-                              setRoute("projects");
-                            }}
-                            onEdit={() => edit("project", p)}
-                          />
-                        ))}
-                        <button
-                          className="new-project-card"
-                          onClick={() => create({ kind: "project" })}
-                        >
-                          <span>
-                            <Plus size={22} />
-                          </span>
-                          <strong>Start a new project</strong>
-                          <small>A space for your next big idea</small>
-                        </button>
-                      </div>
-                    </>
-                  )}
+                  {route !== "home" && !projectId && projectsSection}
                   <SectionHeading
                     title={
-                      projectId ? "Designs in this project" : "Recent designs"
+                      projectId ? "Designs in this project" : route === "home" ? "Continue designing" : "Recent designs"
                     }
                     count={docs.length}
                     action={
@@ -856,6 +810,8 @@ export default function App() {
                       }
                     />
                   )}
+                  {route === "home" && projectsSection}
+                  {route === "home" && <section className="home-template-callout"><div><strong>Start with a reusable prompt</strong><p>Templates keep your favourite recipes and configurable inputs together.</p></div><button className="button secondary" onClick={() => navigate("templates")}><FileImage size={18}/>Browse Templates</button></section>}
                 </>
               )}
             </div>

@@ -1,0 +1,16 @@
+{
+  "identifier": "com.mark.imagegenapp.responsive-review",
+  "productName": "Image Gen Responsive Review",
+  "app": {
+    "windows": [{
+      "label": "main",
+      "title": "Image Gen Local Responsive Review",
+      "width": 1600,
+      "height": 1000,
+      "visible": false,
+      "minWidth": 320,
+      "minHeight": 480,
+      "dragDropEnabled": false
+    }]
+  }
+}

@@ -112,6 +112,13 @@ export function LibraryImageTile({ name, imageId, actions, dragVersionId, onActi
   onActivate?: () => void;
 }) {
   const pointerType = useRef("mouse"), dragged = useRef(false);
+  const hold = useRef<{ x: number; y: number; timer: ReturnType<typeof setTimeout>; cancelOtherTouch: (event: PointerEvent) => void } | null>(null);
+  const held = useRef(false);
+  const cancelHold = () => {
+    if (hold.current) { clearTimeout(hold.current.timer); window.removeEventListener("pointerdown", hold.current.cancelOtherTouch); }
+    hold.current = null;
+  };
+  useEffect(() => cancelHold, []);
   const [open, setOpen] = useState(false);
   const [submenu, setSubmenu] = useState<Extract<LibraryAction, { items: unknown }> | null>(null);
   const root = useRef<HTMLDivElement>(null),
@@ -136,7 +143,11 @@ export function LibraryImageTile({ name, imageId, actions, dragVersionId, onActi
     <div
       className="mini-asset library-image"
       ref={root}
+      onPointerDownCapture={e => { if (!trigger.current?.contains(e.target as Node)) held.current = false; }}
+      onPointerUpCapture={e => { if (held.current) { e.preventDefault(); e.stopPropagation(); cancelHold(); } }}
+      onClickCapture={e => { if (held.current) { e.preventDefault(); e.stopPropagation(); } }}
       onKeyDown={(e) => {
+        if (e.key === "Enter" || e.key === " ") held.current = false;
         if (e.key === "Escape" && open) {
           e.stopPropagation();
           if (submenu) setSubmenu(null); else close();
@@ -180,17 +191,36 @@ export function LibraryImageTile({ name, imageId, actions, dragVersionId, onActi
         aria-haspopup="menu"
         aria-expanded={open}
         title={onActivate ? "Click to place; right-click for options" : undefined}
+        data-click-to-place={onActivate ? true : undefined}
         draggable={!!dragVersionId}
         onContextMenu={e => {
           if (!onActivate) return;
-          e.preventDefault(); setSubmenu(null); setOpen(true);
+          e.preventDefault(); cancelHold(); held.current = true; setSubmenu(null); setOpen(true);
         }}
         onKeyDown={e => {
+          if (e.key === "Enter" || e.key === " ") held.current = false;
           if (onActivate && (e.key === "ContextMenu" || (e.shiftKey && e.key === "F10"))) {
             e.preventDefault(); setSubmenu(null); setOpen(true);
           }
         }}
-        onPointerDown={e => { pointerType.current = e.pointerType; dragged.current = false; }}
+        onPointerDown={e => {
+          cancelHold(); pointerType.current = e.pointerType;
+          if (e.pointerType === "touch" && !e.isPrimary) { held.current = true; return; }
+          dragged.current = false; held.current = false;
+          if (onActivate && e.pointerType === "touch") {
+            const cancelOtherTouch = (event: PointerEvent) => { if (event.pointerType === "touch" && !event.isPrimary) { cancelHold(); held.current = true; } };
+            window.addEventListener("pointerdown", cancelOtherTouch);
+            hold.current = { x: e.clientX, y: e.clientY, cancelOtherTouch, timer: setTimeout(() => {
+              held.current = true; setSubmenu(null); setOpen(true);
+            }, 500) };
+          }
+        }}
+        onPointerMove={e => {
+          if (hold.current && Math.hypot(e.clientX - hold.current.x, e.clientY - hold.current.y) > 10) { cancelHold(); held.current = true; }
+        }}
+        onPointerUp={e => { if (held.current) e.preventDefault(); cancelHold(); }}
+        onPointerCancel={() => { cancelHold(); held.current = true; }}
+        onPointerLeave={cancelHold}
         onDragStart={e => {
           if (!dragVersionId || pointerType.current === "touch") { e.preventDefault(); return; }
           e.dataTransfer.setData(libraryImageDragType, dragVersionId);
@@ -202,9 +232,9 @@ export function LibraryImageTile({ name, imageId, actions, dragVersionId, onActi
         }}
         onDragEnd={() => { libraryImageDrag.versionId = null; setTimeout(() => { dragged.current = false; }, 0); }}
         onClick={e => {
-          if (dragged.current && e.detail !== 0) { dragged.current = false; return; }
+          if (held.current || (dragged.current && e.detail !== 0)) { e.preventDefault(); dragged.current = false; return; }
           setSubmenu(null);
-          if (onActivate && (pointerType.current !== "touch" || e.detail === 0)) { setOpen(false); onActivate(); }
+          if (onActivate) { setOpen(false); onActivate(); }
           else setOpen(!open);
         }}
       >

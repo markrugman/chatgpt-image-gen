@@ -1,5 +1,15 @@
 # Release history
 
+## New in 0.12.0 — responsive design workspace (2026-10-19)
+
+- Put recent designs first on Home and adapt the editor for desktop, tablet, phone and narrow Windows app windows.
+- Switch directly between Canvas, Chat, Tools and a separate Pages drawer while retaining drafts, references and filters.
+- Keep document commands in More and provide a focused Export panel with clear document and output dimensions.
+- Place Assets/Uploads with one click or tap; use right-click or long-press for context menus, with no persistent action rows.
+- Float selected-image controls above the canvas; keep Undo/Redo, zoom and page numbers together in the bottom status bar.
+- Restore subtle transparency checkerboards in both themes and clip thumbnail placements to page boundaries.
+- Preserve original artwork, source versions, edit history and existing server sign-in.
+
 ## New in 0.11.0 — configurable Templates (2026-10-18)
 
 - Add Text, Colour and single-choice inputs to reusable Templates, with required answers, defaults and optional prompt phrases.

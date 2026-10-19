@@ -1,7 +1,7 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
   "productName": "Image Gen",
-  "version": "0.11.0",
+  "version": "0.12.0",
   "identifier": "com.mark.imagegenapp",
   "build": {
     "beforeDevCommand": "npm run dev",
@@ -15,8 +15,8 @@
         "title": "Image Gen \u2014 Your creative workspace",
         "width": 1480,
         "height": 940,
-        "minWidth": 1000,
-        "minHeight": 700,
+        "minWidth": 320,
+        "minHeight": 480,
         "dragDropEnabled": false,
         "backgroundColor": "#f7f7fa"
       }

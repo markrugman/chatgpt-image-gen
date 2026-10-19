@@ -1,0 +1,141 @@
+[
+  {
+    "name": "home-desktop",
+    "viewport": [
+      1600,
+      1000
+    ],
+    "document": [
+      1600,
+      1000
+    ],
+    "poster": null,
+    "errors": []
+  },
+  {
+    "name": "editor-desktop",
+    "viewport": [
+      1600,
+      1000
+    ],
+    "document": [
+      1600,
+      1000
+    ],
+    "poster": {
+      "x": 561,
+      "y": 179.65625,
+      "width": 470,
+      "height": 664.671875
+    },
+    "errors": []
+  },
+  {
+    "name": "editor-tablet",
+    "viewport": [
+      820,
+      1180
+    ],
+    "document": [
+      820,
+      1180
+    ],
+    "poster": {
+      "x": 122,
+      "y": 147.453125,
+      "width": 640,
+      "height": 905.078125
+    },
+    "errors": []
+  },
+  {
+    "name": "editor-phone",
+    "viewport": [
+      390,
+      844
+    ],
+    "document": [
+      390,
+      844
+    ],
+    "poster": {
+      "x": 16,
+      "y": 146.859375,
+      "width": 358,
+      "height": 506.28125
+    },
+    "errors": []
+  },
+  {
+    "name": "tools-phone",
+    "viewport": [
+      390,
+      844
+    ],
+    "document": [
+      390,
+      844
+    ],
+    "poster": {
+      "x": 16,
+      "y": 146.859375,
+      "width": 358,
+      "height": 506.28125
+    },
+    "errors": []
+  },
+  {
+    "name": "more-phone",
+    "viewport": [
+      390,
+      844
+    ],
+    "document": [
+      390,
+      844
+    ],
+    "poster": {
+      "x": 16,
+      "y": 146.859375,
+      "width": 358,
+      "height": 506.28125
+    },
+    "errors": []
+  },
+  {
+    "name": "export-desktop",
+    "viewport": [
+      1600,
+      1000
+    ],
+    "document": [
+      1600,
+      1000
+    ],
+    "poster": {
+      "x": 397,
+      "y": 179.65625,
+      "width": 470,
+      "height": 664.671875
+    },
+    "errors": []
+  },
+  {
+    "name": "chat-phone",
+    "viewport": [
+      390,
+      844
+    ],
+    "document": [
+      390,
+      844
+    ],
+    "poster": {
+      "x": 16,
+      "y": 146.859375,
+      "width": 358,
+      "height": 506.28125
+    },
+    "errors": []
+  }
+]

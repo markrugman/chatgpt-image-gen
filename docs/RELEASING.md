@@ -1,5 +1,9 @@
 # Building and releasing Image Gen
 
+## 0.12.0 — release and deployment authorised (2026-10-19)
+
+Mark requested the next version with the complete responsive workspace, direct drawer switching, context interactions, floating image tools, bottom canvas controls and clipped previews. Prepare Windows downloads and an immutable server image from one checked commit; preserve live workspace and sign-in during the server upgrade. Earlier publication holds are superseded for this change set. [Validation](VALIDATION.md) records qualification and the final release/deployment result.
+
 ## 0.11.0 — published and deployed (2026-10-18)
 
 [Image Gen 0.11.0](https://github.com/markrugman/chatgpt-image-gen/releases/tag/v0.11.0) is published from `09d3471ed6daf26711626b78196366e3b03b9a3e`; every job in the [clean release workflow](https://github.com/markrugman/chatgpt-image-gen/actions/runs/39078806260) passed. Includes configurable Templates with simplified authoring and mobile layouts, faithful Generate/Discuss request composition and captured inputs, transparent document PNG exports, current-design project previews and documented server retention.

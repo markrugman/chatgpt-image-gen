@@ -43,10 +43,11 @@ try {
         await page.goto(origin + '/#view=projects&org=org&design=doc&page=page');
         await page.evaluate(theme => { localStorage.setItem('imagegen-theme', theme); document.documentElement.dataset.theme = theme; }, theme);
         const canvas = page.locator('.design-canvas'), surface = page.locator('.canvas-scroll');
-        const source = kind => page.locator('.editor-library').getByRole('button', { name: 'Use ' + kind, exact: true });
+        const source = kind => page.locator('.editor-library:visible').getByRole('button', { name: 'Use ' + kind, exact: true });
         const tab = async label => page.locator('.tool-tabs').getByRole('button', { name: label, exact: true }).click();
         const last = () => p.history[p.historyIndex].overlays.at(-1);
         const drag = async (kind, x, y) => {
+          await surface.press('Escape');
           const rect = await canvas.boundingBox(), box = await surface.boundingBox();
           const cx = rect.x + rect.width * x / 100, cy = rect.y + rect.height * y / 100;
           assert(cx > box.x && cx < box.x + box.width && cy > box.y && cy < box.y + box.height, 'Drop must be in visible workspace');
@@ -66,7 +67,7 @@ try {
           assert.equal(last().assetVersionId, kind + '-v');
           assert.equal(p.historyIndex, history + 1);
           await source(kind).click({ button: 'right' });
-          const menu = page.locator('.editor-library').getByRole('menu');
+          const menu = page.locator('.editor-library:visible').getByRole('menu');
           await expect(menu).toBeVisible();
           assert.equal(writes.length, before + 1, 'Right-click must not place');
           await page.getByRole('menuitem', { name: 'Add as…', exact: true }).click();
@@ -102,7 +103,7 @@ try {
         const cancelled = writes.length;
         await source('upload').dragTo(page.locator('.tool-tabs'));
         assert.equal(writes.length, cancelled, 'Toolbar drop must cancel');
-        await source('upload').dragTo(page.locator('.editor-library'));
+        await source('upload').dragTo(page.locator('.editor-library:visible'));
         assert.equal(writes.length, cancelled, 'Drawer drop must cancel');
         await source('upload').dragTo(page.locator('.chat-panel'));
         assert.equal(writes.length, cancelled, 'Chat drop must cancel');
@@ -136,7 +137,7 @@ try {
         await page.getByRole('button', { name: 'Tools', exact: true }).click();
         const beforeTouchPlace = writes.length;
         await source('asset').tap();
-        await page.getByRole('menuitem', { name: 'Place', exact: true }).click();
+        await expect(page.locator('.library-image-menu')).toHaveCount(0);
         await expect.poll(() => writes.length).toBe(beforeTouchPlace + 1);
         assert.deepEqual(errors, []);
         console.log(`${name} ${dw}x${dh} ${theme}: real drags, edges/corners, sizing, cancellation, undo/redo, zoom/scroll and reload pass`);

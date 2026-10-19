@@ -10,6 +10,7 @@ lerna-debug.log*
 node_modules
 /work/
 /outputs/
+/docs/design-study-2026-10-19/references/
 /companion/bin/
 /src-tauri/target/
 dist

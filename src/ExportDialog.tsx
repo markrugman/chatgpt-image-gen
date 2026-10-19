@@ -23,12 +23,13 @@ import {
 } from "./export";
 
 export function ExportDialog({
-  w,
-  doc,
+  w: liveWorkspace,
+  doc: liveDocument,
   pageIndex,
   asset,
   onClose,
   notify,
+  onBusyChange,
 }: {
   w: Workspace;
   doc: DesignDocument;
@@ -36,7 +37,10 @@ export function ExportDialog({
   asset: boolean;
   onClose: () => void;
   notify: (message: string) => void;
+  onBusyChange: (busy: boolean) => void;
 }) {
+  const [w] = useState(() => structuredClone(liveWorkspace));
+  const [doc] = useState(() => structuredClone(liveDocument));
   const [format, setFormat] = useState<"png" | "jpg" | "pdf">("png");
   const [dpi, setDpi] = useState(300);
   const [bleedEnabled, setBleedEnabled] = useState(false);
@@ -51,7 +55,9 @@ export function ExportDialog({
   const [compareRgb, setCompareRgb] = useState(false);
   const [fileSize, setFileSize] = useState(0);
   const [exporting, setExporting] = useState(false);
+  useEffect(() => onBusyChange(exporting), [exporting, onBusyChange]);
   const [error, setError] = useState("");
+  const [exportError, setExportError] = useState("");
   const page = doc.pages[pageIndex];
   const image = w.images.find((i) => i.id === currentComposition(page).imageId);
   const resolution = printDpi(doc, image);
@@ -151,8 +157,9 @@ export function ExportDialog({
     };
   }, [source, settingsKey, format, doc, dpi, bleedEnabled]);
   async function save() {
+    if (exporting) return;
     setExporting(true);
-    setError("");
+    setExportError("");
     try {
       const result = await exportDocument(
         w,
@@ -168,7 +175,7 @@ export function ExportDialog({
         onClose();
       }
     } catch (e) {
-      setError(String(e));
+      setExportError(String(e));
     } finally {
       setExporting(false);
     }
@@ -176,6 +183,7 @@ export function ExportDialog({
   return (
     <Modal
       title="Export your design"
+      className="export-panel"
       subtitle="Prepare a digital image or a PDF for print. Your saved design stays unchanged."
       wide
       onClose={() => {
@@ -185,9 +193,18 @@ export function ExportDialog({
       <div className="form-body">
         <div className="export-workspace">
           <fieldset className="export-settings" disabled={exporting}>
+            <div className="export-dimensions" aria-label="Document and export dimensions">
+              <span>Document size</span>
+              <strong>{doc.width} × {doc.height} {doc.unit}</strong>
+              <span>Export dimensions</span>
+              <strong>{dimensions.width} × {dimensions.height} px{doc.unit !== "px" ? ` · ${dpi} DPI` : ""}</strong>
+              {image && <span>Original image: {image.width} × {image.height} px</span>}
+              <p>Export settings affect the exported copy. A larger export does not add image detail.</p>
+            </div>
             <label>
               File format
               <select
+                aria-label="File format"
                 value={format}
                 onChange={(e) => setFormat(e.target.value as typeof format)}
               >
@@ -200,6 +217,7 @@ export function ExportDialog({
               <label>
                 Export resolution
                 <select
+                  aria-label="Export resolution"
                   value={dpi}
                   onChange={(e) => setDpi(Number(e.target.value))}
                 >
@@ -460,14 +478,14 @@ export function ExportDialog({
             )}
           </section>
         </div>
-        {error && (
+        {(error || exportError) && (
           <div role="alert" className="form-error">
-            {error}
+            {error || exportError}
           </div>
         )}
       </div>
       <div className="modal-footer">
-        <span>Original designs stay in your workspace</span>
+        <span>{format === "pdf" ? `All ${doc.pages.length} pages` : `Page ${pageIndex + 1} of ${doc.pages.length}`} · {dimensions.width} × {dimensions.height} px</span>
         <button
           type="button"
           className="button primary"
@@ -479,7 +497,7 @@ export function ExportDialog({
           ) : (
             <ArrowDownToLine size={16} />
           )}{" "}
-          {exporting ? "Exporting…" : "Export design"}
+          {exporting ? "Exporting…" : `${exportError ? "Retry export" : "Export"} ${format === "jpg" ? "JPEG" : format.toUpperCase()}`}
         </button>
       </div>
     </Modal>

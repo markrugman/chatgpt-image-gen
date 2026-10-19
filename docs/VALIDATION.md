@@ -1,5 +1,73 @@
 # Validation
 
+## Off-page composition thumbnail clipping — local only (2026-10-19)
+
+The shared `.card-composition` container clips overflowing descendants to its document rectangle. This fixes Home/design/project thumbnail spill while retaining exact source images, negative/off-page placement coordinates, rotation and history. No export or editor placement code changed; no deployment.
+
+Frontend build and `scripts/test-preview-clipping.mjs` pass Edge/WebKit, light/dark, 390/1600 CSS px. The fixture uses portrait/square/landscape documents, four edge-crossing placements and a rotated placement. Tests verify clipping in all shared preview containers, actual browser hit testing outside each document edge, reproduce the prior overflow by temporarily removing clipping, then confirm the fix. Fixture workspace/placement data stays identical and mutation endpoints are forbidden. Screenshots/results: `outputs/preview-clipping/`. The floating-toolbar changes also remain local; server stays `interaction-fixes-20261019`.
+
+## Floating image toolbar and bottom status controls — local only (2026-10-19)
+
+Selected placement Size/rotation/Bring forward/Remove now use a floating toolbar. Unselected image framing and Asset preview swatches float above the canvas. Undo/Redo, Zoom out/Fit/Zoom in and page count share the bottom bar. The floating controls do not participate in canvas viewport sizing. No deployment; server remains `interaction-fixes-20261019`.
+
+Build and `scripts/test-floating-canvas-tools.mjs` pass in Edge/WebKit, both themes, at 320/390/820/1280/1600 CSS px. Tests cover control bounds, actual placement rotation persistence and removal, bottom Undo/Redo/zoom, page labels and asset preview swatches; original media/asset versions remain unchanged. Existing canvas-selection stability tests pass both engines at 1440/768/393/320 px in Fit and manual zoom. Screenshots/results are local under `outputs/responsive-review/floating-tools/`.
+
+All 64 unit tests, existing six-width light/dark workspace/export acceptance and direct drawer-switching acceptance also pass with the new layout.
+
+## Drawer switching and context menus — deployed to LAN for testing (2026-10-19)
+
+Mark explicitly authorised both fixes, lifting their earlier local hold while requiring existing designs/sign-in to be preserved. Current release is `interaction-fixes-20261019`, private image `imagegen-local:interaction-d00899e75bcb`, at `http://192.168.178.96:8787`. Backend source/runtime is unchanged from the qualified immutable 0.11.0 image. Fresh frontend build passes; the preceding local 64-test suite, six-width/both-theme browser workflows, actual disposable-storage placements and native drag regressions remain applicable to the identical application source.
+
+Live Edge/WebKit drawer switching passes at 320×740, 390×844, 390×480 and 820×1180: direct touch switching, retained draft/filter, one Back entry, Canvas/Escape dismissal, keyboard navigation and Export isolation. Context checks pass in both themes at 390/1600 px for Assets and Uploads: one click/tap dispatches one placement using a current source version, right-click/keyboard/hold opens menus, hold release does not place, and Subject references remain available. Placement requests are intercepted by the test browser so production designs are never changed by these checks; actual persistence was verified against disposable real storage before deployment. Edge uses trusted touch streams, WebKit synthetic holds plus real taps. The completed live runs record unchanged workspace/media/asset versions. Private evidence/captures: `work/interaction-deploy/`.
+
+Complete stopped-volume backup `before-interaction-20261019T191711Z` and its off-host copy are archive/checksum verified before cutover. Exact workspace, all 30 designs/29 library items/83 media hashes, server identity/configuration, existing sessions/jobs and byte-identical signed-in worker credentials are preserved. Other application containers were unchanged. The former `checker-fix-20261019` is registered as rollback. Public releases, GitHub and the installed Windows app remain unchanged. Earlier local-only records below describe qualification before this deployment.
+
+Retention registration and cleanup pass; superseded artifacts were archived/verified off-host, all live containers/volumes remain preserved, and final disk usage is 44% with approximately 25 GiB available. Final server health and deployed frontend fingerprint pass after cleanup.
+
+## Asset/Upload context interactions — local only (2026-10-19)
+
+Mark reaffirmed single-click Place and right-click/mobile long-press context menus, rejecting the responsive on-screen Place/Reference row. That row is removed. One click or short tap places in design drawers; a 500 ms hold opens the existing menu. Gesture release is suppressed at the tile root so it cannot choose a newly opened menu item. Scrolling beyond 10 px, pointer cancellation and a second finger cancel pending holds. Templates and reference pickers retain their existing menu activation.
+
+Production build, all 64 unit tests and the existing Edge/WebKit six-width light/dark workspace/export suite pass. `scripts/test-library-context.mjs` passes Assets/Uploads at 390/1600 px in both themes, with real storage: mouse click and short touch tap place exactly one original version; right-click/Shift+F10 and touch holds open options without placing; Add as Subject creates references; scrolling/cancel/second-touch paths neither place nor open menus. Edge holds use trusted CDP touch streams; WebKit holds use synthetic pointer events with real short taps. Original media and asset versions remain unchanged. Private evidence: `outputs/responsive-review/library-context/results.json`. Physical mobile long-press confirmation remains for user testing. No deployment; the existing server stays unchanged under Mark's hold.
+
+Existing `scripts/test-drawer-placement.mjs` also passes Edge/WebKit in both themes: native asset/upload drags, edge/corner clamping, cancellation, undo/redo, zoom/scroll and reload. Its target selector now selects the visible drawer, and it deselects prior placements before edge-drop checks so the inspector does not cover the test drop point.
+
+## Direct mobile drawer switching — local only (2026-10-19)
+
+Mark explicitly said not to deploy while another issue is pending. The local change exempts the dock/tablet rail from drawer background inertness, includes navigation in keyboard focus handling, and presents drawers as nonmodal dialogs. Canvas editing stays blocked behind drawers; Export/native modal dialogs retain their blocking behaviour. Short phone sheets reserve dock space, and the Canvas button drains the single sheet history entry before dismissing.
+
+Production build and targeted Edge/WebKit acceptance pass at 320×740, 390×844, 390×480 and 820×1180 using emulated touch. Checks cover repeated Pages/Chat/Tools switches without closing, retained Chat draft and asset filter, one shared Back entry, Canvas/Back/Escape dismissal, keyboard navigation, blocked canvas and Export isolation. Disposable workspace remains unchanged. Reusable regression: `scripts/test-drawer-switching.mjs`; evidence: ignored `outputs/responsive-review/drawer-switching/results.json`. Server remains `checker-fix-20261019`; no deployment or installed-app replacement.
+
+All 64 unit tests, existing Edge/WebKit six-width light/dark workspace/export checks, and Template/keyboard-space/focus/page-switch detail checks also pass. Existing acceptance now checks focus within the active drawer or navigation rather than requiring a modal-only drawer.
+
+## Dark-theme thumbnail checkerboard — private LAN (2026-10-19)
+
+Deployed `checker-fix-20261019`, frontend image `imagegen-local:checker-2067e99d28cb`, with the existing qualified 0.11.0 backend. Removed the responsive card rule that replaced the pale checker base with `--page` while retaining pale squares. The shared subtle checkerboard now stays identical in light/dark. No artwork or export code changed.
+
+Production build passes. `scripts/test-transparency-background.mjs` reproduces the old override and verifies computed checker colours on Home/Assets/canvas in Edge/WebKit, both themes, at 390/1600 CSS px. The same eight live browser/theme/width combinations pass, with the workspace unchanged; actual dark-mode Home screenshots show the restored pale checker around the reported recent designs. Private evidence is in `work/checker-deploy/`.
+
+Verified stopped-volume/off-host backup `before-checker-20261019T190147Z` before cutover. Exact workspace, all 83 media hashes, 30 designs/29 library items, config/server identity, sessions/jobs and byte-identical signed-in worker credentials are preserved. Other apps are unchanged; `drawer-fixes-20261019` is registered as rollback. No public release, push or installed Windows replacement.
+
+Retention registration and cleanup pass; superseded artifacts are archived and verified off-host, live containers/volumes are preserved, and disk usage remains 44% with approximately 25 GiB available. Final health and corrected frontend fingerprint pass after deployment.
+
+## Responsive drawer screenshot follow-up — private LAN (2026-10-19)
+
+Deployed `drawer-fixes-20261019` at the existing LAN URL, frontend-only image `imagegen-local:drawer-61b70c448cbc`, qualified 0.11.0 backend unchanged. Pages is separate from Tools, Ready stays inside Chat, drawer handles respond to tap/keyboard/up/down swipes, and the export heading shares the Close control's vertical centre.
+
+Build and all 64 unit tests pass. The targeted Edge/WebKit regression passes at 320/390/820/1600 CSS px, including emulated touch taps, pointer drags, retained asset search, page-only contents, Ready geometry and export header alignment. The existing six-width light/dark workspace/export suite and detail/focus/page-navigation checks pass again. Live LAN checks pass all eight browser/width combinations with the workspace unchanged; completed-job responses are mocked only within the test browser. Physical iPhone gestures remain for user qualification. Screenshots/evidence are private under `work/drawer-deploy/`; reusable regression is `scripts/test-responsive-drawers.mjs`.
+
+Stopped-volume backup `before-drawer-20261019T185551Z` was archive/checksum verified and copied off-host before cutover. All 30 designs, 29 library items and 83 original media hashes, config/server identity, sessions/jobs and byte-identical signed-in worker credentials remain preserved. Other application containers were unchanged. Retention registration and cleanup pass, with previous `responsive-preview-20261019-r2` retained as rollback; superseded artifacts are archived and verified off-host. Server storage is 44% used with approximately 25 GiB available. Public release, GitHub and installed Windows app remain unchanged.
+
+## Responsive workspace — private LAN testing (2026-10-19)
+
+Mark explicitly requested local-server deployment after local implementation. The responsive desktop/tablet/phone interface is running at `http://192.168.178.96:8787`, release `responsive-preview-20261019-r2`, private image `imagegen-local:responsive-7ce3ec146f5a`. Its source archive SHA256 is `7ce3ec146f5ad6a0d51c485ddcb1b3ecf171d7e7d8273752157e041c8aaa9f85` (see private deployment evidence for the recorded digest). Backend source is identical to the qualified immutable 0.11.0 image; public releases and the installed Windows app are unchanged.
+
+Fresh frontend build and all 64 unit tests pass. Actual LAN-origin Edge/WebKit checks pass in light/dark at 320, 390, 820, 1024, 1280 and 1600 CSS px, including Home, canvas bounds, tool/Chat sheets, draft persistence, Back, More, export button bounds and real PNG downloads; both runs verify the workspace is unchanged. LAN testing caught the secure-context restriction on `crypto.randomUUID`; sheet history now uses a local monotonic identifier and passes on plain HTTP. [Implementation evidence and limitations](design-study-2026-10-19/IMPLEMENTATION.md) remain canonical for the broader qualification.
+
+Complete stopped-volume backup `before-responsive-20261019T184428Z` and its off-host copy pass archive/checksum verification before cutover. Exact workspace and all 83 media hashes, 30 designs/29 library items, server identity/configuration, sessions/jobs and byte-identical signed-in worker credentials are preserved. The corrected frontend reused this verified backup after exact baseline comparisons. Other services were unchanged. Private evidence is in ignored `work/responsive-deploy/`.
+
+Retention registration and apply pass. Previous public `v0110-release` is the single qualified rollback; superseded artifacts were archived and verified off-host before deletion. All live containers/volumes remain preserved. Final storage is 44% used with approximately 25 GiB available; private retention evidence is under `%LOCALAPPDATA%/ImageGenBuild/server-retention/20261019T184940Z/`.
+
 ## 0.11.0 — published and deployed (2026-10-18)
 
 [Image Gen 0.11.0](https://github.com/markrugman/chatgpt-image-gen/releases/tag/v0.11.0) is published from `09d3471ed6daf26711626b78196366e3b03b9a3e`; every job in the [clean release workflow](https://github.com/markrugman/chatgpt-image-gen/actions/runs/39078806260) passed. Includes configurable Templates with simplified authoring and mobile layouts, faithful Generate/Discuss request composition and captured inputs, transparent document PNG exports, current-design project previews and documented server retention.

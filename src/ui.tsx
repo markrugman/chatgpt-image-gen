@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { FileImage, X } from "lucide-react";
-import { isBrowser, imageSource } from "./api";
+import { imageSource } from "./api";
 export type Act = <T = unknown>(action: Record<string, unknown>) => Promise<T>;
 export type CreateOptions = {
   kind: "document" | "project" | "organisation" | "asset";
@@ -8,20 +8,20 @@ export type CreateOptions = {
   sourceImageId?: string;
   sourceDocumentId?: string;
 };
-export function useCompactLayout() {
-  const query = "(max-width: 1024px)";
+export function useCompactLayout(maxWidth = 1024) {
+  const query = `(max-width: ${maxWidth}px)`;
   const [compact, setCompact] = useState(() =>
-    isBrowser && typeof window !== "undefined" && typeof window.matchMedia === "function"
+    typeof window !== "undefined" && typeof window.matchMedia === "function"
       ? window.matchMedia(query).matches : false,
   );
   useEffect(() => {
-    if (!isBrowser || typeof window.matchMedia !== "function") return;
+    if (typeof window.matchMedia !== "function") return;
     const media = window.matchMedia(query);
     const update = () => setCompact(media.matches);
     update();
     media.addEventListener("change", update);
     return () => media.removeEventListener("change", update);
-  }, []);
+  }, [query]);
   return compact;
 }
 
@@ -70,12 +70,14 @@ export function Modal({
   children,
   onClose,
   wide = false,
+  className = "",
 }: {
   title: string;
   subtitle?: string;
   children: ReactNode;
   onClose: () => void;
   wide?: boolean;
+  className?: string;
 }) {
   const ref = useRef<HTMLDialogElement>(null);
   useEffect(() => {
@@ -91,7 +93,7 @@ export function Modal({
     <dialog
       ref={ref}
       aria-label={title}
-      className={`modal ${wide ? "wide" : ""}`}
+      className={`modal ${wide ? "wide" : ""} ${className}`}
       onCancel={(e) => { e.stopPropagation(); onClose(); }}
       onClick={(e) => {
         if (e.target === e.currentTarget) onClose();

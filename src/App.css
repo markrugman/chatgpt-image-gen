@@ -874,6 +874,7 @@ h1 {
 }
 .card-composition {
   position: relative;
+  overflow: hidden;
   max-width: 100%;
   height: 100%;
   background: #fff;
@@ -3280,8 +3281,8 @@ label small {
 .browser-login-card form > .button, .browser-login-card form > .text-button { margin-top: 10px; }
 .browser-login-card form > small { margin-top: 10px; display: block; }
 
-/* The browser workspace also supports phones and tablets. Native keeps its desktop layout. */
-.browser-app { min-width: 0; height: 100dvh; }
+/* Shared workspace navigation for browser and native windows. */
+.responsive-app { min-width: 0; height: 100dvh; }
 .mobile-appbar { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; flex-shrink: 0; min-height: 56px; padding: 4px 12px; border-bottom: 1px solid var(--border); background: var(--surface, var(--theme-surface, #fff)); }
 .mobile-appbar > .icon-button { justify-self: start; }
 .mobile-brand { display: flex; align-items: center; justify-content: center; gap: 8px; font-weight: 600; }
@@ -3340,108 +3341,108 @@ label small {
 .mobile-editor-views button { display: flex; align-items: center; justify-content: center; gap: 7px; flex: 1; min-height: 44px; border-radius: 8px; color: var(--muted); }
 .mobile-editor-views button[aria-pressed="true"] { background: var(--accent-soft, var(--theme-soft, #f1ecfa)); color: var(--accent); font-weight: 600; }
 @media (max-width: 1024px) {
-  .browser-app { flex-direction: column; }
-  .browser-app .main, .browser-app .editor, .browser-app .editor-body { min-height: 0; }
-  .browser-app .main { width: 100%; }
-  .browser-app .icon-button { min-width: 44px; min-height: 44px; }
-  .browser-app .topbar { height: auto; min-height: 64px; padding: 12px 16px; flex-wrap: wrap; gap: 12px; }
-  .browser-app .topbar-right { flex: 1; min-width: 0; gap: 12px; }
-  .browser-app .search-box { min-width: 0; width: 100%; }
-  .browser-app .workspace-content { padding: 22px 20px; }
-  .browser-app .editor-topbar { height: auto; min-height: 72px; padding: 10px 12px; flex-wrap: wrap; gap: 10px; flex-shrink: 0; }
-  .browser-app .editor-title { min-width: 0; max-width: 100%; }
-  .browser-app .editor-title > div { min-width: 0; }
-  .browser-app .editor-title > div > button { max-width: 100%; overflow: hidden; text-overflow: ellipsis; display: block; }
-  .browser-app .editor-topbar > .button-row { flex-wrap: wrap; gap: 6px; }
-  .browser-app .editor-topbar .button { min-height: 40px; }
-  .browser-app .mobile-view-canvas .editor-tools, .browser-app .mobile-view-canvas .chat-panel,
-  .browser-app .mobile-view-tools .canvas-workspace, .browser-app .mobile-view-tools .chat-panel,
-  .browser-app .mobile-view-chat .canvas-workspace, .browser-app .mobile-view-chat .editor-tools { display: none; }
-  .browser-app .editor-tools, .browser-app .chat-panel { width: 100%; flex: 1; min-width: 0; }
-  .browser-app .chat-panel { overflow-y: auto; }
-  .browser-app .composer { flex-shrink: 0; }
-  .browser-app .mode-switch > button, .browser-app .send-button { min-height: 44px; }
-  .browser-app .send-button { min-width: 44px; }
-  .browser-app .message-text, .browser-app .chat-heading h3, .browser-app .mode-switch > button, .browser-app .prompt-suggestions button { font-size: 14px; }
-  .browser-app .message-author, .browser-app .chat-heading small { font-size: 12px; }
-  .browser-app .canvas-scroll { padding: 18px 16px; }
-  .browser-app .canvas-toolbar { padding: 6px 10px; height: auto; min-height: 54px; flex-wrap: wrap; gap: 4px; }
-  .browser-app .canvas-toolbar .toolbar-caption { min-width: 0; }
-  .browser-app .overlay-inspector { flex-wrap: wrap; }
-  .browser-app .modal { max-width: calc(100vw - 16px); max-height: calc(100dvh - 16px); }
-  .browser-app .modal[open]:has(.export-workspace) { width: min(940px, calc(100vw - 16px)); max-width: calc(100vw - 16px); max-height: calc(100dvh - 16px); }
+  .responsive-app { flex-direction: column; }
+  .responsive-app .main, .responsive-app .editor, .responsive-app .editor-body { min-height: 0; }
+  .responsive-app .main { width: 100%; }
+  .responsive-app .icon-button { min-width: 44px; min-height: 44px; }
+  .responsive-app .topbar { height: auto; min-height: 64px; padding: 12px 16px; flex-wrap: wrap; gap: 12px; }
+  .responsive-app .topbar-right { flex: 1; min-width: 0; gap: 12px; }
+  .responsive-app .search-box { min-width: 0; width: 100%; }
+  .responsive-app .workspace-content { padding: 22px 20px; }
+  .responsive-app .editor-topbar { height: auto; min-height: 72px; padding: 10px 12px; flex-wrap: wrap; gap: 10px; flex-shrink: 0; }
+  .responsive-app .editor-title { min-width: 0; max-width: 100%; }
+  .responsive-app .editor-title > div { min-width: 0; }
+  .responsive-app .editor-title > div > button { max-width: 100%; overflow: hidden; text-overflow: ellipsis; display: block; }
+  .responsive-app .editor-topbar > .button-row { flex-wrap: wrap; gap: 6px; }
+  .responsive-app .editor-topbar .button { min-height: 40px; }
+  .responsive-app .mobile-view-canvas .editor-tools, .responsive-app .mobile-view-canvas .chat-panel,
+  .responsive-app .mobile-view-tools .canvas-workspace, .responsive-app .mobile-view-tools .chat-panel,
+  .responsive-app .mobile-view-chat .canvas-workspace, .responsive-app .mobile-view-chat .editor-tools { display: none; }
+  .responsive-app .editor-tools, .responsive-app .chat-panel { width: 100%; flex: 1; min-width: 0; }
+  .responsive-app .chat-panel { overflow-y: auto; }
+  .responsive-app .composer { flex-shrink: 0; }
+  .responsive-app .mode-switch > button, .responsive-app .send-button { min-height: 44px; }
+  .responsive-app .send-button { min-width: 44px; }
+  .responsive-app .message-text, .responsive-app .chat-heading h3, .responsive-app .mode-switch > button, .responsive-app .prompt-suggestions button { font-size: 14px; }
+  .responsive-app .message-author, .responsive-app .chat-heading small { font-size: 12px; }
+  .responsive-app .canvas-scroll { padding: 18px 16px; }
+  .responsive-app .canvas-toolbar { padding: 6px 10px; height: auto; min-height: 54px; flex-wrap: wrap; gap: 4px; }
+  .responsive-app .canvas-toolbar .toolbar-caption { min-width: 0; }
+  .responsive-app .overlay-inspector { flex-wrap: wrap; }
+  .responsive-app .modal { max-width: calc(100vw - 16px); max-height: calc(100dvh - 16px); }
+  .responsive-app .modal[open]:has(.export-workspace) { width: min(940px, calc(100vw - 16px)); max-width: calc(100vw - 16px); max-height: calc(100dvh - 16px); }
   .mobile-navigation .modal { width: 360px; }
-  .browser-app .mobile-navigation .sidebar { width: 100%; height: auto; padding: 0; border: 0; }
-  .browser-app .mobile-navigation .brand { padding: 0; justify-content: flex-start; }
-  .browser-app .mobile-navigation .brand > span:last-child,
-  .browser-app .mobile-navigation .sidebar-create > span,
-  .browser-app .mobile-navigation .nav-label,
-  .browser-app .mobile-navigation .nav-item > span,
-  .browser-app .mobile-navigation .nav-item > b,
-  .browser-app .mobile-navigation .org-item > span:last-child,
-  .browser-app .mobile-navigation .connection-card > span:not(.status-dot),
-  .browser-app .mobile-navigation .connection-card > svg { display: block; }
-  .browser-app .mobile-navigation .org-label { display: flex; }
-  .browser-app .mobile-navigation .sidebar-create { width: 100%; margin: 24px 0; }
-  .browser-app .mobile-navigation .nav-item, .browser-app .mobile-navigation .org-item { justify-content: flex-start; padding: 10px 12px; min-height: 44px; }
-  .browser-app .mobile-navigation .connection-card { justify-content: flex-start; padding: 12px; }
-  .browser-app .mobile-navigation .org-item > span:last-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .responsive-app .mobile-navigation .sidebar { width: 100%; height: auto; padding: 0; border: 0; }
+  .responsive-app .mobile-navigation .brand { padding: 0; justify-content: flex-start; }
+  .responsive-app .mobile-navigation .brand > span:last-child,
+  .responsive-app .mobile-navigation .sidebar-create > span,
+  .responsive-app .mobile-navigation .nav-label,
+  .responsive-app .mobile-navigation .nav-item > span,
+  .responsive-app .mobile-navigation .nav-item > b,
+  .responsive-app .mobile-navigation .org-item > span:last-child,
+  .responsive-app .mobile-navigation .connection-card > span:not(.status-dot),
+  .responsive-app .mobile-navigation .connection-card > svg { display: block; }
+  .responsive-app .mobile-navigation .org-label { display: flex; }
+  .responsive-app .mobile-navigation .sidebar-create { width: 100%; margin: 24px 0; }
+  .responsive-app .mobile-navigation .nav-item, .responsive-app .mobile-navigation .org-item { justify-content: flex-start; padding: 10px 12px; min-height: 44px; }
+  .responsive-app .mobile-navigation .connection-card { justify-content: flex-start; padding: 12px; }
+  .responsive-app .mobile-navigation .org-item > span:last-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 }
 @media (max-width: 600px) {
-  .browser-app .editor-topbar { flex-wrap: nowrap; gap: 6px; padding: 8px; min-height: 64px; }
-  .browser-app .editor-title { flex: 1; gap: 6px; }
-  .browser-app .editor-title > .back-button { min-width: 32px; width: 32px; padding: 4px; }
-  .browser-app .editor-title-divider { flex-shrink: 0; }
-  .browser-app .editor-title > div { flex: 1; }
-  .browser-app .editor-title small { display: block; text-overflow: ellipsis; }
-  .browser-app .editor-topbar > .editor-actions { flex-shrink: 0; flex-wrap: nowrap; gap: 4px; }
-  .browser-app .editor-actions > .button { width: 40px; min-width: 40px; height: 44px; justify-content: center; padding: 0; }
-  .browser-app .editor-actions > .button > span { display: none; }
-  .browser-app .topbar-right { flex-basis: 100%; }
-  .browser-app .search-box kbd, .browser-app .topbar-right > .avatar { display: none; }
-  .browser-app .workspace-content { padding: 20px 16px; }
-  .browser-app .page-heading { flex-wrap: wrap; gap: 16px; }
-  .browser-app .page-heading h1 { font-size: 28px; }
-  .browser-app .creative-hero { height: auto; padding: 24px; }
-  .browser-app .hero-copy { max-width: 100%; }
-  .browser-app .hero-art { display: none; }
-  .browser-app .creative-hero h2 { font-size: 28px; }
-  .browser-app .project-grid, .browser-app .document-grid, .browser-app .asset-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
-  .browser-app .card-caption { padding: 10px 8px; gap: 4px; }
-  .browser-app .card-name strong { white-space: normal; overflow-wrap: anywhere; }
-  .browser-app .card-name small { display: block; }
-  .browser-app .card-name small span { margin: 0 4px; }
-  .browser-app .document-preview, .browser-app .asset-preview { height: clamp(130px, 40vw, 190px); padding: 12px; }
-  .browser-app .filter-tabs { flex-wrap: wrap; }
-  .browser-app .modal-head, .browser-app .form-body, .browser-app .modal-footer { padding: 16px; }
-  .browser-app .modal-head > div { min-width: 0; }
-  .browser-app .modal-head h2 { overflow-wrap: anywhere; }
-  .browser-app .form-grid { grid-template-columns: minmax(0, 1fr); }
-  .browser-app .dimensions-row { grid-template-columns: minmax(0, 1fr) 14px minmax(0, 1fr); }
-  .browser-app .dimensions-row > label:last-child { grid-column: 1 / -1; }
-  .browser-app .modal label, .browser-app .modal input, .browser-app .modal select { min-width: 0; }
-  .browser-app .preset-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .browser-app .saved-indicator { display: none; }
-  .browser-app input:not([type="checkbox"]):not([type="range"]):not([type="radio"]), .browser-app textarea,
+  .responsive-app .editor-topbar { flex-wrap: nowrap; gap: 6px; padding: 8px; min-height: 64px; }
+  .responsive-app .editor-title { flex: 1; gap: 6px; }
+  .responsive-app .editor-title > .back-button { min-width: 32px; width: 32px; padding: 4px; }
+  .responsive-app .editor-title-divider { flex-shrink: 0; }
+  .responsive-app .editor-title > div { flex: 1; }
+  .responsive-app .editor-title small { display: block; text-overflow: ellipsis; }
+  .responsive-app .editor-topbar > .editor-actions { flex-shrink: 0; flex-wrap: nowrap; gap: 4px; }
+  .responsive-app .editor-actions > .button { width: 40px; min-width: 40px; height: 44px; justify-content: center; padding: 0; }
+  .responsive-app .editor-actions > .button > span { display: none; }
+  .responsive-app .topbar-right { flex-basis: 100%; }
+  .responsive-app .search-box kbd, .responsive-app .topbar-right > .avatar { display: none; }
+  .responsive-app .workspace-content { padding: 20px 16px; }
+  .responsive-app .page-heading { flex-wrap: wrap; gap: 16px; }
+  .responsive-app .page-heading h1 { font-size: 28px; }
+  .responsive-app .creative-hero { height: auto; padding: 24px; }
+  .responsive-app .hero-copy { max-width: 100%; }
+  .responsive-app .hero-art { display: none; }
+  .responsive-app .creative-hero h2 { font-size: 28px; }
+  .responsive-app .project-grid, .responsive-app .document-grid, .responsive-app .asset-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+  .responsive-app .card-caption { padding: 10px 8px; gap: 4px; }
+  .responsive-app .card-name strong { white-space: normal; overflow-wrap: anywhere; }
+  .responsive-app .card-name small { display: block; }
+  .responsive-app .card-name small span { margin: 0 4px; }
+  .responsive-app .document-preview, .responsive-app .asset-preview { height: clamp(130px, 40vw, 190px); padding: 12px; }
+  .responsive-app .filter-tabs { flex-wrap: wrap; }
+  .responsive-app .modal-head, .responsive-app .form-body, .responsive-app .modal-footer { padding: 16px; }
+  .responsive-app .modal-head > div { min-width: 0; }
+  .responsive-app .modal-head h2 { overflow-wrap: anywhere; }
+  .responsive-app .form-grid { grid-template-columns: minmax(0, 1fr); }
+  .responsive-app .dimensions-row { grid-template-columns: minmax(0, 1fr) 14px minmax(0, 1fr); }
+  .responsive-app .dimensions-row > label:last-child { grid-column: 1 / -1; }
+  .responsive-app .modal label, .responsive-app .modal input, .responsive-app .modal select { min-width: 0; }
+  .responsive-app .preset-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .responsive-app .saved-indicator { display: none; }
+  .responsive-app input:not([type="checkbox"]):not([type="range"]):not([type="radio"]), .responsive-app textarea,
   .browser-login-card input:not([type="checkbox"]) { font-size: 16px; }
-  .browser-app .button { min-height: 44px; }
-  .browser-app .editor-title small { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+  .responsive-app .button { min-height: 44px; }
+  .responsive-app .editor-title small { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
   .browser-login-card { padding: 24px 20px; }
   .browser-login-card h1 { font-size: 30px; }
 }
 
 @media (max-width: 1024px) and (max-height: 600px) {
-  .browser-app .mobile-view-chat .editor-topbar, .browser-app .mobile-view-chat .chat-heading { display: none; }
-  .browser-app .composer { padding: 8px 12px; }
-  .browser-app .mode-switch { margin-bottom: 6px; }
-  .browser-app .prompt-box textarea { min-height: 60px; height: 60px; }
+  .responsive-app .mobile-view-chat .editor-topbar, .responsive-app .mobile-view-chat .chat-heading { display: none; }
+  .responsive-app .composer { padding: 8px 12px; }
+  .responsive-app .mode-switch { margin-bottom: 6px; }
+  .responsive-app .prompt-box textarea { min-height: 60px; height: 60px; }
 }
 
 @media (max-width: 1024px) {
-  .browser-app .mobile-navigation .organisation-row .org-item { padding-right: 35px; }
-  .browser-app .mobile-navigation .organisation-more { right: 3px; }
-  .browser-app .mobile-navigation .organisation-menu { left: auto; right: 0; top: 38px; }
-  .browser-app .mobile-navigation .organisation-rename { width: 100%; }
+  .responsive-app .mobile-navigation .organisation-row .org-item { padding-right: 35px; }
+  .responsive-app .mobile-navigation .organisation-more { right: 3px; }
+  .responsive-app .mobile-navigation .organisation-menu { left: auto; right: 0; top: 38px; }
+  .responsive-app .mobile-navigation .organisation-rename { width: 100%; }
 }
 
 /* Theme changes the workspace chrome; artwork, paper and contrast previews keep their original colours. */
@@ -3458,7 +3459,7 @@ label small {
 :root[data-theme="dark"] option { color: var(--ink); background: var(--surface); }
 :root[data-theme="dark"] ::selection { background: #604380; color: white; }
 :root[data-theme="dark"] ::-webkit-scrollbar-thumb { background-color: #63596e; }
-.browser-app .mobile-appbar .user-avatar { width: 36px; height: 36px; }
+.responsive-app .mobile-appbar .user-avatar { width: 36px; height: 36px; }
 .templates-library { min-width: 0; }
 .template-library-actions { flex-wrap: wrap; }
 .template-toolbar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin: 0 0 20px; }

@@ -1,5 +1,5 @@
 import type { HTMLAttributes } from "react";
-import { newestFirst } from "./folderOrdering";
+import { modificationDate, newestFirst } from "./folderOrdering";
 import {
   ChevronRight,
   FileImage,
@@ -130,6 +130,11 @@ export function DocumentCard({
   const project = w.projects.find((p) => p.id === doc.projectId),
     comp = currentComposition(doc.pages[0]),
     busy = jobs.some((j) => j.target.id === doc.id && activeJob(j));
+  const modified = modificationDate(doc), age = Math.max(0, Date.now() / 1000 - modified);
+  const edited = new Intl.RelativeTimeFormat(undefined, { numeric: "auto" }).format(
+    -Math.floor(age / (age < 3600 ? 60 : age < 86400 ? 3600 : 86400)),
+    age < 3600 ? "minute" : age < 86400 ? "hour" : "day",
+  );
   return (
     <article {...dragProps} data-document-id={doc.id} className={`document-card ${dragProps?.className || ""}`}>
       <button
@@ -157,6 +162,7 @@ export function DocumentCard({
             <span>·</span>
             {doc.pages.length} {doc.pages.length === 1 ? "page" : "pages"}
           </small>
+          {modified > 0 && <time className="card-edited" dateTime={new Date(modified * 1000).toISOString()} title={new Date(modified * 1000).toLocaleString()}>Edited {edited}</time>}
         </button>
         <button
           className="icon-button"

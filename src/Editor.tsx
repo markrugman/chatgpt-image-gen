@@ -6,8 +6,9 @@ import {
   ArrowUp,
   ArrowUpRight,
   Check,
-  ChevronRight,
   FileImage,
+  ChevronsUpDown,
+  Pencil,
   History,
   ImagePlus,
   Images,
@@ -66,6 +67,7 @@ import type { Template, TemplateRequest, ReferencePurpose, Message } from "./typ
 import { ExportDialog } from "./ExportDialog";
 import { RegionCanvas } from "./RegionCanvas";
 import { RegionReview } from "./RegionReview";
+import { useEditorSheet, useSheetBack } from "./editorSheets";
 import { annotationSource, regionFrame, regionNotesFingerprint } from "./annotationEditing";
 
 function UserMessageText({ text }: { text: string }) {
@@ -84,6 +86,36 @@ function UserMessageText({ text }: { text: string }) {
     <span ref={content} id={id} className={`user-message-content${expanded ? "" : " collapsed"}`}>{text}</span>
     {long && <button className="text-button message-expand" aria-expanded={expanded} aria-controls={id} onClick={() => setExpanded(!expanded)}>{expanded ? "Show less" : "More…"}</button>}
   </div>;
+}
+
+function SheetHandle({ expanded, onExpand, onDismiss }: { expanded: boolean; onExpand: (expanded: boolean) => void; onDismiss: () => void }) {
+  const gesture = useRef<{ y: number; dragged: boolean } | null>(null);
+  const suppressClick = useRef(false);
+  return <button type="button" className="sheet-handle" aria-label={expanded ? "Collapse drawer" : "Expand drawer"} aria-expanded={expanded}
+    onPointerDown={event => {
+      if (event.button !== 0) return;
+      gesture.current = { y: event.clientY, dragged: false };
+      suppressClick.current = false;
+      event.currentTarget.setPointerCapture(event.pointerId);
+    }}
+    onPointerMove={event => {
+      if (gesture.current && Math.abs(event.clientY - gesture.current.y) > 8) gesture.current.dragged = true;
+    }}
+    onPointerUp={event => {
+      const start = gesture.current;
+      gesture.current = null;
+      if (!start) return;
+      suppressClick.current = start.dragged;
+      const delta = event.clientY - start.y;
+      if (delta < -32) onExpand(true);
+      else if (delta > 32) { if (expanded) onExpand(false); else onDismiss(); }
+    }}
+    onPointerCancel={() => { gesture.current = null; suppressClick.current = true; }}
+    onClick={() => {
+      if (suppressClick.current) { suppressClick.current = false; return; }
+      onExpand(!expanded);
+    }}
+  />;
 }
 
 export function Editor({
@@ -123,8 +155,15 @@ export function Editor({
   onRefresh: () => Promise<void>;
   onOpenAsset: (id: string) => void;
 }) {
-  const compact = useCompactLayout();
+  const compact = useCompactLayout(1279);
   const [mobilePanel, setMobilePanel] = useState("canvas");
+  const [drawerOpen, setDrawerOpen] = useState(true), [sheetExpanded, setSheetExpanded] = useState(false);
+  const [moreOpen, setMoreOpen] = useState(false);
+  const [assetSearch, setAssetSearch] = useState("");
+  const [layoutSaving, setLayoutSaving] = useState(false), [saveError, setSaveError] = useState("");
+  const toolsRef = useRef<HTMLElement>(null), chatRef = useRef<HTMLElement>(null), editorRef = useRef<HTMLDivElement>(null);
+  useEditorSheet(toolsRef, compact && (mobilePanel === "tools" || mobilePanel === "pages"), () => dismissSheet(() => setMobilePanel("canvas")));
+  useEditorSheet(chatRef, compact && mobilePanel === "chat", () => dismissSheet(() => setMobilePanel("canvas")));
   const page = doc
     ? doc.pages.find((p) => p.id === pageId) || doc.pages[0]
     : asset!.page;
@@ -220,23 +259,38 @@ export function Editor({
   }, [JSON.stringify(page.regionNotes || [])]);
   const saveRegionNotes = async (next: RegionNote[]) => {
     if (savingRegionNotes.current || annotationLocked) throw Error("Wait for the current edit to finish saving");
-    savingRegionNotes.current = true; setRegionSaving(true);
+    savingRegionNotes.current = true; setRegionSaving(true); setSaveError("");
     try {
       const base = await api<Workspace>("get_workspace");
       const stored = base.documents.find(d => d.id === target.id)?.pages.find(p => p.id === target.pageId);
       if (regionNotesFingerprint(stored?.regionNotes || []) !== savedRegionNotes.current) { await onRefresh(); throw Error("Region edits changed elsewhere. Refresh before changing them."); }
       await api("mutate", { action: { op: "annotation_notes", target, notes: next, _base: base } });
       savedRegionNotes.current = regionNotesFingerprint(next); setRegionNotes(next); await onRefresh();
-    } finally { savingRegionNotes.current = false; setRegionSaving(false); }
+    } catch (error) { setSaveError(String(error)); throw error; }
+    finally { savingRegionNotes.current = false; setRegionSaving(false); }
   };
   const [overlays, setOverlays] = useState<Overlay[]>(comp.overlays),
     [showExport, setShowExport] = useState(false);
+  const [exportBusy, setExportBusy] = useState(false);
+  const [exportReturnPanel, setExportReturnPanel] = useState("canvas");
+  const openExport = () => { setMoreOpen(false); setExportReturnPanel(mobilePanel); setMobilePanel("canvas"); setShowExport(true); };
+  useEffect(() => {
+    const viewport = window.visualViewport;
+    const update = () => editorRef.current?.style.setProperty("--keyboard-inset", `${Math.max(0, window.innerHeight - (viewport?.height || window.innerHeight) - (viewport?.offsetTop || 0))}px`);
+    update(); viewport?.addEventListener("resize", update); viewport?.addEventListener("scroll", update);
+    return () => { viewport?.removeEventListener("resize", update); viewport?.removeEventListener("scroll", update); };
+  }, []);
   const overlaySaves = useRef(Promise.resolve()), pendingSaves = useRef(0);
   const savedOverlays = useRef(comp.overlays);
   const [autoFit, setAutoFit] = useState(true);
   const [viewport, setViewport] = useState({ width: 0, height: 0 });
   const [extracting, setExtracting] = useState(false);
   const [showAssetJson, setShowAssetJson] = useState(false);
+  const dismissSheet = useSheetBack(compact && (mobilePanel !== "canvas" || moreOpen || showExport || !!picker || showTemplatePicker || !!templateSource || extracting || showAssetJson), () => {
+    if (exportBusy) return false;
+    setMobilePanel("canvas"); setMoreOpen(false); setShowExport(false); setPicker(null); setShowTemplatePicker(false); setTemplateSource(null); setExtracting(false); setShowAssetJson(false);
+  });
+  const closeFloating = (action: () => void) => compact && mobilePanel === "canvas" ? dismissSheet(action) : action();
   const previewBackgrounds = [
     { name: "Checkerboard", color: "checker" },
     { name: "White", color: "#ffffff" },
@@ -321,6 +375,7 @@ export function Editor({
   const persistOverlays = (next: Overlay[]) => {
     if (annotationLocked) return Promise.reject(Error("Apply or discard the annotated edit before changing layers"));
     pendingSaves.current++;
+    setLayoutSaving(true); setSaveError("");
     const work = overlaySaves.current.catch(() => {}).then(async () => {
       const base = await api<Workspace>("get_workspace");
       const storedPage = target.kind === "document" ? base.documents.find(d => d.id === target.id)?.pages.find(p => p.id === target.pageId) : base.assets.find(a => a.id === target.id)?.page;
@@ -334,7 +389,7 @@ export function Editor({
       await api("mutate", { action: { op: "overlays", target, overlays: next, _base: base } });
       savedOverlays.current = next;
       await onRefresh();
-    }).catch(async error => { setOverlays(savedOverlays.current); await onRefresh().catch(() => {}); throw error; }).finally(() => { pendingSaves.current--; });
+    }).catch(async error => { setSaveError(String(error)); setOverlays(savedOverlays.current); await onRefresh().catch(() => {}); throw error; }).finally(() => { pendingSaves.current--; setLayoutSaving(pendingSaves.current > 0); });
     overlaySaves.current = work;
     return work;
   };
@@ -355,7 +410,8 @@ export function Editor({
     if (purpose) setReferencePurposes(current => ({ ...current, [version]: { reference: version, purpose, explanation: "" } }));
     setPicker(null);
     setPrompt((p) => p.replace(/\/(asset|upload)\s*$/, ""));
-    textarea.current?.focus();
+    if (compact) setMobilePanel("chat");
+    requestAnimationFrame(() => textarea.current?.focus());
   };
   const addPageReference = (sourceDoc: DesignDocument, sourcePage: Page) =>
     run(async () => {
@@ -380,7 +436,7 @@ export function Editor({
       addReference(`image:${imageId}`);
     });
   const placeVersion = (version: string | null | undefined, point?: { x: number; y: number }) => {
-    void canvasCommands.placeVersion(version, point).then(() => setPicker(null)).catch(error => notify(String(error)));
+    void canvasCommands.placeVersion(version, point).then(() => { if (compact) dismissSheet(() => { setPicker(null); setMobilePanel("canvas"); }); else setPicker(null); }).catch(error => notify(String(error)));
   };
   const placeAsset = (asset: Asset) => placeVersion(asset.currentVersionId);
   async function submit() {
@@ -461,14 +517,31 @@ export function Editor({
   const displayWidth = autoFit
     ? Math.max(1, Math.min(viewport.width, viewport.height * ratio))
     : (pageWidth * zoom) / 100;
+  const toolItems = [
+    { id: "pages", label: asset ? libraryKind(asset) === "upload" ? "Upload" : "Asset" : "Pages", Icon: FileImage },
+    { id: "assets", label: "Assets", Icon: Images },
+    { id: "uploads", label: "Uploads", Icon: Upload },
+    { id: "templates", label: "Templates", Icon: FileImage },
+    { id: "history", label: "History", Icon: History },
+  ];
+  const activePanel = compact && mobilePanel === "pages" ? "pages" : compact && panel === "pages" ? "assets" : panel;
+  const chooseTool = (id: string) => {
+    if (compact) { if (id !== "pages") setPanel(id); setMobilePanel(id === "pages" ? "pages" : "tools"); }
+    else { setDrawerOpen(id === panel ? !drawerOpen : true); setPanel(id); }
+  };
+  const jobStatus = busyJob ? "Working" : failedJob ? "Request failed" : latestJob?.status === "completed" ? "Ready" : "";
+  const saveTemplate = () => {
+    const revision = page.revisions.find(r => r.id === comp.revisionId);
+    setTemplateSource(sourceFor(comp.imageId!, revision?.messages || page.messages, revision?.prompt || ""));
+  };
   return (
-    <div className={`editor mobile-view-${mobilePanel}`}>
+    <div ref={editorRef} className={`editor responsive-editor mobile-view-${mobilePanel} ${drawerOpen ? "drawer-open" : "drawer-closed"} ${sheetExpanded ? "sheet-expanded" : ""}`}>
       {canvasCommands.ui}
       {showAssetJson && asset && (
         <AssetJsonDialog
           asset={asset}
           act={act}
-          onClose={() => setShowAssetJson(false)}
+          onClose={() => closeFloating(() => setShowAssetJson(false))}
           onRefresh={onRefresh}
           notify={notify}
           generationBusy={!!busyJob}
@@ -481,10 +554,10 @@ export function Editor({
           ratio={ratio}
           organisationId={orgId || null}
           act={act}
-          onClose={() => setExtracting(false)}
+          onClose={() => closeFloating(() => setExtracting(false))}
           onCreated={async (id) => {
             await onRefresh();
-            onOpenAsset(id);
+            dismissSheet(() => onOpenAsset(id));
           }}
           notify={notify}
         />
@@ -512,112 +585,35 @@ export function Editor({
       )}
       <header className="editor-topbar">
         <div className="editor-title">
-          <button
-            className="icon-button back-button"
-            title="Back to workspace"
-            onClick={onBack}
-          >
-            <ArrowLeft size={19} />
-          </button>
-          <span className="editor-title-divider" />
+          <button className="icon-button back-button" title="Back to workspace" aria-label="Back to workspace" onClick={onBack}><ArrowLeft size={20} /></button>
           <div>
-            <small>
-              {asset ? libraryKind(asset) === "upload" ? "Uploads" : "Asset library" : project?.name}
-              <ChevronRight size={11} />
-              {asset ? libraryKind(asset) === "upload" ? "Upload workspace" : "Asset workspace" : "Design"}
-            </small>
-            <button onClick={onEdit}>
-              {doc?.name || asset?.name}
-              <MoreHorizontal size={16} />
-            </button>
+            <button className="editor-name" title="Rename or manage design" onClick={onEdit}>{doc?.name || asset?.name}</button>
+            <small className="editor-context">{project?.name || (asset && libraryKind(asset) === "upload" ? "Uploads" : "Asset workspace")}</small>
+            <span className={`saved-indicator ${saveError ? "save-failed" : ""}`} role="status" title={saveError || undefined}>
+              {layoutSaving || regionSaving ? <LoaderCircle size={13} className="spin" /> : <Check size={13} />}
+              {layoutSaving || regionSaving ? "Saving…" : saveError ? "Save failed · try your change again" : "All changes saved"}
+            </span>
           </div>
-          <span className="saved-indicator">
-            <Check size={13} />
-            Saved
-          </span>
         </div>
         <div className="button-row editor-actions">
-          {comp.imageId && <button className="button secondary small" aria-label="Save as template" title="Save as template" onClick={() => {
-            const revision = page.revisions.find(r => r.id === comp.revisionId);
-            setTemplateSource(sourceFor(comp.imageId!, revision?.messages || page.messages, revision?.prompt || ""));
-          }}><FileImage size={15} /><span>Save as template</span></button>}
-          {doc && comp.imageId && (
-            <button
-              className="button secondary small"
-              aria-label="Extract asset"
-              title="Extract asset"
-              onClick={() => setExtracting(true)}
-            >
-              <Sparkles size={15} />
-              <span>Extract asset</span>
-            </button>
-          )}
-          {asset && (
-            <button
-              className="button secondary small"
-              aria-label="Replace image"
-              title="Replace image"
-              onClick={() => replacement.current?.click()}
-            >
-              <ImagePlus size={15} /><span>Replace image</span>
-            </button>
-          )}
-          {comp.imageId && (
-            <button className="button secondary small" aria-label="Use in new design" title="Use in new design" onClick={useInNew}>
-              <ImagePlus size={15} />
-              <span>Use in new design</span>
-            </button>
-          )}
-          <button
-            className="button primary small"
-            aria-label="Export"
-            title="Export"
-            disabled={!comp.imageId && !overlays.length}
-            onClick={() => setShowExport(true)}
-          >
-            <ArrowDownToLine size={16} />
-            <span>Export</span>
-          </button>
+          <button className="icon-button" aria-label="More document actions" title="More document actions" onClick={event => { event.currentTarget.focus(); setMoreOpen(true); }}><MoreHorizontal size={21} /></button>
+          <button className="button primary small editor-export" aria-label="Export" disabled={!comp.imageId && !overlays.length} onClick={event => { event.currentTarget.focus(); openExport(); }}><ArrowDownToLine size={17} /><span>Export</span></button>
           {!compact && <UserMenu />}
         </div>
       </header>
-      {compact && <div className="mobile-editor-views" role="group" aria-label="Editor view">
-        {([ ["canvas", "Canvas", Square], ["tools", "Tools", Layers], ["chat", "Chat", MessageCircle] ] as const).map(([id, label, Icon]) => (
-          <button key={id} aria-pressed={mobilePanel === id} onClick={() => setMobilePanel(id)}><Icon size={17} />{label}</button>
-        ))}
-      </div>}
       <div className="editor-body">
-        <aside className="editor-tools">
-          <div className="tool-tabs">
-            <button
-              className={panel === "pages" ? "active" : ""}
-              title={asset ? libraryKind(asset) === "upload" ? "Upload" : "Asset" : "Pages"}
-              onClick={() => setPanel("pages")}
-            >
-              <FileImage size={18} />
-              <span>{asset ? libraryKind(asset) === "upload" ? "Upload" : "Asset" : "Pages"}</span>
-            </button>
-            <button
-              className={panel === "assets" ? "active" : ""}
-              title="Assets"
-              onClick={() => setPanel("assets")}
-            >
-              <Images size={18} />
-              <span>Assets</span>
-            </button>
-            <button className={panel === "templates" ? "active" : ""} title="Templates" onClick={() => setPanel("templates")}><FileImage size={18} /><span>Templates</span></button>
-            <button className={panel === "uploads" ? "active" : ""} title="Uploads" onClick={() => setPanel("uploads")}><Upload size={18} /><span>Uploads</span></button>
-            <button
-              className={panel === "history" ? "active" : ""}
-              title="History"
-              onClick={() => setPanel("history")}
-            >
-              <History size={18} />
-              <span>History</span>
-            </button>
-          </div>
-          {panel === "pages" && (
-            <div className="pages-panel">
+        <nav className="editor-rail tool-tabs" aria-label="Design tools">
+          {toolItems.map(({ id, label, Icon }) => <button key={id} title={label} aria-pressed={activePanel === id && (compact ? mobilePanel === (id === "pages" ? "pages" : "tools") : drawerOpen)} className={activePanel === id && (compact ? mobilePanel === (id === "pages" ? "pages" : "tools") : drawerOpen) ? "active" : ""} onClick={event => { event.currentTarget.focus(); chooseTool(id); }}><Icon size={20} /><span>{label}</span></button>)}
+          {compact && <button className={`rail-chat ${mobilePanel === "chat" ? "active" : ""}`} aria-label={`Chat${jobStatus ? ` · ${jobStatus}` : ""}`} onClick={event => { event.currentTarget.focus(); setMobilePanel("chat"); }}><MessageCircle size={20}/><span>Chat</span>{jobStatus && <span className="job-badge">{jobStatus}</span>}</button>}
+        </nav>
+        <aside ref={toolsRef} className="editor-tools" role={compact && (mobilePanel === "tools" || mobilePanel === "pages") ? "dialog" : undefined} aria-label={activePanel === "pages" ? "Pages panel" : "Design tools panel"} tabIndex={-1}>
+          <SheetHandle expanded={sheetExpanded} onExpand={setSheetExpanded} onDismiss={() => dismissSheet(() => setMobilePanel("canvas"))} />
+          <div className="tool-panel-heading"><h2>{toolItems.find(t => t.id === activePanel)?.label}</h2><div className="button-row">
+            {compact && <button className="icon-button expand-sheet" aria-label={sheetExpanded ? "Collapse sheet" : "Expand sheet"} aria-expanded={sheetExpanded} onClick={() => setSheetExpanded(!sheetExpanded)}><ChevronsUpDown size={19}/></button>}
+            <button className="icon-button" data-sheet-close aria-label="Close tools" onClick={() => compact ? dismissSheet(() => setMobilePanel("canvas")) : setDrawerOpen(false)}><X size={20}/></button>
+          </div></div>
+          {activePanel !== "pages" && <div className="tool-chooser" role="group" aria-label="Choose a tool">{toolItems.filter(t => t.id !== "pages").map(({id,label}) => <button key={id} aria-pressed={activePanel === id} onClick={() => setPanel(id)}>{label}</button>)}</div>}
+          <div hidden={activePanel !== "pages"} className="tool-content"><div className="pages-panel">
               <div className="panel-heading">
                 {asset ? libraryKind(asset) === "upload" ? "UPLOAD WORKSPACE" : "ASSET WORKSPACE" : `PAGES · ${doc!.pages.length}`}
               </div>
@@ -626,7 +622,7 @@ export function Editor({
                   <button
                     key={p.id}
                     className={`page-tile ${page.id === p.id ? "active" : ""}`}
-                    onClick={() => onPage(p.id)}
+                    onClick={() => compact ? dismissSheet(() => onPage(p.id)) : onPage(p.id)}
                   >
                     <div
                       className="page-thumbnail"
@@ -665,7 +661,7 @@ export function Editor({
                   onClick={() =>
                     run(async () => {
                       const id = await act<string>({ op: "page", id: doc.id });
-                      onPage(id);
+                      if (compact) dismissSheet(() => onPage(id)); else onPage(id);
                     })
                   }
                 >
@@ -673,17 +669,17 @@ export function Editor({
                   Add page
                 </button>
               )}
-            </div>
-          )}
-          {panel === "uploads" && <UploadDrawer key={selectedOrganisation} w={w} orgId={selectedOrganisation === "all" ? orgId : selectedOrganisation} uploads={uploads} onReference={addReference} onPlace={doc ? placeAsset : undefined} />}
-          {panel === "assets" && (
+            </div></div>
+          <div hidden={activePanel !== "uploads"} className="tool-content"><UploadDrawer key={selectedOrganisation} w={w} orgId={selectedOrganisation === "all" ? orgId : selectedOrganisation} uploads={uploads} onReference={addReference} onPlace={doc ? placeAsset : undefined} /></div>
+          <div hidden={activePanel !== "assets"} className="tool-content">
             <div className="editor-library">
               <div className="panel-heading">YOUR ASSETS</div>
-              <LibraryImages w={w} orgId={orgId} kind="asset" onReference={addReference} onPlace={doc ? placeAsset : undefined} clickToPlace />
-            </div>
-          )}
-          {panel === "templates" && <div className="editor-library"><div className="panel-heading">YOUR TEMPLATES</div><Templates key={orgId} w={w} orgId={orgId} act={act} onRefresh={onRefresh} onSelect={selectTemplate} /></div>}
-          {panel === "history" && (
+              <label className="drawer-search"><Search size={17}/><input aria-label="Search assets" placeholder="Search assets" value={assetSearch} onChange={event => setAssetSearch(event.target.value)}/></label>
+              <p className="drawer-guidance">Place keeps the original. Reference guides generation.</p>
+              <LibraryImages w={w} orgId={orgId} kind="asset" search={assetSearch} onReference={addReference} onPlace={doc ? placeAsset : undefined} clickToPlace />
+            </div></div>
+          <div hidden={activePanel !== "templates"} className="tool-content"><div className="editor-library"><div className="panel-heading">YOUR TEMPLATES</div><Templates key={orgId} w={w} orgId={orgId} act={act} onRefresh={onRefresh} onSelect={selectTemplate} /></div></div>
+          <div hidden={activePanel !== "history"} className="tool-content">
             <div className="history-panel">
               <div className="panel-heading">
                 IMAGE REVISIONS · {page.revisions.length}
@@ -712,105 +708,9 @@ export function Editor({
                 <p className="muted">Your first image will appear here.</p>
               )}
             </div>
-          )}
+          </div>
         </aside>
         <section className="canvas-workspace">
-          <div className="canvas-toolbar">
-            <div className="button-row">
-              <button
-                className="icon-button"
-                title="Undo layout or image change"
-                disabled={page.historyIndex === 0 || !!busyJob || annotationLocked || canvasCommands.busy}
-                onClick={() =>
-                  canvasCommands.undo()
-                }
-              >
-                <Undo2 size={17} />
-              </button>
-              <button
-                className="icon-button"
-                title="Redo"
-                disabled={
-                  page.historyIndex >= page.history.length - 1 || !!busyJob || annotationLocked || canvasCommands.busy
-                }
-                onClick={() =>
-                  canvasCommands.redo()
-                }
-              >
-                <Redo2 size={17} />
-              </button>
-              <span className="toolbar-divider" />
-              {currentOverlay ? (
-                <span className="toolbar-caption">
-                  <Layers size={14} />
-                  Original asset selected
-                </span>
-              ) : (
-                <span className="toolbar-caption">
-                  {doc
-                    ? `${doc.width} × ${doc.height} ${doc.unit}`
-                    : "Transparent asset"}
-                </span>
-              )}
-            </div>
-            <div className="button-row">
-              {image && (
-                <button
-                  className="text-button"
-                  disabled={annotationLocked || !!busyJob}
-                  onClick={() =>
-                    run(() =>
-                      act({
-                        op: "framing",
-                        target,
-                        framing: comp.framing === "crop" ? "fit" : "crop",
-                      }),
-                    )
-                  }
-                >
-                  <Maximize2 size={14} />
-                  {comp.framing === "crop" ? "Fill" : "Fit"}
-                </button>
-              )}
-              <button
-                className="icon-button"
-                title="Zoom out"
-                onClick={() => {
-                  setZoom(
-                    Math.max(
-                      10,
-                      Math.round((displayWidth / pageWidth) * 100) - 10,
-                    ),
-                  );
-                  setAutoFit(false);
-                }}
-              >
-                <ZoomOut size={16} />
-              </button>
-              <button
-                className="zoom-label"
-                onClick={() => setAutoFit(true)}
-                title="Fit to window"
-              >
-                {autoFit ? "Fit" : `${zoom}%`}
-              </button>
-              <button
-                className="icon-button"
-                title="Zoom in"
-                onClick={() => {
-                  setZoom(
-                    Math.min(
-                      400,
-                      Math.round((displayWidth / pageWidth) * 100) + 10,
-                    ),
-                  );
-                  setAutoFit(false);
-                }}
-              >
-                <ZoomIn size={16} />
-              </button>
-            </div>
-          </div>
           <div
             ref={viewportRef}
             className={`canvas-scroll ${canvasUploadDrop.dragging ? "upload-drop-zone upload-dragging" : ""}`}
@@ -995,8 +895,57 @@ export function Editor({
               </div>
             </div>
           </div>
+          {!currentOverlay && !annotating && (image || asset) && <div className="canvas-context-tools" role="toolbar" aria-label="Image tools">
+              {image && (
+                <button
+                  className="text-button"
+                  title="Image framing: fit the original or fill the page"
+                  disabled={annotationLocked || !!busyJob}
+                  onClick={() =>
+                    run(() =>
+                      act({
+                        op: "framing",
+                        target,
+                        framing: comp.framing === "crop" ? "fit" : "crop",
+                      }),
+                    )
+                  }
+                >
+                  <Maximize2 size={14} />
+                  {comp.framing === "crop" ? "Fill image" : "Fit image"}
+                </button>
+              )}
+            {asset && (
+              <div
+                className="preview-backgrounds"
+                role="group"
+                aria-label="Asset preview background"
+              >
+                <span>Preview</span>
+                {previewBackgrounds.map((bg) => (
+                  <button
+                    key={bg.color}
+                    className={`preview-swatch ${bg.color === "checker" ? "checker" : ""}`}
+                    style={
+                      bg.color === "checker" ? {} : { background: bg.color }
+                    }
+                    title={`${bg.name} preview background`}
+                    aria-label={`${bg.name} preview background`}
+                    aria-pressed={previewBackground === bg.color}
+                    onClick={() => {
+                      setPreviewBackground(bg.color);
+                      localStorage.setItem(
+                        "asset-preview-background",
+                        bg.color,
+                      );
+                    }}
+                  />
+                ))}
+              </div>
+            )}
+          </div>}
           {currentOverlay && !annotating && (
-            <div className="overlay-inspector">
+            <div className="overlay-inspector canvas-context-tools" role="toolbar" aria-label="Selected image tools">
               <span>
                 <Layers size={15} />
                 Asset placement
@@ -1005,6 +954,7 @@ export function Editor({
                 Size
                 <input
                   type="range"
+                  aria-label="Placement size"
                   min="3"
                   disabled={currentOverlay.locked || canvasCommands.busy || annotationLocked || !!busyJob}
                   max="100"
@@ -1076,49 +1026,86 @@ export function Editor({
               </button>
             </div>
           )}
-          <div className="canvas-status">
-            {asset ? (
-              <div
-                className="preview-backgrounds"
-                role="group"
-                aria-label="Asset preview background"
-              >
-                <span>Preview</span>
-                {previewBackgrounds.map((bg) => (
-                  <button
-                    key={bg.color}
-                    className={`preview-swatch ${bg.color === "checker" ? "checker" : ""}`}
-                    style={
-                      bg.color === "checker" ? {} : { background: bg.color }
-                    }
-                    title={`${bg.name} preview background`}
-                    aria-label={`${bg.name} preview background`}
-                    aria-pressed={previewBackground === bg.color}
-                    onClick={() => {
-                      setPreviewBackground(bg.color);
-                      localStorage.setItem(
-                        "asset-preview-background",
-                        bg.color,
-                      );
-                    }}
-                  />
-                ))}
+          <div className="canvas-status" role="group" aria-label="Canvas status and controls">
+            <div className="canvas-toolbar">
+              <div className="button-row">
+                <button
+                  className="icon-button"
+                  title="Undo layout or image change"
+                  disabled={page.historyIndex === 0 || !!busyJob || annotationLocked || canvasCommands.busy}
+                  onClick={() =>
+                    canvasCommands.undo()
+                  }
+                >
+                  <Undo2 size={17} />
+                </button>
+                <button
+                  className="icon-button"
+                  title="Redo"
+                  disabled={
+                    page.historyIndex >= page.history.length - 1 || !!busyJob || annotationLocked || canvasCommands.busy
+                  }
+                  onClick={() =>
+                    canvasCommands.redo()
+                  }
+                >
+                  <Redo2 size={17} />
+                </button>
               </div>
-            ) : (
-              <span>
-                {asset
-                  ? "Asset workspace"
-                  : `${doc!.pages.findIndex((p) => p.id === page.id) + 1} of ${doc!.pages.length} pages`}
-              </span>
-            )}
-            <span>
+              <div className="button-row">
+                <button
+                  className="icon-button"
+                  title="Zoom out"
+                  onClick={() => {
+                    setZoom(
+                      Math.max(
+                        10,
+                        Math.round((displayWidth / pageWidth) * 100) - 10,
+                      ),
+                    );
+                    setAutoFit(false);
+                  }}
+                >
+                  <ZoomOut size={16} />
+                </button>
+                <button
+                  className="zoom-label"
+                  onClick={() => setAutoFit(true)}
+                  title="Fit to window"
+                >
+                  {autoFit ? "Fit" : `${zoom}%`}
+                </button>
+                <button
+                  className="icon-button"
+                  title="Zoom in"
+                  onClick={() => {
+                    setZoom(
+                      Math.min(
+                        400,
+                        Math.round((displayWidth / pageWidth) * 100) + 10,
+                      ),
+                    );
+                    setAutoFit(false);
+                  }}
+                >
+                  <ZoomIn size={16} />
+                </button>
+              </div>
+            </div>
+            <span className="canvas-page-count" role="status" aria-label={asset ? "Asset workspace" : `${doc!.pages.findIndex(p => p.id === page.id) + 1} of ${doc!.pages.length} pages`}>
+              <FileImage size={14} />
+              <span className="page-count-full">{asset ? "Asset workspace" : `${doc!.pages.findIndex(p => p.id === page.id) + 1} of ${doc!.pages.length} pages`}</span>
+              <span className="page-count-compact" aria-hidden="true">{asset ? "Asset" : `${doc!.pages.findIndex(p => p.id === page.id) + 1} / ${doc!.pages.length}`}</span>
+            </span>
+            <span className="canvas-image-resolution">
               {image
                 ? `${image.width} × ${image.height} px${resolution ? ` · ${resolution} DPI at print size` : ""}`
                 : "Ready for your first idea"}
             </span>
           </div>
         </section>
-        <aside className="chat-panel">
+        <aside ref={chatRef} className="chat-panel" role={compact && mobilePanel === "chat" ? "dialog" : undefined} aria-label="Design conversation" tabIndex={-1}>
+          <SheetHandle expanded={sheetExpanded} onExpand={setSheetExpanded} onDismiss={() => dismissSheet(() => setMobilePanel("canvas"))} />
           <div className="chat-heading">
             <span className="assistant-symbol">
               <Sparkles size={19} />
@@ -1131,6 +1118,7 @@ export function Editor({
               </small>
             </div>
             <span className="tiny-dot green" />
+            {compact && <button className="icon-button" data-sheet-close aria-label="Close Chat" onClick={() => dismissSheet(() => setMobilePanel("canvas"))}><X size={20}/></button>}
           </div>
           <div className="chat-messages">
             {!page.messages.length && (
@@ -1396,8 +1384,33 @@ export function Editor({
           </div>
         </aside>
       </div>
-      {templateSource && <TemplateForm w={w} act={act} orgId={orgId} source={templateSource} onClose={() => setTemplateSource(null)} onRefresh={onRefresh} />}
-      {showTemplatePicker && <Modal title="Templates" onClose={() => setShowTemplatePicker(false)} wide><Templates w={w} orgId={orgId} act={act} onRefresh={onRefresh} onSelect={selectTemplate} /></Modal>}
+      {compact && <nav className="mobile-editor-views" aria-label="Editor view">
+        {([ ["canvas", "Canvas", Square], ["chat", "Chat", MessageCircle], ["tools", "Tools", Layers], ["pages", "Pages", FileImage] ] as const).map(([id, label, Icon]) => (
+          <button key={id} aria-label={label} title={id === "chat" && jobStatus ? `Chat · ${jobStatus}` : label} aria-pressed={mobilePanel === id} onClick={event => { event.currentTarget.focus(); if (id === "canvas") dismissSheet(() => setMobilePanel("canvas")); else setMobilePanel(id); }}>
+            <Icon size={20}/><span>{label}</span>{id === "chat" && jobStatus && <span className="job-badge" role="status" aria-label={jobStatus}>{jobStatus}</span>}
+          </button>
+        ))}
+      </nav>}
+      {compact && mobilePanel !== "canvas" && <div className="editor-sheet-backdrop" aria-hidden="true" onClick={() => dismissSheet(() => setMobilePanel("canvas"))} />}
+      {moreOpen && <Modal title="Document" className="document-menu" onClose={() => dismissSheet(() => setMoreOpen(false))}>
+        <div className="document-identity"><strong>{doc?.name || asset?.name}</strong><p>{project?.name || (asset && libraryKind(asset) === "upload" ? "Uploads" : "Asset library")}</p><p>{doc ? `${doc.width} × ${doc.height} ${doc.unit} · ${doc.pages.length} pages` : image ? `${image.width} × ${image.height} px` : "No image yet"}</p><span role="status">{layoutSaving || regionSaving ? "Saving…" : saveError ? "Save failed" : "All changes saved"}</span></div>
+        <div className="document-command-group">
+          <button onClick={() => dismissSheet(() => { setMoreOpen(false); onEdit(); })}><Pencil size={19}/>Rename and manage</button>
+          {comp.imageId && <button onClick={() => dismissSheet(() => { setMoreOpen(false); void useInNew(); })}><ImagePlus size={19}/>Use in new design</button>}
+          {asset && <button onClick={() => dismissSheet(() => { setMoreOpen(false); replacement.current?.click(); })}><Upload size={19}/>Replace image</button>}
+        </div>
+        {comp.imageId && <div className="document-command-group">
+          <button onClick={() => { setMoreOpen(false); saveTemplate(); }}><FileImage size={19}/>Save as template</button>
+          {doc && <button onClick={() => { setMoreOpen(false); setExtracting(true); }}><Sparkles size={19}/>Extract asset</button>}
+        </div>}
+        <div className="document-command-group">
+          <button onClick={() => { setMoreOpen(false); setPanel("history"); setDrawerOpen(true); if (compact) setMobilePanel("tools"); }}><History size={19}/>Revision history</button>
+          <button onClick={() => { setMoreOpen(false); if (compact) setMobilePanel("pages"); else setPanel("pages"); setDrawerOpen(true); }}><FileImage size={19}/>{doc ? "View pages" : "View workspace"}</button>
+          <button disabled={!comp.imageId && !overlays.length} onClick={openExport}><ArrowDownToLine size={19}/>Export files</button>
+        </div>
+      </Modal>}
+      {templateSource && <TemplateForm w={w} act={act} orgId={orgId} source={templateSource} onClose={() => closeFloating(() => setTemplateSource(null))} onRefresh={onRefresh} />}
+      {showTemplatePicker && <Modal title="Templates" onClose={() => closeFloating(() => setShowTemplatePicker(false))} wide><Templates w={w} orgId={orgId} act={act} onRefresh={onRefresh} onSelect={selectTemplate} /></Modal>}
       {picker && (
         <AssetPicker
           w={w}
@@ -1406,7 +1419,7 @@ export function Editor({
           onReference={addReference}
           onPageReference={addPageReference}
           onPlace={doc ? placeAsset : undefined}
-          onClose={() => { setPicker(null); setPendingPurpose(undefined); }}
+          onClose={() => closeFloating(() => { setPicker(null); setPendingPurpose(undefined); })}
         />
       )}
       {showExport && (
@@ -1429,7 +1442,8 @@ export function Editor({
           }
           pageIndex={doc ? doc.pages.findIndex((p) => p.id === page.id) : 0}
           asset={!!asset}
-          onClose={() => setShowExport(false)}
+          onClose={() => { const restore = () => { setShowExport(false); setExportBusy(false); setMobilePanel(exportReturnPanel); }; if (exportReturnPanel === "canvas") dismissSheet(restore); else restore(); }}
+          onBusyChange={setExportBusy}
           notify={notify}
         />
       )}

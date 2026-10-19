@@ -1,5 +1,37 @@
 # Next version design interview
 
+## 0.12.0 — build, release and server deployment authorised (2026-10-19)
+
+Mark requested building, releasing and deploying the next version. This lifts the earlier publication and deployment holds for the complete responsive-workspace change set, including floating canvas tools and preview clipping. Version 0.12.0 covers Windows Setup/Portable/Companion, the immutable server image and the existing LAN server update. Preserve all workspace/media, sessions/jobs/configuration and signed-in worker credentials with verified stopped-volume/off-host backups. Qualify the published artifacts and deployed UI before recording completion. Earlier hold records below are historical; the installed Windows app is not replaced by publishing downloads or updating the server.
+
+## Off-page preview clipping — local only (2026-10-19)
+
+Mark reported placed artwork spilling beyond document boundaries in thumbnail previews. The shared composition preview now clips its children to the document rectangle, covering Home/design cards and project previews, including rotated and partially off-page placements. Source assets, placement coordinates/history and exports are unchanged. Build and Edge/WebKit both-theme phone/desktop regression pass. Kept local with the floating-toolbar layout; server remains `interaction-fixes-20261019`.
+
+## Floating image tools and bottom canvas controls — local review (2026-10-19)
+
+Mark requested a Canva-style floating pill for selected Asset/Upload placement controls, with Undo/Redo and zoom moved into the bottom page-status bar. Implemented locally across desktop/tablet/phone. Image framing and Asset preview backgrounds also use a floating image toolbar; existing tool actions and export behaviour remain unchanged. Selection does not resize the canvas. This new layout has not been deployed; the server remains `interaction-fixes-20261019`. Earlier LAN authorisation below covers the previously deployed fixes.
+
+## Drawer switching and context menus — LAN testing authorised (2026-10-19)
+
+Mark explicitly requested deployment of both pending fixes to the local server for testing, preserving existing designs and sign-in. This lifts the deployment hold below for these fixes only. Keep the established backend/runtime and live volumes, verify full stopped-volume/off-host backups before cutover, then qualify the deployed interactions and preservation. Public release, GitHub push and installed Windows app replacement remain on hold.
+
+Deployed as `interaction-fixes-20261019`; full backup `before-interaction-20261019T191711Z` and its off-host copy are verified. All designs/media/configuration/sessions/jobs and signed-in worker credentials are preserved. Live Edge/WebKit drawer switching and context-menu checks pass; placement requests are intercepted during production acceptance to avoid editing real designs. [Validation](VALIDATION.md) records the evidence and physical-device limits.
+
+## Earlier local deployment hold — lifted for the two fixes above (2026-10-19)
+
+Mark requested direct switching between mobile drawers and explicitly said **do not deploy** while another issue is pending. Keep this and subsequent changes local until new deployment authorisation. The existing server remains `checker-fix-20261019`. This instruction supersedes the earlier server-testing authorisation below for new changes.
+
+The subsequent interaction correction is also local only: remove the responsive Place/Reference action row. Asset/Upload drawer cards place on one click or short tap; right-click or a 500 ms touch hold opens the existing context menu. Release after a hold must not place or choose a menu item. Preserve keyboard menus, reference roles, dragging and scroll/cancel behaviour. Mark's explicit preference supersedes the earlier visible phone-action proposal.
+
+## Responsive workspace — local server testing authorised (2026-10-19)
+
+Mark authorised implementation of the Canva-informed desktop/tablet/phone proposal, then explicitly requested deployment to the local server for testing. The new shell, work-first Home, adaptive sheets, document More menu and export panel are implemented. Shared responsive rules include narrow native windows. [Implementation and verification](design-study-2026-10-19/IMPLEMENTATION.md) records review and deployment evidence. This authorises the existing LAN server only; public publication, GitHub pushes and installed Windows app replacement remain on hold. The previous 0.11.0 release authorisation below does not authorise a new public release.
+
+Screenshot follow-up: Pages has its own page-only drawer state; Tools retains the selected tool/filter and excludes Pages. Ready is contained in Chat; the pull handle supports tap, keyboard and expand/collapse/dismiss swipes. Export's title is vertically centred in its header. These fixes are deployed privately as `drawer-fixes-20261019`, with preservation and live Edge/WebKit checks recorded in the implementation document.
+
+Dark-theme checkerboard regression corrected privately as `checker-fix-20261019`: removed the responsive card background override so thumbnails retain the shared pale checkerboard in both themes. Build and live/local Edge/WebKit phone/desktop checks pass across Home/Assets/canvas; artwork/export behaviour is unchanged. See the implementation document for backup and preservation evidence.
+
 ## 0.11.0 — published and deployed (2026-10-18)
 
 [Image Gen 0.11.0](https://github.com/markrugman/chatgpt-image-gen/releases/tag/v0.11.0) is published from `09d3471ed6daf26711626b78196366e3b03b9a3e`; every job in the [clean release workflow](https://github.com/markrugman/chatgpt-image-gen/actions/runs/39078806260) passed. Includes configurable Templates with simplified authoring and mobile layouts, faithful Generate/Discuss request composition and captured inputs, transparent document PNG exports, current-design project previews and documented server retention.
